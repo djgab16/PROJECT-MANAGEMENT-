@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import './Modals.css';
 
-interface PODModalProps {
+interface POTModalProps {
   onClose: () => void;
-  onSubmit: (data: { podImage: string; recipientName: string }) => void;
+  onSubmit: (data: { potImage: string; recipientName: string }) => void;
   defaultRecipient: string;
 }
 
-export default function PODModal({ onClose, onSubmit, defaultRecipient }: PODModalProps) {
-  const [podImage, setPodImage] = useState<string | null>(null);
+export default function POTModal({ onClose, onSubmit, defaultRecipient }: POTModalProps) {
+  const [potImage, setPotImage] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState(defaultRecipient);
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -17,18 +17,18 @@ export default function PODModal({ onClose, onSubmit, defaultRecipient }: PODMod
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPodImage(reader.result as string);
+        setPotImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = () => {
-    if (!podImage || !recipientName.trim()) {
+    if (!potImage || !recipientName.trim()) {
       alert("Please capture a photo and enter the recipient's name.");
       return;
     }
-    onSubmit({ podImage, recipientName });
+    onSubmit({ potImage, recipientName });
   };
 
   return (
@@ -40,14 +40,14 @@ export default function PODModal({ onClose, onSubmit, defaultRecipient }: PODMod
         </div>
         
         <div className="modal-body">
-          <div className="pod-capture-area">
-            {podImage ? (
-              <div className="pod-preview">
-                <img src={podImage} alt="POD" />
-                <button className="btn btn-sm btn-outline" onClick={() => setPodImage(null)}>Retake Photo</button>
+          <div className="pot-capture-area">
+            {potImage ? (
+              <div className="pot-preview">
+                <img src={potImage} alt="POT" />
+                <button className="btn btn-sm btn-outline" onClick={() => setPotImage(null)}>Retake Photo</button>
               </div>
             ) : (
-              <label className="pod-capture-btn">
+              <label className="pot-capture-btn">
                 <Camera size={32} />
                 <span>Tap to take photo</span>
                 <input 
@@ -74,7 +74,7 @@ export default function PODModal({ onClose, onSubmit, defaultRecipient }: PODMod
 
         <div className="modal-footer">
           <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={!podImage || !recipientName}>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!potImage || !recipientName}>
             Submit POD
           </button>
         </div>

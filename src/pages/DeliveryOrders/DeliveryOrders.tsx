@@ -77,8 +77,8 @@ export default function DeliveryOrders() {
           </div>
           <div className="order-stat-divider" />
           <div className="order-stat">
-            <span className="order-stat-value">{baseOrders.filter(o => o.podStatus === 'Submitted').length}</span>
-            <span className="order-stat-label">POD SUBMITTED</span>
+            <span className="order-stat-value">{baseOrders.filter(o => o.potStatus === 'Submitted').length}</span>
+            <span className="order-stat-label">POT SUBMITTED</span>
           </div>
         </div>
 

@@ -14,15 +14,15 @@ export default function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
   const [driverFilter, setDriverFilter] = useState('All Drivers');
   const [areaFilter, setAreaFilter] = useState('All Areas');
-  const [podFilter, setPodFilter] = useState('POD: All');
+  const [POTFilter, setPOTFilter] = useState('POT: All');
 
   const filteredOrders = archivedOrdersAll.filter(o => {
     if (searchQuery && !o.waybillNo.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
     if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;
     
-    if (podFilter === 'POD: Submitted' && o.podStatus !== 'Submitted') return false;
-    if (podFilter === 'No POD' && o.podStatus !== 'No POD') return false;
+    if (POTFilter === 'POT: Submitted' && o.potStatus !== 'Submitted') return false;
+    if (POTFilter === 'No POT' && o.potStatus !== 'No POT') return false;
     return true;
   });
 
@@ -45,9 +45,9 @@ export default function Archive() {
           </div>
           <div className="archive-stats">
             <div className="archive-stat"><strong>{archivedOrdersAll.length}</strong><span>TOTAL ARCHIVED</span></div>
-            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.podStatus === 'Submitted').length}</strong><span>WITH POD</span></div>
-            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.podStatus === 'No POD').length}</strong><span>NO POD</span></div>
-            <div className="archive-stat"><strong>{archivedOrdersAll.length > 0 ? ((archivedOrdersAll.filter(o => o.podStatus === 'Submitted').length / archivedOrdersAll.length) * 100).toFixed(1) : 0}%</strong><span>SUCCESS RATE</span></div>
+            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.potStatus === 'Submitted').length}</strong><span>WITH POT</span></div>
+            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.potStatus === 'No POT').length}</strong><span>NO POT</span></div>
+            <div className="archive-stat"><strong>{archivedOrdersAll.length > 0 ? ((archivedOrdersAll.filter(o => o.potStatus === 'Submitted').length / archivedOrdersAll.length) * 100).toFixed(1) : 0}%</strong><span>SUCCESS RATE</span></div>
           </div>
           <div className="archive-readonly">
             <Lock size={14} /> <strong>Read-only.</strong> Archived records cannot be edited.
@@ -76,10 +76,10 @@ export default function Archive() {
             <option>All Areas</option>
             {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
-          <select className="filter-select" value={podFilter} onChange={e => setPodFilter(e.target.value)}>
-            <option>POD: All</option>
-            <option>POD: Submitted</option>
-            <option>No POD</option>
+          <select className="filter-select" value={POTFilter} onChange={e => setPOTFilter(e.target.value)}>
+            <option>POT: All</option>
+            <option>POT: Submitted</option>
+            <option>No POT</option>
           </select>
           <button className="btn btn-outline btn-sm"><Download size={14} /> Export</button>
         </div>
@@ -103,7 +103,7 @@ export default function Archive() {
                 <th>AREA</th>
                 <th>DRIVER</th>
                 <th>DATE COMPLETED</th>
-                <th>POD</th>
+                <th>POT</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
@@ -137,7 +137,7 @@ export default function Archive() {
                       </div>
                     </td>
                     <td className="text-sm">{order.dateCompleted || '—'}</td>
-                    <td><StatusBadge status={order.podStatus} size="sm" /></td>
+                    <td><StatusBadge status={order.potStatus} size="sm" /></td>
                     <td className="cell-actions">
                       <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
                       <button className="action-icon-btn" title="Archive" disabled><ArchiveIcon size={14} /></button>

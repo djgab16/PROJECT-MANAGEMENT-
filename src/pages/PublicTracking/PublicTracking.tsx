@@ -82,10 +82,17 @@ export default function PublicTracking() {
                   <TrackingTimeline events={data.events} currentStatus={data.currentStatus} />
                 </div>
                 
-                <div className="card map-container" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="card map-container" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <StaticMapBox location={data.lastLocation} />
                 </div>
               </div>
+
+              {data.potImage && (
+                <div className="card pot-container animate-fade-in" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <h3 style={{ marginBottom: '16px', color: 'var(--text-main)', alignSelf: 'flex-start' }}>Proof of Transaction</h3>
+                  <img src={data.potImage} alt="Proof of Transaction" style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '12px', objectFit: 'contain', background: '#f8fafc', padding: '10px', border: '1px solid #e2e8f0' }} />
+                </div>
+              )}
             </div>
           )}
         </main>

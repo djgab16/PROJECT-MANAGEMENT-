@@ -45,7 +45,7 @@ export default function EditDeliveryOrder() {
         orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         status: 'Pending',
-        podStatus: 'Not Submitted',
+        potStatus: 'Not Submitted',
         itemCount: 1,
         weight: '0.0 kg',
         declaredValue: '₱ 0.00',
@@ -70,8 +70,8 @@ export default function EditDeliveryOrder() {
       reader.onloadend = () => {
         setFormData(prev => ({ 
           ...prev, 
-          podImage: reader.result as string,
-          podStatus: 'Submitted'
+          potImage: reader.result as string,
+          potStatus: 'Submitted'
         }));
       };
       reader.readAsDataURL(file);
@@ -279,16 +279,16 @@ export default function EditDeliveryOrder() {
 
             <div className="card">
               <div className="card-header">
-                <h4>Proof of Delivery</h4>
+                <h4>Proof of Transaction</h4>
               </div>
-              <div className="pod-upload-area" style={{ marginTop: '12px', border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', background: 'var(--bg-main)' }}>
-                {formData.podImage ? (
+              <div className="POT-upload-area" style={{ marginTop: '12px', border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', background: 'var(--bg-main)' }}>
+                {formData.potImage ? (
                   <div style={{ position: 'relative' }}>
-                    <img src={formData.podImage} alt="POD Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '4px' }} />
+                    <img src={formData.potImage} alt="POT Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '4px' }} />
                     <button 
                       className="btn btn-sm btn-danger" 
                       style={{ position: 'absolute', top: '8px', right: '8px' }}
-                      onClick={(e) => { e.preventDefault(); setFormData(p => ({ ...p, podImage: undefined, podStatus: 'Not Submitted' })) }}
+                      onClick={(e) => { e.preventDefault(); setFormData(p => ({ ...p, potImage: undefined, potStatus: 'Not Submitted' })) }}
                     >
                       Remove
                     </button>
@@ -298,7 +298,7 @@ export default function EditDeliveryOrder() {
                     <div style={{ padding: '12px', background: 'white', borderRadius: '50%', color: 'var(--text-secondary)' }}>
                       <ImageIcon size={24} />
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No POD uploaded yet.</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No Proof of Transaction uploaded yet.</p>
                     <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', marginTop: '8px' }}>
                       <Upload size={14} /> Upload Image
                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />

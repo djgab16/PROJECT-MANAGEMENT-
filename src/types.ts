@@ -1,9 +1,9 @@
 export type DeliveryStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Completed' | 'Failed' | 'Returned';
-export type PODStatus = 'Submitted' | 'No POD' | 'Not Submitted';
+export type POTStatus = 'Submitted' | 'No POT' | 'Not Submitted';
 export type UserRole = 'ADMIN' | 'OP. TEAM' | 'DRIVER';
 export type AccountStatus = 'Active' | 'Pending' | 'Locked';
 export type NotificationType = 'alert' | 'success' | 'system' | 'info';
-export type ActionType = 'Create' | 'Update' | 'Assign' | 'POD Upload' | 'Login' | 'Archive' | 'Delete';
+export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'Login' | 'Archive' | 'Delete';
 
 export interface Employee {
   id: string;
@@ -29,13 +29,13 @@ export interface DeliveryOrder {
   driverInitials: string;
   driverColor: string;
   status: DeliveryStatus;
-  podStatus: PODStatus;
+  potStatus: POTStatus;
   packageType: string;
   packageDescription: string;
   itemCount: number;
   weight: string;
   declaredValue: string;
-  podImage?: string;
+  potImage?: string;
   gpsCoordinates?: { lat: number; lng: number };
   failureReason?: string;
   failureRemarks?: string;
@@ -82,7 +82,7 @@ export interface DriverPerformance {
   totalOrders: number;
   delivered: number;
   failed: number;
-  podRate: string;
+  potRate: string;
   successRate: string;
   avgTime: string;
   rating: string;

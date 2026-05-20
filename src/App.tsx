@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/failed-pickups" element={<FailedPickups />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tasks" element={<Tasks />} />
-            <Route path="/pod-records" element={<DeliveryOrders />} />
+            <Route path="/POT-records" element={<DeliveryOrders />} />
             <Route path="/activity-logs" element={<ActivityLogs />} />
             
             {/* Admin Only Routes */}

@@ -4,7 +4,7 @@ import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import type { DeliveryStatus } from '../../types';
+import type { DeliveryStatus, DeliveryOrder } from '../../types';
 import './DeliveryOrderDetail.css';
 
 export default function DeliveryOrderDetail() {
@@ -187,19 +187,25 @@ export default function DeliveryOrderDetail() {
 
           {/* Right Column - Sidebar */}
           <div className="detail-right">
-            {/* Proof of Delivery */}
+            {/* Proof of Transaction */}
             <div className="card">
               <div className="info-card-header">
                 <FileText size={18} />
-                <h4>Proof of Delivery</h4>
+                <h4>Proof of Transaction</h4>
               </div>
-              <div className="pod-placeholder">
-                <Image size={40} color="var(--text-secondary)" />
-                <p>{order.podStatus === 'Submitted' ? 'Proof of Delivery Attached' : 'No POD submitted yet'}</p>
+              <div className="pot-placeholder" style={order.potImage ? { padding: '10px' } : undefined}>
+                {order.potImage ? (
+                  <img src={order.potImage} alt="Proof of Transaction" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
+                ) : (
+                  <>
+                    <Image size={40} color="var(--text-secondary)" />
+                    <p>{order.potStatus === 'Submitted' ? 'Proof of Transaction Attached' : 'No POT submitted yet'}</p>
+                  </>
+                )}
               </div>
-              <div className="pod-fields">
-                <div className="pod-field"><span>Recipient Name</span><span>{order.recipientName}</span></div>
-                <div className="pod-field"><span>Status</span><span>{order.podStatus}</span></div>
+              <div className="pot-fields">
+                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><span>Recipient Name</span><span>{order.recipientName}</span></div>
+                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.potStatus}</span></div>
               </div>
             </div>
 
@@ -221,7 +227,7 @@ export default function DeliveryOrderDetail() {
                 <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{order.waybillNo}</span></div>
                 <div className="summary-field"><span>Current Status</span><StatusBadge status={order.status} size="sm" /></div>
                 <div className="summary-field"><span>Expected Delivery</span><span>{order.expectedDelivery}</span></div>
-                <div className="summary-field"><span>POD Status</span><span className="summary-val" style={{ color: order.podStatus === 'Not Submitted' ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.podStatus}</span></div>
+                <div className="summary-field"><span>POT Status</span><span className="summary-val" style={{ color: order.potStatus === 'Not Submitted' ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.potStatus}</span></div>
               </div>
             </div>
           </div>

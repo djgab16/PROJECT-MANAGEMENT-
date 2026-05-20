@@ -173,7 +173,7 @@
 }
 
 /* POD */
-.pod-placeholder {
+.pot-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -186,18 +186,18 @@
   margin-bottom: 12px;
 }
 
-.pod-placeholder p {
+.pot-placeholder p {
   font-size: 0.82rem;
   color: var(--text-secondary);
 }
 
-.pod-fields {
+.pot-fields {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
-.pod-field {
+.pot-field {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
@@ -205,15 +205,15 @@
   font-size: 0.82rem;
 }
 
-.pod-field:last-child {
+.pot-field:last-child {
   border-bottom: none;
 }
 
-.pod-field span:first-child {
+.pot-field span:first-child {
   color: var(--text-secondary);
 }
 
-.pod-field span:last-child {
+.pot-field span:last-child {
   color: var(--text-secondary);
 }
 

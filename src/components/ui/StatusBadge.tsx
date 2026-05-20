@@ -1,8 +1,8 @@
-import type { DeliveryStatus, AccountStatus, PODStatus } from '../../types';
+import type { DeliveryStatus, AccountStatus, POTStatus } from '../../types';
 import './StatusBadge.css';
 
 interface StatusBadgeProps {
-  status: DeliveryStatus | AccountStatus | PODStatus | string;
+  status: DeliveryStatus | AccountStatus | POTStatus | string;
   size?: 'sm' | 'md';
 }
 
@@ -16,7 +16,7 @@ const statusConfig: Record<string, { className: string; label?: string }> = {
   'Returned': { className: 'status-failed' },
   'Locked': { className: 'status-locked' },
   'Submitted': { className: 'status-active', label: 'Submitted' },
-  'No POD': { className: 'status-failed', label: 'No POD' },
+  'No POT': { className: 'status-failed', label: 'No POT' },
   'Not Submitted': { className: 'status-pending', label: 'Not Submitted' },
   'Urgent': { className: 'status-failed' },
   'Success': { className: 'status-active' },

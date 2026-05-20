@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import StatusBadge from '../../components/ui/StatusBadge';
-import PODModal from './components/PODModal';
+import POTModal from './components/POTModal';
 import FailureModal from './components/FailureModal';
 import './DriverDeliveryDetail.css';
 
@@ -13,7 +13,7 @@ export default function DriverDeliveryDetail() {
   const { deliveryOrders, updateDeliveryOrder, addActivityLog } = useData();
 
   const [order, setOrder] = useState(deliveryOrders.find(o => o.id === id));
-  const [showPODModal, setShowPODModal] = useState(false);
+  const [showPOTModal, setShowPOTModal] = useState(false);
   const [showFailureModal, setShowFailureModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -68,12 +68,12 @@ export default function DriverDeliveryDetail() {
     });
   };
 
-  const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
+  const handlePOTSubmit = (data: { potImage: string; recipientName: string }) => {
     withLocation((coords) => {
       updateDeliveryOrder(order.id, {
         status: 'Delivered',
-        podStatus: 'Submitted',
-        podImage: data.podImage,
+        potStatus: 'Submitted',
+        potImage: data.potImage,
         recipientName: data.recipientName,
         dateCompleted: new Date().toLocaleString(),
         gpsCoordinates: coords || undefined
@@ -85,11 +85,11 @@ export default function DriverDeliveryDetail() {
         userRole: 'DRIVER',
         userInitials: order.driverInitials || 'DR',
         userColor: order.driverColor || '#000',
-        action: 'POD Upload',
+        action: 'POT Upload',
         description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
         reference: order.waybillNo
       });
-      setShowPODModal(false);
+      setShowPOTModal(false);
       navigate('/driver/dashboard');
     });
   };
@@ -183,7 +183,7 @@ export default function DriverDeliveryDetail() {
           <div className="split-actions">
             <button 
               className="btn btn-success btn-massive"
-              onClick={() => setShowPODModal(true)}
+              onClick={() => setShowPOTModal(true)}
               disabled={isUpdating}
             >
               <CheckCircle size={20} />
@@ -202,10 +202,10 @@ export default function DriverDeliveryDetail() {
       </div>
 
       {/* Modals */}
-      {showPODModal && (
-        <PODModal 
-          onClose={() => setShowPODModal(false)}
-          onSubmit={handlePODSubmit}
+      {showPOTModal && (
+        <POTModal 
+          onClose={() => setShowPOTModal(false)}
+          onSubmit={handlePOTSubmit}
           defaultRecipient={order.recipientName}
         />
       )}

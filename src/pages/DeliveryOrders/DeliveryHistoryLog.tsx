@@ -119,14 +119,14 @@ export default function DeliveryHistoryLog() {
                     <div key={log.id} className="timeline-entry">
                       <div className={`timeline-icon ${isCurrent ? 'completed' : isCompleted ? 'pending' : 'pending'}`}>
                         {log.action === 'Create' ? <Package size={14} /> : 
-                         log.action === 'POD Upload' ? <ImageIcon size={14} /> : 
+                         log.action === 'POT Upload' ? <ImageIcon size={14} /> : 
                          isCurrent ? <CheckCircle2 size={16} /> : <Clock size={14} />}
                       </div>
                       <div className={`timeline-content ${isCurrent ? 'border-left-green' : ''}`}>
                         <div className="timeline-header">
                           <h4>
                             {log.action === 'Create' ? 'Order Created' : 
-                             log.action === 'POD Upload' ? 'Proof of Delivery (POD) Submitted' : 
+                             log.action === 'POT Upload' ? 'Proof of Transaction (POT) Submitted' : 
                              log.description.includes('Completed') ? 'Order Marked as Completed' : 
                              'Status Updated'}
                             {log.action !== 'Create' && <span style={{ fontSize: '0.8rem', marginLeft: '12px', fontWeight: 'normal', color: 'var(--text-secondary)' }}>● {log.action}</span>}
@@ -138,7 +138,7 @@ export default function DeliveryHistoryLog() {
                         </div>
                         <div className="timeline-meta">
                           <div className="meta-item"><span style={{ color: 'var(--text-muted)' }}>👤 {log.userName} ({log.userRole === 'DRIVER' ? 'Driver' : 'System Auto'})</span></div>
-                          {log.action === 'POD Upload' && <div className="meta-item ml-2"><ImageIcon size={12} /> Photo attached</div>}
+                          {log.action === 'POT Upload' && <div className="meta-item ml-2"><ImageIcon size={12} /> Photo attached</div>}
                         </div>
                       </div>
                     </div>
@@ -165,8 +165,8 @@ export default function DeliveryHistoryLog() {
                   <div className="summary-stat-label">Status Changes</div>
                 </div>
                 <div className="summary-stat-card">
-                  <div className="summary-stat-val" style={{ color: 'var(--text-primary)' }}>{order.podStatus === 'Submitted' ? '1' : '0'}</div>
-                  <div className="summary-stat-label">POD Submitted</div>
+                  <div className="summary-stat-val" style={{ color: 'var(--text-primary)' }}>{order.potStatus === 'Submitted' ? '1' : '0'}</div>
+                  <div className="summary-stat-label">POT Submitted</div>
                 </div>
               </div>
             </div>

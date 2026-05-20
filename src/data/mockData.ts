@@ -13,7 +13,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-123-4567', senderAddress: 'Rockwell Dr., Brgy. Poblacion, Makati City, Metro Manila',
     recipientName: 'Dela Cruz, Maria', recipientContact: '0932-987-6543', recipientAddress: '142 Roces Ave., Brgy. Paligsahan, Quezon City',
     area: 'Quezon City', landmark: 'Near Sct. Alcaraz St.', driverName: 'Conag, Reca M.', driverInitials: 'RC', driverColor: '#00A99D',
-    status: 'In Transit', podStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Electronics — Shopee order #LZD-88201',
+    status: 'In Transit', potStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Electronics — Shopee order #LZD-88201',
     itemCount: 2, weight: '1.2 kg', declaredValue: '₱ 2,500.00', specialInstructions: 'Fragile, handle with care',
     orderDate: 'March 29, 2026', expectedDelivery: 'March 31, 2026', encodedBy: 'Gabriel, David Jr.',
     dateEncoded: 'Mar 29, 8:05 AM', lastUpdated: 'Mar 29, 9:41 AM', updatedBy: 'Conag, Reca M.', route: 'Quezon City'
@@ -23,7 +23,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-123-4567', senderAddress: 'Rockwell Dr., Brgy. Poblacion, Makati City',
     recipientName: 'Ocampo, Cecilia', recipientContact: '0918-555-1234', recipientAddress: 'Brgy. Sta. Mesa Heights, QC',
     area: 'Caloocan City', driverName: 'Conag, Reca M.', driverInitials: 'RC', driverColor: '#00A99D',
-    status: 'Delivered', podStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Fashion accessories',
+    status: 'Delivered', potStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Fashion accessories',
     itemCount: 1, weight: '0.5 kg', declaredValue: '₱ 890.00',
     orderDate: 'March 29, 2026', expectedDelivery: 'March 30, 2026', dateCompleted: 'Mar 29, 2026 · 9:52 AM',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 29, 8:10 AM', lastUpdated: 'Mar 29, 9:52 AM', updatedBy: 'Conag, Reca M.', route: 'Caloocan City'
@@ -33,7 +33,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-555-9876', senderAddress: 'Ayala Ave., Makati City',
     recipientName: 'Santos, Jose', recipientContact: '0920-111-2222', recipientAddress: 'Ayala Ave., Makati',
     area: 'Makati City', driverName: 'Panaligan, S.', driverInitials: 'SP', driverColor: '#FF7B42',
-    status: 'Completed', podStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Home appliance',
+    status: 'Completed', potStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Home appliance',
     itemCount: 1, weight: '3.2 kg', declaredValue: '₱ 4,500.00',
     orderDate: 'March 28, 2026', expectedDelivery: 'March 29, 2026', dateCompleted: 'Mar 28, 2026 · 2:14 PM',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 28, 7:00 AM', lastUpdated: 'Mar 28, 2:14 PM', updatedBy: 'Panaligan, S.', route: 'Makati City'
@@ -43,7 +43,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-333-4444', senderAddress: 'BGC High St., Taguig',
     recipientName: 'Lim, Robert', recipientContact: '0921-333-4567', recipientAddress: 'BGC High St., Taguig',
     area: 'Taguig City', driverName: 'Dumlao, J.', driverInitials: 'JD', driverColor: '#4318FF',
-    status: 'Completed', podStatus: 'No POD', packageType: 'Document', packageDescription: 'Legal documents',
+    status: 'Completed', potStatus: 'No POT', packageType: 'Document', packageDescription: 'Legal documents',
     itemCount: 1, weight: '0.3 kg', declaredValue: '₱ 200.00',
     orderDate: 'March 28, 2026', expectedDelivery: 'March 29, 2026', dateCompleted: 'Mar 28, 2026 · 11:05 AM',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 28, 8:00 AM', lastUpdated: 'Mar 28, 11:05 AM', updatedBy: 'Dumlao, J.', route: 'Taguig City'
@@ -53,7 +53,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-555-9876', senderAddress: 'Kanlaon St., Mandaluyong',
     recipientName: 'Garcia, Ella', recipientContact: '0922-777-8888', recipientAddress: 'Kanlaon St., Mandaluyong',
     area: 'Mandaluyong', driverName: 'Panaligan, S.', driverInitials: 'SP', driverColor: '#FF7B42',
-    status: 'Completed', podStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Clothing',
+    status: 'Completed', potStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Clothing',
     itemCount: 3, weight: '1.5 kg', declaredValue: '₱ 1,800.00',
     orderDate: 'March 27, 2026', expectedDelivery: 'March 28, 2026', dateCompleted: 'Mar 27, 2026 · 4:30 PM',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 27, 9:00 AM', lastUpdated: 'Mar 27, 4:30 PM', updatedBy: 'Panaligan, S.', route: 'Mandaluyong'
@@ -63,7 +63,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-123-4567', senderAddress: 'Batangas St., Pasig',
     recipientName: 'Cruz, Benjamin', recipientContact: '0923-444-5555', recipientAddress: 'Batangas St., Pasig',
     area: 'Pasig City', driverName: 'Dumlao, J.', driverInitials: 'JD', driverColor: '#4318FF',
-    status: 'Completed', podStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Kitchen supplies',
+    status: 'Completed', potStatus: 'Submitted', packageType: 'Parcel', packageDescription: 'Kitchen supplies',
     itemCount: 2, weight: '2.1 kg', declaredValue: '₱ 3,200.00',
     orderDate: 'March 26, 2026', expectedDelivery: 'March 27, 2026', dateCompleted: 'Mar 26, 2026 · 1:48 PM',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 26, 8:30 AM', lastUpdated: 'Mar 26, 1:48 PM', updatedBy: 'Dumlao, J.', route: 'Pasig City'
@@ -73,7 +73,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-555-9876', senderAddress: 'Marikina City',
     recipientName: 'Torres, Miguel', recipientContact: '0924-666-7777', recipientAddress: 'Marikina City',
     area: 'Marikina City', driverName: '', driverInitials: '', driverColor: '',
-    status: 'Pending', podStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Mixed items',
+    status: 'Pending', potStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Mixed items',
     itemCount: 4, weight: '2.5 kg', declaredValue: '₱ 1,500.00',
     orderDate: 'March 26, 2026', expectedDelivery: 'March 28, 2026',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 26, 10:00 AM', lastUpdated: 'Mar 26, 10:00 AM', updatedBy: 'System', route: 'Marikina City'
@@ -83,7 +83,7 @@ export const deliveryOrders: DeliveryOrder[] = [
     contactNumber: '0917-555-9876', senderAddress: 'Caloocan City',
     recipientName: 'Reyes, Anna', recipientContact: '0925-888-9999', recipientAddress: 'Caloocan City',
     area: 'Caloocan City', driverName: 'Conag, Reca M.', driverInitials: 'RC', driverColor: '#00A99D',
-    status: 'Pending', podStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Beauty products',
+    status: 'Pending', potStatus: 'Not Submitted', packageType: 'Parcel', packageDescription: 'Beauty products',
     itemCount: 2, weight: '0.8 kg', declaredValue: '₱ 950.00',
     orderDate: 'March 27, 2026', expectedDelivery: 'March 29, 2026',
     encodedBy: 'Gabriel, David Jr.', dateEncoded: 'Mar 27, 9:00 AM', lastUpdated: 'Mar 27, 9:00 AM', updatedBy: 'System', route: 'Caloocan City'
@@ -92,7 +92,7 @@ export const deliveryOrders: DeliveryOrder[] = [
 
 export const notifications: Notification[] = [
   { id: '1', type: 'alert', title: 'Failed Pickup Alert', waybillNo: 'SPX-2026-0801', description: 'Package not picked up for 3 days. Marikina City. Immediate action required.', timestamp: '10:15 AM', date: 'March 29, 2026', source: 'Automated Alert', read: false, statusBadge: 'Urgent' },
-  { id: '2', type: 'success', title: 'POD Submitted', waybillNo: 'SPX-2026-0845', description: 'Conag, Reca M. submitted proof of delivery. Delivery auto-marked as Completed.', timestamp: '10:12 AM', date: 'March 29, 2026', source: 'Conag, Reca M.', read: false, statusBadge: 'Success' },
+  { id: '2', type: 'success', title: 'POT Submitted', waybillNo: 'SPX-2026-0845', description: 'Conag, Reca M. submitted proof of transaction. Delivery auto-marked as Completed.', timestamp: '10:12 AM', date: 'March 29, 2026', source: 'Conag, Reca M.', read: false, statusBadge: 'Success' },
   { id: '3', type: 'info', title: 'Status Updated', waybillNo: 'SPX-2026-0841', description: 'Delivery status changed from Pending → In Transit by Conag, Reca M.', timestamp: '10:11 AM', date: 'March 29, 2026', source: 'Conag, Reca M.', read: false, statusBadge: 'In Transit' },
   { id: '4', type: 'alert', title: 'Failed Pickup Alert', waybillNo: 'SPX-2026-0829', description: 'Package not picked up for 2 days. Caloocan City. Please coordinate with assigned driver.', timestamp: '10:00 AM', date: 'March 29, 2026', source: 'Automated Alert', read: false, statusBadge: 'Urgent' },
   { id: '5', type: 'info', title: 'New Delivery Order', waybillNo: 'SPX-2026-0849', description: 'New order created for TikTok Shop. Recipient: Villanueva, Carlos. Taguig City. Needs driver assignment.', timestamp: '10:00 AM', date: 'March 29, 2026', source: 'System', read: false, statusBadge: 'New' },
@@ -102,19 +102,19 @@ export const notifications: Notification[] = [
 
 export const activityLogs: ActivityLog[] = [
   { id: '1', timestamp: 'Mar 29, 10:22 AM', userName: 'Gabriel, D.', userRole: 'Dispatcher', userInitials: 'DG', userColor: '#00A99D', action: 'Update', description: 'Updated delivery status of SPX-2026-99205 to In Transit', reference: 'SPX-2026-99205' },
-  { id: '2', timestamp: 'Mar 29, 10:18 AM', userName: 'Conag, R.', userRole: 'Driver / Staff', userInitials: 'RC', userColor: '#FF7B42', action: 'POD Upload', description: 'Uploaded proof of delivery for SPX-2026-99201 — Recipient: J. Santos', reference: 'SPX-2026-99201' },
+  { id: '2', timestamp: 'Mar 29, 10:18 AM', userName: 'Conag, R.', userRole: 'Driver / Staff', userInitials: 'RC', userColor: '#FF7B42', action: 'POT Upload', description: 'Uploaded proof of transaction for SPX-2026-99201 — Recipient: J. Santos', reference: 'SPX-2026-99201' },
   { id: '3', timestamp: 'Mar 29, 10:05 AM', userName: 'Gabriel, D.', userRole: 'Dispatcher', userInitials: 'DG', userColor: '#00A99D', action: 'Assign', description: 'Assigned driver Panaligan, S. to order SPX-2026-99205', reference: 'SPX-2026-99205' },
   { id: '4', timestamp: 'Mar 29, 9:55 AM', userName: 'Gabriel, D.', userRole: 'Dispatcher', userInitials: 'DG', userColor: '#00A99D', action: 'Create', description: 'Created new delivery order SPX-2026-99210 for client SM Supermalls', reference: 'SPX-2026-99210' },
-  { id: '5', timestamp: 'Mar 29, 9:42 AM', userName: 'Conag, R.', userRole: 'Driver / Staff', userInitials: 'RC', userColor: '#FF7B42', action: 'POD Upload', description: 'Uploaded proof of delivery for SPX-2026-99289 — Recipient: L. Tan', reference: 'SPX-2026-99289' },
+  { id: '5', timestamp: 'Mar 29, 9:42 AM', userName: 'Conag, R.', userRole: 'Driver / Staff', userInitials: 'RC', userColor: '#FF7B42', action: 'POT Upload', description: 'Uploaded proof of transaction for SPX-2026-99289 — Recipient: L. Tan', reference: 'SPX-2026-99289' },
   { id: '6', timestamp: 'Mar 29, 9:30 AM', userName: 'Panaligan, S.', userRole: 'Driver / Staff', userInitials: 'SP', userColor: '#E31A1A', action: 'Update', description: 'Updated delivery status of SPX-2026-99187 to Failed Pickup', reference: 'SPX-2026-99187' },
   { id: '7', timestamp: 'Mar 29, 9:14 AM', userName: 'Gabriel, D.', userRole: 'Dispatcher', userInitials: 'DG', userColor: '#00A99D', action: 'Archive', description: 'Auto-archived completed delivery SPX-2026-99145 — Lazada Philippines', reference: 'SPX-2026-99145' },
   { id: '8', timestamp: 'Mar 29, 8:50 AM', userName: 'Dumlao, J.', userRole: 'Driver / Staff', userInitials: 'JD', userColor: '#4318FF', action: 'Login', description: 'User Dumlao, J. logged in to the Delivery Tracker System' },
 ];
 
 export const driverPerformance: DriverPerformance[] = [
-  { name: 'Conag, Reca M.', initials: 'RC', color: '#00A99D', totalOrders: 312, delivered: 298, failed: 14, podRate: '95.5%', successRate: '95.5%', avgTime: '3.8h', rating: 'Excellent' },
-  { name: 'Panaligan, Sofia Q.', initials: 'SP', color: '#FF7B42', totalOrders: 289, delivered: 271, failed: 18, podRate: '93.8%', successRate: '93.8%', avgTime: '4.1h', rating: 'Excellent' },
-  { name: 'Dumlao, Jhoyce A.', initials: 'JD', color: '#4318FF', totalOrders: 261, delivered: 248, failed: 13, podRate: '95.0%', successRate: '95.0%', avgTime: '4.6h', rating: 'Excellent' },
+  { name: 'Conag, Reca M.', initials: 'RC', color: '#00A99D', totalOrders: 312, delivered: 298, failed: 14, potRate: '95.5%', successRate: '95.5%', avgTime: '3.8h', rating: 'Excellent' },
+  { name: 'Panaligan, Sofia Q.', initials: 'SP', color: '#FF7B42', totalOrders: 289, delivered: 271, failed: 18, potRate: '93.8%', successRate: '93.8%', avgTime: '4.1h', rating: 'Excellent' },
+  { name: 'Dumlao, Jhoyce A.', initials: 'JD', color: '#4318FF', totalOrders: 261, delivered: 248, failed: 13, potRate: '95.0%', successRate: '95.0%', avgTime: '4.6h', rating: 'Excellent' },
 ];
 
 export const activityFeed = [

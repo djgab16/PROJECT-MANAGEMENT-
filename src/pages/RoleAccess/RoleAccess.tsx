@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 const permissionsData = [
   { module: 'View Dashboard Elements', op: true, admin: true },
   { module: 'Manage Delivery Orders', op: true, admin: true },
-  { module: 'Upload/Verify PODs', op: true, admin: true },
+  { module: 'Upload/Verify POTs', op: true, admin: true },
   { module: 'View Analytics & Summaries', op: false, admin: true },
   { module: 'Manage Employee Directory', op: false, admin: true },
   { module: 'View System Activity Logs', op: false, admin: true },

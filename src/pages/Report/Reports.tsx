@@ -87,7 +87,7 @@ export default function Reports() {
             <div className="stats-row" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
               <StatCard icon={<FileBarChart size={18} />} iconColor="var(--primary)" iconBg="var(--status-transit-bg)" label="TOTAL DELIVERIES" value="862" subtitle="+12.5% vs last month" subtitleColor="var(--status-active)" />
               <StatCard icon={<TrendingUp size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="SUCCESS RATE" value="94.8%" subtitle="+2.3% vs last month" subtitleColor="var(--status-active)" />
-              <StatCard icon={<CheckCircle2 size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="POD SUBMITTED" value="817" subtitle="94.8% completion rate" />
+              <StatCard icon={<CheckCircle2 size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="POT SUBMITTED" value="817" subtitle="94.8% completion rate" />
               <StatCard icon={<AlertTriangle size={18} />} iconColor="var(--status-failed)" iconBg="var(--status-failed-bg)" label="FAILED / RETURNED" value="45" subtitle="5.2% failure rate" subtitleColor="var(--status-failed)" />
               <StatCard icon={<Clock size={18} />} iconColor="var(--primary)" iconBg="var(--status-transit-bg)" label="AVG. DELIVERY TIME" value="4.2h" subtitle="-0.3h vs last month" subtitleColor="var(--status-active)" />
             </div>
@@ -151,7 +151,7 @@ export default function Reports() {
                     <th>TOTAL ORDERS</th>
                     <th>DELIVERED</th>
                     <th>FAILED</th>
-                    <th>POD RATE</th>
+                    <th>POT RATE</th>
                     <th>SUCCESS RATE</th>
                     <th>AVG. TIME</th>
                     <th>RATING</th>
@@ -171,8 +171,8 @@ export default function Reports() {
                       <td style={{ color: 'var(--status-failed)' }}>{d.failed}</td>
                       <td>
                         <div className="rate-bar-wrapper">
-                          <div className="rate-bar"><div className="rate-bar-fill" style={{ width: d.podRate }} /></div>
-                          {d.podRate}
+                          <div className="rate-bar"><div className="rate-bar-fill" style={{ width: d.potRate }} /></div>
+                          {d.potRate}
                         </div>
                       </td>
                       <td>{d.successRate}</td>
