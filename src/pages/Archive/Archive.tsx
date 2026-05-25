@@ -3,6 +3,7 @@ import { Search, Download, Eye, Archive as ArchiveIcon, Lock } from 'lucide-reac
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
+import EmptyState from '../../components/ui/EmptyState';
 import { useData } from '../../context/DataContext';
 import './Archive.css';
 
@@ -17,7 +18,7 @@ export default function Archive() {
   const [POTFilter, setPOTFilter] = useState('POT: All');
 
   const filteredOrders = archivedOrdersAll.filter(o => {
-    if (searchQuery && !o.waybillNo.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery && !(o.waybillNo || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
     if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;
     
@@ -29,11 +30,24 @@ export default function Archive() {
   const uniqueDrivers = Array.from(new Set(archivedOrdersAll.map(o => o.driverName).filter(Boolean)));
   const uniqueAreas = Array.from(new Set(archivedOrdersAll.map(o => o.area).filter(Boolean)));
 
+  const handleExport = () => {
+    const headers = ['Waybill No', 'Client', 'Recipient', 'Area', 'Driver', 'Date Completed', 'POT Status'];
+    const rows = filteredOrders.map(o => [o.waybillNo, o.clientName, o.recipientName, o.area, o.driverName, o.dateCompleted, o.potStatus].join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "archive_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <Header
         title="Data Archive"
-        actions={<button className="btn btn-outline btn-sm" id="export-archive"><Download size={14} /> Export Archive</button>}
+        actions={<button className="btn btn-outline btn-sm" id="export-archive" onClick={handleExport}><Download size={14} /> Export Archive</button>}
       />
       <div className="page-content">
         {/* Archive Banner */}
@@ -81,7 +95,7 @@ export default function Archive() {
             <option>POT: Submitted</option>
             <option>No POT</option>
           </select>
-          <button className="btn btn-outline btn-sm"><Download size={14} /> Export</button>
+          <button className="btn btn-outline btn-sm" onClick={handleExport}><Download size={14} /> Export</button>
         </div>
 
         {/* Table */}
@@ -110,8 +124,14 @@ export default function Archive() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                    No archived orders found matching your filters.
+                  <td colSpan={8} style={{ padding: 0 }}>
+                    <div style={{ padding: '24px' }}>
+                      <EmptyState
+                        icon={ArchiveIcon}
+                        title="No archived records found"
+                        description="We couldn't find any completed or delivered orders matching your search or filters."
+                      />
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -127,7 +147,7 @@ export default function Archive() {
                     </td>
                     <td>
                       <span>{order.recipientName}</span>
-                      <div className="cell-sub">{order.recipientAddress.substring(0, 25)}...</div>
+                      <div className="cell-sub">{(order.recipientAddress || '').substring(0, 25)}...</div>
                     </td>
                     <td>{order.area}</td>
                     <td>

@@ -20,8 +20,8 @@ export default function TrackDelivery() {
     const searchVal = typeof eOrString === 'string' ? eOrString : query;
     if (!searchVal.trim()) return;
 
-    const found = deliveryOrders.find(o => 
-      o.waybillNo.toLowerCase() === searchVal.toLowerCase().trim()
+    const found = deliveryOrders.find(
+      (o) => (o.waybillNo || '').toLowerCase() === searchVal.toLowerCase().trim()
     );
     
     if (found) {

@@ -75,6 +75,13 @@ export default function PublicTracking() {
               <div className="card results-header-card">
                 <h2>{data.currentStatusHeadline}</h2>
                 <span className="waybill-badge">{data.waybillNo}</span>
+                <button 
+                  className="btn btn-outline" 
+                  style={{ marginTop: '20px' }}
+                  onClick={() => setData(null)}
+                >
+                  Track Another Package
+                </button>
               </div>
               
               <div className="results-grid">

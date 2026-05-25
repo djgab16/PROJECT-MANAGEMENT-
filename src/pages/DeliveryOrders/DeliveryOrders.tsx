@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Pencil, Trash2, Image, PackageX } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
+import EmptyState from '../../components/ui/EmptyState';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import './DeliveryOrders.css';
@@ -25,9 +26,9 @@ export default function DeliveryOrders() {
 
   const filteredOrders = baseOrders.filter(order => {
     const matchesSearch =
-      order.waybillNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.recipientName.toLowerCase().includes(searchTerm.toLowerCase());
+      (order.waybillNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.recipientName || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'All Status' || order.status === statusFilter;
     const matchesArea = areaFilter === 'All Areas' || order.area === areaFilter;
@@ -172,7 +173,7 @@ export default function DeliveryOrders() {
                   </td>
                   <td>
                     <span>{order.recipientName}</span>
-                    <div className="cell-sub">{order.recipientAddress.substring(0, 30)}...</div>
+                    <div className="cell-sub">{(order.recipientAddress || '').substring(0, 30)}...</div>
                   </td>
                   <td>{order.area}</td>
                   <td>
@@ -187,7 +188,14 @@ export default function DeliveryOrders() {
                       <span className="cell-muted">Unassigned</span>
                     )}
                   </td>
-                  <td><StatusBadge status={order.status} size="sm" /></td>
+                  <td>
+                    <StatusBadge status={order.status} size="sm" />
+                    {order.podStatus === 'Submitted' && (
+                      <div className="cell-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: 'var(--status-active)' }}>
+                        <Image size={12} /> POD Attached
+                      </div>
+                    )}
+                  </td>
                   <td className="cell-actions">
                     <Link to={`/delivery-orders/${order.id}`} className="action-icon-btn" title="View">
                       <Eye size={14} />
@@ -207,8 +215,14 @@ export default function DeliveryOrders() {
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                    No delivery orders found matching your search.
+                  <td colSpan={7} style={{ padding: 0 }}>
+                    <div style={{ padding: '24px' }}>
+                      <EmptyState
+                        icon={PackageX}
+                        title="No delivery orders found"
+                        description="We couldn't find any delivery orders matching your current search or filter criteria."
+                      />
+                    </div>
                   </td>
                 </tr>
               )}

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Employee, DeliveryOrder, Notification, ActivityLog } from '../types';
-import { employees as initialEmployees, deliveryOrders as initialOrders, notifications as initialNotifications, activityLogs as initialLogs } from '../data/mockData';
 
 interface DataContextType {
   employees: Employee[];
@@ -25,39 +24,85 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>(() => {
-    // Force reload employees to reset IDs to 1-4 as requested
-    return initialEmployees;
+    const saved = localStorage.getItem('dts_employees_v2');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'EMP-001',
+        name: 'System Admin',
+        role: 'ADMIN',
+        systemAccess: 'All Systems',
+        status: 'Active',
+        initials: 'AD',
+        color: '#FFB547'
+      },
+      {
+        id: 'EMP-002',
+        name: 'Operations Team',
+        role: 'OP. TEAM',
+        systemAccess: 'Operations',
+        status: 'Active',
+        initials: 'OT',
+        color: '#01B574'
+      },
+      {
+        id: 'EMP-003',
+        name: 'Test Driver',
+        role: 'DRIVER',
+        systemAccess: 'Delivery Tracker',
+        status: 'Active',
+        initials: 'TD',
+        color: '#00A99D'
+      }
+    ];
   });
 
   const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrder[]>(() => {
-    const saved = localStorage.getItem('speedex_orders');
-    return saved ? JSON.parse(saved) : initialOrders;
+    const saved = localStorage.getItem('dts_orders');
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
-    // Force reload mock notifications so user can preview them
-    return initialNotifications;
+    const saved = localStorage.getItem('dts_notifications');
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
-    const saved = localStorage.getItem('speedex_logs');
-    return saved ? JSON.parse(saved) : initialLogs;
+    const saved = localStorage.getItem('dts_logs');
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('speedex_employees', JSON.stringify(employees));
+    try {
+      localStorage.setItem('dts_employees_v2', JSON.stringify(employees));
+    } catch (e) {
+      console.error('Failed to save employees to local storage', e);
+    }
   }, [employees]);
 
   useEffect(() => {
-    localStorage.setItem('speedex_orders', JSON.stringify(deliveryOrders));
+    try {
+      localStorage.setItem('dts_orders', JSON.stringify(deliveryOrders));
+    } catch (e) {
+      console.error('Failed to save orders to local storage', e);
+      alert("Storage limit reached! Your device's local storage is full. Please clear your browser data or use smaller images for Proof of Transaction.");
+    }
   }, [deliveryOrders]);
 
   useEffect(() => {
-    localStorage.setItem('speedex_notifications', JSON.stringify(notifications));
+    try {
+      localStorage.setItem('dts_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.error('Failed to save notifications to local storage', e);
+    }
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem('speedex_logs', JSON.stringify(activityLogs));
+    try {
+      localStorage.setItem('dts_logs', JSON.stringify(activityLogs));
+    } catch (e) {
+      console.error('Failed to save logs to local storage', e);
+    }
   }, [activityLogs]);
 
   const addEmployee = (employee: Employee) => {

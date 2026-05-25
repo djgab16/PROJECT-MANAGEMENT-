@@ -16,7 +16,7 @@ export default function QRScannerView() {
       
       // Look for a delivery order with matching waybill
       const order = deliveryOrders.find(
-        (o) => o.waybillNo.toLowerCase() === scannedText.toLowerCase() || o.id === scannedText
+        (o) => (o.waybillNo || '').toLowerCase() === scannedText.toLowerCase() || o.id === scannedText
       );
 
       if (order) {

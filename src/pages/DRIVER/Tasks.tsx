@@ -3,7 +3,8 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { Plus } from 'lucide-react';
+import { Plus, ClipboardList } from 'lucide-react';
+import EmptyState from '../../components/ui/EmptyState';
 import type { DeliveryOrder } from '../../types';
 import './Tasks.css';
 
@@ -14,24 +15,32 @@ interface ColumnProps {
 }
 
 const Column = ({ title, orders, onNavigate }: ColumnProps) => (
-  <div className="task-column" style={{ flex: 1, background: 'var(--bg-main)', borderRadius: '8px', padding: '16px', minHeight: '400px' }}>
+  <div className="task-column" style={{ flex: 1, background: 'var(--bg-card)', borderRadius: '12px', padding: '16px', minHeight: '400px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
     <h4 style={{ marginBottom: '16px', borderBottom: '1px solid #E9EDF7', paddingBottom: '8px' }}>{title} <span style={{ color: 'var(--text-muted)' }}>({orders.length})</span></h4>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {orders.map(o => (
-        <div key={o.id} className="task-card" onClick={() => onNavigate(`/delivery-orders/${o.id}`)}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <strong style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{o.waybillNo}</strong>
-          </div>
-          <div style={{ fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-main)' }}>{o.recipientAddress.substring(0, 35)}...</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {o.driverInitials && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: o.driverColor, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem' }}>{o.driverInitials}</div>}
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{o.driverName ? o.driverName.split(',')[0] : 'Unassigned'}</span>
+      {orders.length === 0 ? (
+        <EmptyState
+          icon={ClipboardList}
+          title="No tasks"
+          description={`There are no tasks in ${title}.`}
+        />
+      ) : (
+        orders.map(o => (
+          <div key={o.id} className="task-card" onClick={() => onNavigate(`/delivery-orders/${o.id}`)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <strong style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{o.waybillNo}</strong>
             </div>
-            <StatusBadge status={o.status} size="sm" />
+            <div style={{ fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-main)' }}>{(o.recipientAddress || '').substring(0, 35)}...</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {o.driverInitials && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: o.driverColor, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem' }}>{o.driverInitials}</div>}
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{o.driverName ? o.driverName.split(',')[0] : 'Unassigned'}</span>
+              </div>
+              <StatusBadge status={o.status} size="sm" />
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   </div>
 );
@@ -46,7 +55,7 @@ export default function Tasks() {
   const isOpTeam = user?.role === 'OP. TEAM';
 
   const visibleOrders = isDriver 
-    ? deliveryOrders.filter(o => o.driverName === user?.name)
+    ? deliveryOrders.filter(o => o.driverName === user?.name || !o.driverName)
     : isOpTeam
     ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
     : deliveryOrders;

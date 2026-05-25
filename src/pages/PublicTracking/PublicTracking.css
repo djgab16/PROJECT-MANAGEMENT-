@@ -30,6 +30,9 @@
 .logo-brand {
   display: flex;
   align-items: center;
+  background-color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
 }
 
 .public-main {

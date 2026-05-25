@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import StatusBadge from '../../components/ui/StatusBadge';
-import POTModal from './components/POTModal';
+import PODModal from './components/PODModal';
 import FailureModal from './components/FailureModal';
 import './DriverDeliveryDetail.css';
 
@@ -13,7 +13,7 @@ export default function DriverDeliveryDetail() {
   const { deliveryOrders, updateDeliveryOrder, addActivityLog } = useData();
 
   const [order, setOrder] = useState(deliveryOrders.find(o => o.id === id));
-  const [showPOTModal, setShowPOTModal] = useState(false);
+  const [showPODModal, setShowPODModal] = useState(false);
   const [showFailureModal, setShowFailureModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -68,12 +68,12 @@ export default function DriverDeliveryDetail() {
     });
   };
 
-  const handlePOTSubmit = (data: { potImage: string; recipientName: string }) => {
+  const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
     withLocation((coords) => {
       updateDeliveryOrder(order.id, {
         status: 'Delivered',
-        potStatus: 'Submitted',
-        potImage: data.potImage,
+        podStatus: 'Submitted',
+        podImage: data.podImage,
         recipientName: data.recipientName,
         dateCompleted: new Date().toLocaleString(),
         gpsCoordinates: coords || undefined
@@ -89,7 +89,7 @@ export default function DriverDeliveryDetail() {
         description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
         reference: order.waybillNo
       });
-      setShowPOTModal(false);
+      setShowPODModal(false);
       navigate('/driver/dashboard');
     });
   };
@@ -166,6 +166,27 @@ export default function DriverDeliveryDetail() {
         </div>
       </div>
 
+      {order.podImage && (
+        <div className="detail-section" style={{ marginTop: '16px' }}>
+          <h3>Proof of Delivery</h3>
+          <div className="pot-preview-container" style={{ marginTop: '12px', background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
+            <img 
+              src={order.podImage} 
+              alt="Proof of Delivery" 
+              style={{ width: '100%', borderRadius: '8px', maxHeight: '300px', objectFit: 'contain' }} 
+            />
+            <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Received by:</span>
+              <span style={{ fontWeight: '600' }}>{order.recipientName}</span>
+            </div>
+            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Delivered at:</span>
+              <span style={{ fontWeight: '500' }}>{order.dateCompleted || 'Completed'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="action-buttons-container">
         {order.status === 'Pending' && (
@@ -183,7 +204,7 @@ export default function DriverDeliveryDetail() {
           <div className="split-actions">
             <button 
               className="btn btn-success btn-massive"
-              onClick={() => setShowPOTModal(true)}
+              onClick={() => setShowPODModal(true)}
               disabled={isUpdating}
             >
               <CheckCircle size={20} />
@@ -202,10 +223,10 @@ export default function DriverDeliveryDetail() {
       </div>
 
       {/* Modals */}
-      {showPOTModal && (
-        <POTModal 
-          onClose={() => setShowPOTModal(false)}
-          onSubmit={handlePOTSubmit}
+      {showPODModal && (
+        <PODModal 
+          onClose={() => setShowPODModal(false)}
+          onSubmit={handlePODSubmit}
           defaultRecipient={order.recipientName}
         />
       )}

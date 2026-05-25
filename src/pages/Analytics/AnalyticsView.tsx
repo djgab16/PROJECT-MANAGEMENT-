@@ -1,10 +1,39 @@
 import Header from '../../components/layout/Header';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { dailyDeliveries } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 import '../../pages/Report/Reports.css';
 
 export default function AnalyticsView() {
-  const computedDailyDeliveries = dailyDeliveries;
+  const { deliveryOrders } = useData();
+
+  const generateDailyDeliveries = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const data = days.map(day => ({ day, weekday: 0, weekend: 0, peak: 0 }));
+
+    deliveryOrders.forEach(order => {
+      if (order.status !== 'Pending') {
+        const dateStr = order.dateCompleted || order.lastUpdated || order.orderDate;
+        if (!dateStr) return;
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return;
+        
+        const dayIdx = date.getDay();
+        const isWeekend = dayIdx === 0 || dayIdx === 6;
+        const isPeak = date.getHours() >= 16 || date.getHours() <= 8;
+        
+        if (isWeekend) data[dayIdx].weekend += 1;
+        else data[dayIdx].weekday += 1;
+        if (isPeak) data[dayIdx].peak += 1;
+      }
+    });
+
+    const sunday = data.shift();
+    if (sunday) data.push(sunday);
+    
+    return data;
+  };
+
+  const computedDailyDeliveries = generateDailyDeliveries();
 
   return (
     <>

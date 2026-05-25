@@ -26,7 +26,7 @@ export async function mockFetchTracking(waybill: string): Promise<PublicTracking
         return;
       }
 
-      const savedOrders = localStorage.getItem('speedex_orders');
+      const savedOrders = localStorage.getItem('dts_orders');
       if (savedOrders) {
         const orders = JSON.parse(savedOrders);
         const order = orders.find((o: any) => o.waybillNo.toUpperCase() === cleanWaybill);

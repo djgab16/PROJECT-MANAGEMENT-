@@ -1,26 +1,58 @@
-import { Users, ClipboardList, CheckCircle2, AlertCircle, Pencil, X, Package } from 'lucide-react';
+import { Users, ClipboardList, CheckCircle2, Package } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatCard from '../../components/ui/StatCard';
-import RoleBadge from '../../components/ui/RoleBadge';
-import StatusBadge from '../../components/ui/StatusBadge';
+
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { dailyDeliveries } from '../../data/mockData';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { employees, deleteEmployee, deliveryOrders, activityLogs } = useData();
+  const { employees, deliveryOrders, activityLogs } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const totalEmployees = employees.length;
   const activeTasks = deliveryOrders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
   const completedTasks = deliveryOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
-  const lockedAccounts = employees.filter(e => e.status === 'Locked').length;
 
   const isAdmin = user?.role === 'ADMIN';
+
+  const generateDailyDeliveries = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const data = days.map(day => ({ day, weekday: 0, weekend: 0, peak: 0 }));
+
+    deliveryOrders.forEach(order => {
+      if (order.status !== 'Pending') {
+        const dateStr = order.dateCompleted || order.lastUpdated || order.orderDate;
+        if (!dateStr) return;
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return;
+        
+        const dayIdx = date.getDay();
+        const isWeekend = dayIdx === 0 || dayIdx === 6;
+        const isPeak = date.getHours() >= 16 || date.getHours() <= 8;
+        
+        if (isWeekend) {
+          data[dayIdx].weekend += 1;
+        } else {
+          data[dayIdx].weekday += 1;
+        }
+        
+        if (isPeak) {
+          data[dayIdx].peak += 1;
+        }
+      }
+    });
+
+    // Shift Sunday to the end to make week start on Monday
+    const sunday = data.shift();
+    if (sunday) data.push(sunday);
+    
+    return data;
+  };
+
+  const dynamicDailyDeliveries = generateDailyDeliveries();
 
   return (
     <>
@@ -138,7 +170,7 @@ export default function Dashboard() {
             </div>
             <div style={{ width: '100%', height: '220px', marginTop: '16px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyDeliveries}>
+                <BarChart data={dynamicDailyDeliveries}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E9EDF7" />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#A3AED0' }} />
                   <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} />

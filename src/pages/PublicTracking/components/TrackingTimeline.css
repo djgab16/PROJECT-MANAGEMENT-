@@ -106,6 +106,7 @@
   align-items: flex-end;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .history-time .time {

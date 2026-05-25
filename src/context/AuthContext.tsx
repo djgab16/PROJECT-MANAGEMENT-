@@ -12,13 +12,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Employee | null>(() => {
-    const savedUser = localStorage.getItem('speedex_user');
+    const savedUser = localStorage.getItem('dts_user');
     if (savedUser) {
       const parsed = JSON.parse(savedUser) as Employee;
-      // Migration: Update name if it matches the old Admin
-      if (parsed.id === 'EMP-001' && parsed.name === 'Vanessa D. Reuteras') {
-        return { ...parsed, name: 'Taromaru Rex Gabriel' };
-      }
       return parsed;
     }
     return null;
@@ -26,12 +22,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (employee: Employee) => {
     setUser(employee);
-    localStorage.setItem('speedex_user', JSON.stringify(employee));
+    localStorage.setItem('dts_user', JSON.stringify(employee));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('speedex_user');
+    localStorage.removeItem('dts_user');
   };
 
   const isAuthenticated = !!user;

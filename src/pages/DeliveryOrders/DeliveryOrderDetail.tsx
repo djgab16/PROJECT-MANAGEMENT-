@@ -191,7 +191,7 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <div className="info-card-header">
                 <FileText size={18} />
-                <h4>Proof of Transaction</h4>
+                <h4>Proof of Transaction (Receipt)</h4>
               </div>
               <div className="pot-placeholder" style={order.potImage ? { padding: '10px' } : undefined}>
                 {order.potImage ? (
@@ -199,13 +199,34 @@ export default function DeliveryOrderDetail() {
                 ) : (
                   <>
                     <Image size={40} color="var(--text-secondary)" />
-                    <p>{order.potStatus === 'Submitted' ? 'Proof of Transaction Attached' : 'No POT submitted yet'}</p>
+                    <p>{order.potStatus === 'Submitted' ? 'Proof of Transaction Attached' : 'No receipt submitted yet'}</p>
+                  </>
+                )}
+              </div>
+              <div className="pot-fields">
+                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.potStatus}</span></div>
+              </div>
+            </div>
+
+            {/* Proof of Delivery */}
+            <div className="card">
+              <div className="info-card-header">
+                <FileText size={18} />
+                <h4>Proof of Delivery</h4>
+              </div>
+              <div className="pot-placeholder" style={order.podImage ? { padding: '10px' } : undefined}>
+                {order.podImage ? (
+                  <img src={order.podImage} alt="Proof of Delivery" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
+                ) : (
+                  <>
+                    <Image size={40} color="var(--text-secondary)" />
+                    <p>{order.podStatus === 'Submitted' ? 'Proof of Delivery Attached' : 'No POD submitted yet'}</p>
                   </>
                 )}
               </div>
               <div className="pot-fields">
                 <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><span>Recipient Name</span><span>{order.recipientName}</span></div>
-                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.potStatus}</span></div>
+                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.podStatus || 'Not Submitted'}</span></div>
               </div>
             </div>
 
@@ -227,7 +248,11 @@ export default function DeliveryOrderDetail() {
                 <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{order.waybillNo}</span></div>
                 <div className="summary-field"><span>Current Status</span><StatusBadge status={order.status} size="sm" /></div>
                 <div className="summary-field"><span>Expected Delivery</span><span>{order.expectedDelivery}</span></div>
+                {order.dateCompleted && (
+                  <div className="summary-field"><span>Date Completed</span><span className="summary-val" style={{ color: 'var(--status-active)' }}>{order.dateCompleted}</span></div>
+                )}
                 <div className="summary-field"><span>POT Status</span><span className="summary-val" style={{ color: order.potStatus === 'Not Submitted' ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.potStatus}</span></div>
+                <div className="summary-field"><span>POD Status</span><span className="summary-val" style={{ color: (!order.podStatus || order.podStatus === 'Not Submitted') ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.podStatus || 'Not Submitted'}</span></div>
               </div>
             </div>
           </div>

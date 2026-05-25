@@ -17,7 +17,7 @@ export default function FailedPickups() {
   const [areaFilter, setAreaFilter] = useState('All Areas');
 
   const failedOrders = failedOrdersAll.filter(o => {
-    if (searchQuery && !o.waybillNo.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery && !(o.waybillNo || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
     if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;
     return true;

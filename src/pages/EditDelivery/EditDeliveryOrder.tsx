@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Calendar, Save, Undo2, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import Header from '../../components/layout/Header';
@@ -7,6 +7,29 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import type { DeliveryOrder } from '../../types';
 import './EditDeliveryOrder.css';
+
+const REGIONS = [
+  {
+    name: "National Capital Region (Metro Manila)",
+    cities: ["Manila", "Quezon City", "Makati", "Pasig", "Taguig", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa", "Marikina", "Mandaluyong", "San Juan", "Caloocan", "Malabon", "Navotas", "Valenzuela"]
+  },
+  {
+    name: "Central Luzon",
+    cities: ["Angeles", "San Fernando", "Olongapo", "Tarlac City", "Cabanatuan"]
+  },
+  {
+    name: "CALABARZON",
+    cities: ["Antipolo", "Dasmariñas", "Bacoor", "Tagaytay", "Batangas City", "Lucena"]
+  },
+  {
+    name: "Visayas",
+    cities: ["Cebu City", "Mandaue", "Lapu-Lapu", "Iloilo City", "Bacolod", "Tacloban"]
+  },
+  {
+    name: "Mindanao",
+    cities: ["Davao City", "Cagayan de Oro", "Zamboanga City", "General Santos", "Butuan"]
+  }
+];
 
 export default function EditDeliveryOrder() {
   const { id } = useParams();
@@ -20,6 +43,26 @@ export default function EditDeliveryOrder() {
   const inputStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
 
   const [formData, setFormData] = useState<Partial<DeliveryOrder>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+
+  const getInputStyle = (field: string, extraStyle = {}) => {
+    const baseStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
+    const errorStyle = errors[field] ? { borderColor: 'var(--status-failed)' } : {};
+    return { ...baseStyle, ...errorStyle, ...extraStyle };
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (areaRef.current && !areaRef.current.contains(event.target as Node)) {
+        setShowAreaDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isNew) {
@@ -61,6 +104,9 @@ export default function EditDeliveryOrder() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,45 +125,63 @@ export default function EditDeliveryOrder() {
   };
 
   const handleSave = () => {
-    if (!formData.expectedDelivery || !formData.area || !formData.clientName || !formData.senderAddress || !formData.recipientName || !formData.recipientContact || !formData.recipientAddress) {
-      alert('Please fill in all required fields (marked with *).');
+    const newErrors: Record<string, string> = {};
+    if (!formData.expectedDelivery) newErrors.expectedDelivery = 'Expected Delivery date is required';
+    if (!formData.area) newErrors.area = 'Area / Route is required';
+    if (!formData.clientName) newErrors.clientName = 'Client Name is required';
+    if (!formData.senderAddress) newErrors.senderAddress = 'Sender Address is required';
+    if (!formData.recipientName) newErrors.recipientName = 'Recipient Name is required';
+    if (!formData.recipientContact) newErrors.recipientContact = 'Recipient Contact is required';
+    if (!formData.recipientAddress) newErrors.recipientAddress = 'Delivery Address is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Find the first error element and scroll to it (rough approximation)
+      const firstErrorElement = document.querySelector('.form-input[style*="var(--status-failed)"]');
+      if (firstErrorElement) firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    if (isNew) {
-      const newOrder = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9),
-      } as DeliveryOrder;
+    setErrors({});
+    setIsSubmitting(true);
 
-      addDeliveryOrder(newOrder);
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#00A99D',
-        action: 'Create',
-        description: `Created new delivery order ${newOrder.waybillNo}`,
-        reference: newOrder.waybillNo
-      });
-      navigate('/delivery-orders');
-    } else {
-      updateDeliveryOrder(id!, formData);
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#FF7B42',
-        action: 'Update',
-        description: `Updated delivery order ${formData.waybillNo}`,
-        reference: formData.waybillNo
-      });
-      navigate(isDriver ? '/tasks' : `/delivery-orders/${id}`);
-    }
+    setTimeout(() => {
+      if (isNew) {
+        const newOrder = {
+          ...formData,
+          id: Math.random().toString(36).substr(2, 9),
+        } as DeliveryOrder;
+
+        addDeliveryOrder(newOrder);
+        addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: user?.name || 'System',
+          userRole: user?.role || 'Staff',
+          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+          userColor: '#00A99D',
+          action: 'Create',
+          description: `Created new delivery order ${newOrder.waybillNo}`,
+          reference: newOrder.waybillNo
+        });
+        navigate('/delivery-orders');
+      } else {
+        updateDeliveryOrder(id!, formData);
+        addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: user?.name || 'System',
+          userRole: user?.role || 'Staff',
+          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+          userColor: '#FF7B42',
+          action: 'Update',
+          description: `Updated delivery order ${formData.waybillNo}`,
+          reference: formData.waybillNo
+        });
+        navigate(isDriver ? '/tasks' : `/delivery-orders/${id}`);
+      }
+      setIsSubmitting(false);
+    }, 600);
   };
 
   const handleDelete = () => {
@@ -199,29 +263,90 @@ export default function EditDeliveryOrder() {
                       value={formData.expectedDelivery}
                       onChange={handleChange}
                       readOnly={isReadOnly}
-                      style={{ paddingLeft: '42px', borderColor: 'var(--primary)', ...inputStyle }}
+                      style={getInputStyle('expectedDelivery', { paddingLeft: '42px' })}
                     />
                   </div>
+                  {errors.expectedDelivery && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.expectedDelivery}</span>}
                 </div>
               </div>
-              <div className="form-row three-col" style={{ marginTop: '16px' }}>
-                <div className="form-group">
+              <div className="form-row two-col" style={{ marginTop: '16px' }}>
+                <div className="form-group" ref={areaRef} style={{ position: 'relative' }}>
                   <label className="form-label">AREA / ROUTE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="area" className="form-input" value={formData.area} onChange={handleChange} placeholder="e.g. Quezon City" readOnly={isReadOnly} style={inputStyle} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">PACKAGE TYPE</label>
-                  <input name="packageType" className="form-input" value={formData.packageType} onChange={handleChange} placeholder="e.g. Parcel" readOnly={isReadOnly} style={inputStyle} />
+                  <input 
+                    name="area" 
+                    className="form-input" 
+                    value={formData.area || ''} 
+                    onChange={(e) => {
+                      handleChange(e);
+                      setShowAreaDropdown(true);
+                    }} 
+                    onFocus={() => setShowAreaDropdown(true)}
+                    placeholder="Search or select a city..." 
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('area')} 
+                    autoComplete="off"
+                  />
+                  {showAreaDropdown && !isReadOnly && (
+                    <div className="search-popover" style={{ top: 'calc(100% + 4px)', maxHeight: '250px', overflowY: 'auto' }}>
+                      {REGIONS.map(region => {
+                        const filteredCities = region.cities.filter(c => c.toLowerCase().includes((formData.area || '').toLowerCase()));
+                        if (filteredCities.length === 0) return null;
+                        return (
+                          <div key={region.name} className="search-group">
+                            <div className="search-group-title">{region.name}</div>
+                            {filteredCities.map(city => (
+                              <div 
+                                key={city} 
+                                className="search-item" 
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, area: city }));
+                                  setErrors(prev => ({ ...prev, area: '' }));
+                                  setShowAreaDropdown(false);
+                                }}
+                              >
+                                <span className="search-item-main">{city}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {REGIONS.every(r => r.cities.filter(c => c.toLowerCase().includes((formData.area || '').toLowerCase())).length === 0) && (
+                        <div className="search-empty">No matching cities found</div>
+                      )}
+                    </div>
+                  )}
+                  {errors.area && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.area}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">STATUS</label>
-                  <select name="status" className="form-input" value={formData.status} onChange={handleChange}>
+                  <select name="status" className="form-input" value={formData.status} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
                     <option value="Pending">Pending</option>
                     <option value="In Transit">In Transit</option>
                     <option value="Delivered">Delivered</option>
                     <option value="Completed">Completed</option>
                     <option value="Failed">Failed</option>
                   </select>
+                </div>
+              </div>
+              <div className="form-row three-col" style={{ marginTop: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">PACKAGE TYPE / BOX</label>
+                  <select name="packageType" className="form-input" value={formData.packageType || ''} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
+                    <option value="">Select Box Type</option>
+                    <option value="Small Box">Small Box</option>
+                    <option value="Medium Box">Medium Box</option>
+                    <option value="Large Box">Large Box</option>
+                    <option value="Document / Pouch">Document / Pouch</option>
+                    <option value="Custom">Custom / Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">WEIGHT</label>
+                  <input name="weight" className="form-input" value={formData.weight || ''} onChange={handleChange} placeholder="e.g. 1.5 kg" readOnly={isReadOnly} style={inputStyle} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ITEM COUNT</label>
+                  <input type="number" name="itemCount" className="form-input" value={formData.itemCount || ''} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
                 </div>
               </div>
             </div>
@@ -231,7 +356,8 @@ export default function EditDeliveryOrder() {
               <div className="form-row two-col">
                 <div className="form-group">
                   <label className="form-label">CLIENT NAME <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="clientName" className="form-input" value={formData.clientName} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                  <input name="clientName" className="form-input" value={formData.clientName} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('clientName')} />
+                  {errors.clientName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.clientName}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">CONTACT NUMBER</label>
@@ -240,7 +366,8 @@ export default function EditDeliveryOrder() {
               </div>
               <div className="form-group">
                 <label className="form-label">SENDER ADDRESS <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                <textarea name="senderAddress" className="form-input form-textarea" value={formData.senderAddress} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                <textarea name="senderAddress" className="form-input form-textarea" value={formData.senderAddress} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('senderAddress')} />
+                {errors.senderAddress && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.senderAddress}</span>}
               </div>
             </div>
 
@@ -249,16 +376,19 @@ export default function EditDeliveryOrder() {
               <div className="form-row two-col">
                 <div className="form-group">
                   <label className="form-label">RECIPIENT NAME <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="recipientName" className="form-input" value={formData.recipientName} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                  <input name="recipientName" className="form-input" value={formData.recipientName} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('recipientName')} />
+                  {errors.recipientName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.recipientName}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">CONTACT NUMBER <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="recipientContact" className="form-input" value={formData.recipientContact} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                  <input name="recipientContact" className="form-input" value={formData.recipientContact} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('recipientContact')} />
+                  {errors.recipientContact && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.recipientContact}</span>}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">DELIVERY ADDRESS <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                <textarea name="recipientAddress" className="form-input form-textarea" value={formData.recipientAddress} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                <textarea name="recipientAddress" className="form-input form-textarea" value={formData.recipientAddress} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('recipientAddress')} />
+                {errors.recipientAddress && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.recipientAddress}</span>}
               </div>
             </div>
           </div>
@@ -308,7 +438,11 @@ export default function EditDeliveryOrder() {
               </div>
             </div>
 
-            <button className="btn btn-primary btn-lg" onClick={handleSave}><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</button>
+            <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={isSubmitting}>
+              {isSubmitting ? 'SAVING...' : (
+                <><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</>
+              )}
+            </button>
             <button className="btn btn-outline" onClick={() => navigate(-1)}><Undo2 size={16} /> {isDriver ? 'Back' : 'Discard'}</button>
             {!isNew && !isDriver && <button className="btn btn-danger" onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
           </div>

@@ -10,12 +10,12 @@ export default function DriverDashboard() {
   const { deliveryOrders } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'Pending' | 'In Transit' | 'Completed'>('Pending');
+  const [activeTab, setActiveTab] = useState<'Pending' | 'In Transit' | 'Delivered'>('Pending');
 
-  // Fetch only deliveries assigned to this driver
+  // Fetch deliveries assigned to this driver or unassigned
   const assignedRoutes = deliveryOrders.filter(
     (order) => 
-      order.driverName === user?.name && 
+      (order.driverName === user?.name || !order.driverName) && 
       order.status === activeTab
   );
 
@@ -23,7 +23,7 @@ export default function DriverDashboard() {
     <div className="driver-dashboard">
       <div className="driver-greeting">
         <h2>Hello, {user?.name?.split(' ')[0] || 'Driver'}</h2>
-        <p>You have {deliveryOrders.filter(o => o.driverName === user?.name && (o.status === 'Pending' || o.status === 'In Transit')).length} active deliveries today.</p>
+        <p>You have {deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && (o.status === 'Pending' || o.status === 'In Transit')).length} active deliveries today.</p>
       </div>
 
       <div className="driver-tabs">
@@ -40,10 +40,10 @@ export default function DriverDashboard() {
           In Transit
         </button>
         <button 
-          className={`driver-tab ${activeTab === 'Completed' ? 'active' : ''}`}
-          onClick={() => setActiveTab('Completed')}
+          className={`driver-tab ${activeTab === 'Delivered' ? 'active' : ''}`}
+          onClick={() => setActiveTab('Delivered')}
         >
-          Completed
+          Delivered
         </button>
       </div>
 

@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, ClipboardList, FileText, BarChart3,
-  Settings, Activity, LogOut, FileBarChart
+  LayoutDashboard, ClipboardList, FileText, BarChart3,
+  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/logo.png';
@@ -19,6 +19,7 @@ interface NavLinkConfig {
 const mainLinks: NavLinkConfig[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/tasks', icon: ClipboardList, label: 'Tasks' },
+  { to: '/archive', icon: ArchiveIcon, label: 'Archive' },
 ];
 
 const integrationLinks: NavLinkConfig[] = [
