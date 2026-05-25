@@ -15,7 +15,7 @@ export default function TrackDelivery() {
   const [error, setError] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const handleTrack = (eOrString?: any) => {
+  const handleTrack = (eOrString?: React.FormEvent | string) => {
     setError(false);
     const searchVal = typeof eOrString === 'string' ? eOrString : query;
     if (!searchVal.trim()) return;

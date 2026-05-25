@@ -20,9 +20,9 @@ export default function EditDeliveryOrder() {
   useEffect(() => {
     if (!isNew) {
       const order = deliveryOrders.find(o => o.id === id);
-      if (order) {
+      if (order && formData.id !== id) {
         setFormData(order);
-      } else {
+      } else if (!order) {
         navigate('/delivery-orders');
       }
     } else {
@@ -41,6 +41,7 @@ export default function EditDeliveryOrder() {
         updatedBy: user?.name || 'Unknown',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, deliveryOrders, navigate, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -248,7 +249,7 @@ export default function EditDeliveryOrder() {
             <div className="card">
               <div className="card-header">
                 <h4>Order Summary</h4>
-                <StatusBadge status={formData.status as any} size="sm" />
+                <StatusBadge status={formData.status as DeliveryOrder['status']} size="sm" />
               </div>
               <div className="summary-fields">
                 <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{formData.waybillNo}</span></div>

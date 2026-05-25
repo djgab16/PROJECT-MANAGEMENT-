@@ -2,7 +2,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Download, CheckCircle2, Clock, MapPin, Package, FileText, Image as ImageIcon } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import { useData } from '../../context/DataContext';
-import type { DeliveryStatus, ActivityLog } from '../../types';
+import type { DeliveryStatus } from '../../types';
 import './DeliveryHistoryLog.css';
 import '../DeliveryOrders/DeliveryOrderDetail.css';
 
@@ -112,7 +112,7 @@ export default function DeliveryHistoryLog() {
               </div>
               <div className="timeline-box">
                 {orderLogs.map((log, index) => {
-                  const isCompleted = index === orderLogs.length - 1 || log.action === 'Create' || log.status === 'Completed';
+                  const isCompleted = index === orderLogs.length - 1 || log.action === 'Create' || log.description.includes('Completed');
                   const isCurrent = index === 0;
                   
                   return (

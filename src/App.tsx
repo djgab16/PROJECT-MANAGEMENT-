@@ -14,7 +14,6 @@ import Archive from './pages/Archive/Archive';
 import ActivityLogs from './pages/ActivityLogs/ActivityLogs';
 import FailedPickups from './pages/FailedPickups/FailedPickups';
 import Employees from './pages/Employees/Employees';
-import RoleAccess from './pages/RoleAccess/RoleAccess';
 import Settings from './pages/Settings/Settings';
 import DeliverySummary from './pages/DeliverySummary/DeliverySummary';
 import AnalyticsView from './pages/Analytics/AnalyticsView';
@@ -58,10 +57,6 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Super Admin Only Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['SUPER ADMIN']} />}>
-            <Route path="/role-access" element={<RoleAccess />} />
-          </Route>
         </Route>
 
         {/* Fallback */}

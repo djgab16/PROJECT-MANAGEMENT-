@@ -32,18 +32,36 @@
   justify-content: center;
 }
 
-.sidebar-role-badge.super-admin {
+.sidebar-role-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 30px;
-  background: var(--primary);
   border-radius: var(--radius-full);
   color: white;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 1px;
+}
+
+.sidebar-role-badge.super-admin {
+  background: var(--primary);
   box-shadow: 0 4px 10px rgba(0, 169, 157, 0.3);
+}
+
+.sidebar-role-badge.admin {
+  background: #2563EB; /* Bright Blue */
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.sidebar-role-badge.op-team {
+  background: #7C3AED; /* Purple */
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+}
+
+.sidebar-role-badge.employee {
+  background: #64748B; /* Slate */
+  box-shadow: 0 4px 10px rgba(100, 116, 139, 0.3);
 }
 
 .role-dot-inner {

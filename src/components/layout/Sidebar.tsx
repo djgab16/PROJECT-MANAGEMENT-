@@ -11,7 +11,7 @@ import type { UserRole } from '../../types';
 
 interface NavLinkConfig {
   to: string;
-  icon: any;
+  icon: React.ElementType;
   label: string;
   allowedRoles?: UserRole[];
 }
@@ -20,7 +20,6 @@ const mainLinks: NavLinkConfig[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/employees', icon: Users, label: 'Employees', allowedRoles: ['SUPER ADMIN', 'ADMIN'] },
   { to: '/tasks', icon: ClipboardList, label: 'Tasks' },
-  { to: '/role-access', icon: FileText, label: 'Role Access', allowedRoles: ['SUPER ADMIN'] },
 ];
 
 const integrationLinks: NavLinkConfig[] = [
@@ -62,7 +61,7 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-role-section">
-        <div className={`sidebar-role-badge ${user?.role ? user.role.toLowerCase().replace('.', '').replace(' ', '-') : 'employee'}`}>
+        <div className={`sidebar-role-badge ${user?.role ? user.role.toLowerCase().replaceAll('.', '').replaceAll(' ', '-') : 'employee'}`}>
           <div className="role-dot-inner" />
           {user?.role || 'EMPLOYEE'}
         </div>

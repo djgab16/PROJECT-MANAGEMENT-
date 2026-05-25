@@ -28,12 +28,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem('speedex_employees');
     if (saved) {
       const parsed = JSON.parse(saved) as Employee[];
-      // Migration: Update old superadmin name to new one
-      return parsed.map(emp => 
-        emp.id === 'EMP-001' && emp.name === 'Vanessa D. Reuteras' 
-          ? { ...emp, name: 'Taromaru Rex Gabriel' } 
-          : emp
-      );
+      // Migration: Update old superadmin name and force unlock all accounts
+      return parsed.map(emp => {
+        const updatedEmp = { ...emp, status: 'Active' as const };
+        if (emp.id === 'EMP-001' && emp.name === 'Vanessa D. Reuteras') {
+          updatedEmp.name = 'Taromaru Rex Gabriel';
+        }
+        return updatedEmp;
+      });
     }
     return initialEmployees;
   });
@@ -141,6 +143,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useData = () => {
   const context = useContext(DataContext);
   if (context === undefined) {

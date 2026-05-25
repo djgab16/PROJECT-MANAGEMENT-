@@ -86,7 +86,7 @@ export default function Employees() {
               </div>
               <div className="form-group">
                 <label className="form-label">ROLE</label>
-                <select className="form-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value as any})}>
+                <select className="form-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value as Employee['role']})}>
                   <option>OP. TEAM</option>
                   <option>ADMIN</option>
                   <option>SUPER ADMIN</option>
@@ -104,7 +104,7 @@ export default function Employees() {
               </div>
               <div className="form-group">
                 <label className="form-label">STATUS</label>
-                <select className="form-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as any})}>
+                <select className="form-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as Employee['status']})}>
                   <option>Active</option>
                   <option>Pending</option>
                   <option>Locked</option>

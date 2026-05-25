@@ -4,8 +4,8 @@ export const employees: Employee[] = [
   { id: 'EMP-001', name: 'Taromaru Rex Gabriel', role: 'SUPER ADMIN', systemAccess: 'All Systems', status: 'Active' },
   { id: 'EMP-002', name: 'Kenneth D. Yulip', role: 'ADMIN', systemAccess: 'Operations', status: 'Active' },
   { id: 'EMP-003', name: 'John Angelo M. Reveche', role: 'OP. TEAM', systemAccess: 'Delivery Tracker', status: 'Active' },
-  { id: 'EMP-004', name: 'Hermione B. Benitez', role: 'OP. TEAM', systemAccess: 'Operations', status: 'Pending' },
-  { id: 'EMP-005', name: 'David Jr. M. Gabriel', role: 'ADMIN', systemAccess: 'Delivery Tracker', status: 'Locked' },
+  { id: 'EMP-004', name: 'Hermione B. Benitez', role: 'OP. TEAM', systemAccess: 'Operations', status: 'Active' },
+  { id: 'EMP-005', name: 'David Jr. M. Gabriel', role: 'ADMIN', systemAccess: 'Delivery Tracker', status: 'Active' },
 ];
 
 export const deliveryOrders: DeliveryOrder[] = [

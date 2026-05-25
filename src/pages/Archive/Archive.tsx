@@ -16,7 +16,7 @@ export default function Archive() {
   const [areaFilter, setAreaFilter] = useState('All Areas');
   const [podFilter, setPodFilter] = useState('POD: All');
 
-  let filteredOrders = archivedOrdersAll.filter(o => {
+  const filteredOrders = archivedOrdersAll.filter(o => {
     if (searchQuery && !o.waybillNo.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
     if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;

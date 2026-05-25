@@ -23,7 +23,7 @@ export default function DeliverySummary() {
     if (order.status === 'Failed') acc[order.driverName].failed++;
     
     return acc;
-  }, {} as Record<string, any>)).map(d => {
+  }, {} as Record<string, { name: string; initials: string; color: string; totalOrders: number; delivered: number; failed: number }>)).map(d => {
     const successRateRaw = d.totalOrders > 0 ? (d.delivered / d.totalOrders) : 0;
     const successRate = (successRateRaw * 100).toFixed(1) + '%';
     let rating = 'Average';
