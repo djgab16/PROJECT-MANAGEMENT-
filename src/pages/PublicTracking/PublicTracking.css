@@ -23,14 +23,14 @@
   padding: 1.5rem 2rem;
   display: flex;
   align-items: center;
-  background-color: var(--bg-card);
+  background-color: var(--sidebar-bg); /* Dark background for white logo */
   box-shadow: var(--shadow-sm);
 }
 
 .logo-brand {
   display: flex;
   align-items: center;
-  background-color: white;
+  /* Removed white background to let the dark header show through */
   padding: 4px 12px;
   border-radius: 6px;
 }

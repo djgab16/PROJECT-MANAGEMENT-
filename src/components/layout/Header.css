@@ -191,3 +191,23 @@
 .search-item-sub {
   font-size: 0.75rem;
 }
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .header-search-container {
+    width: auto;
+    flex: 1;
+  }
+
+  .header-title {
+    font-size: 1.1rem;
+  }
+  
+  .header-breadcrumb {
+    display: none;
+  }
+}

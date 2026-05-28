@@ -2,11 +2,13 @@ import { useState } from 'react';
 import Header from '../../components/layout/Header';
 import { Save } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Settings() {
   const [isSaved, setIsSaved] = useState(false);
   const { addActivityLog } = useData();
-  const [settings, setSettings] = useState({ theme: 'light', emailNotifs: true, smsNotifs: false, timezone: 'Asia/Manila' });
+  const { theme, setTheme } = useTheme();
+  const [settings, setSettings] = useState({ emailNotifs: true, smsNotifs: false, timezone: 'Asia/Manila' });
 
   const handleSave = () => {
     setIsSaved(true);
@@ -22,12 +24,12 @@ export default function Settings() {
     <>
       <Header title="Settings" subtitle="System Preferences" actions={<button className="btn btn-primary btn-sm" onClick={handleSave}><Save size={14}/> {isSaved ? 'Saved!' : 'Save Settings'}</button>} />
       <div className="page-content">
-        <div className="edit-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="edit-grid">
           <div className="card">
             <h4>Appearance</h4>
             <div className="form-group" style={{ marginTop: '16px' }}>
               <label className="form-label">THEME</label>
-              <select className="form-input" value={settings.theme} onChange={(e) => setSettings({...settings, theme: e.target.value})}>
+              <select className="form-input" value={theme} onChange={(e) => setTheme(e.target.value as any)}>
                 <option value="light">Light Mode</option>
                 <option value="dark">Dark Mode</option>
                 <option value="system">System Default</option>

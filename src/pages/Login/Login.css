@@ -241,3 +241,42 @@
 .login-footer a:hover {
   text-decoration: underline;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .login-left {
+    width: 100%;
+    padding: 24px 16px;
+  }
+
+  .login-left-content {
+    padding: 0;
+  }
+
+  .login-steps, .login-tagline {
+    display: none;
+  }
+
+  .login-logo {
+    justify-content: center;
+    margin-bottom: 0;
+  }
+
+  .login-right {
+    padding: 24px 16px;
+    align-items: flex-start;
+  }
+
+  .login-form {
+    padding: 24px;
+    width: 100%;
+  }
+
+  .login-form-title {
+    font-size: 1.3rem;
+  }
+}

@@ -7,6 +7,39 @@ import EmptyState from '../../components/ui/EmptyState';
 import { useData } from '../../context/DataContext';
 import './Archive.css';
 
+const REGIONS = [
+  {
+    name: "National Capital Region",
+    cities: ["Manila", "Quezon City", "Makati", "Pasig", "Taguig", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa", "Marikina", "Mandaluyong", "San Juan", "Caloocan", "Malabon", "Navotas", "Valenzuela"]
+  },
+  {
+    name: "Central Luzon",
+    cities: ["Angeles", "San Fernando", "Olongapo", "Tarlac City", "Cabanatuan"]
+  },
+  {
+    name: "CALABARZON",
+    cities: ["Antipolo", "Dasmariñas", "Bacoor", "Tagaytay", "Batangas City", "Lucena"]
+  },
+  {
+    name: "Visayas",
+    cities: ["Cebu City", "Mandaue", "Lapu-Lapu", "Iloilo City", "Bacolod", "Tacloban"]
+  },
+  {
+    name: "Mindanao",
+    cities: ["Davao City", "Cagayan de Oro", "Zamboanga City", "General Santos", "Butuan"]
+  }
+];
+
+const getRegionForArea = (area: string) => {
+  if (!area) return 'Unknown Region';
+  for (const region of REGIONS) {
+    if (region.cities.includes(area)) {
+      return region.name;
+    }
+  }
+  return 'Custom Area';
+};
+
 export default function Archive() {
   const { deliveryOrders } = useData();
   const navigate = useNavigate();
@@ -108,13 +141,14 @@ export default function Archive() {
             </div>
             <span className="text-muted text-sm">Sort by: Date Completed (Newest)</span>
           </div>
-          <table className="data-table">
+          <div className="table-responsive">
+            <table className="data-table">
             <thead>
               <tr>
                 <th>WAYBILL NO.</th>
                 <th>CLIENT / SENDER</th>
                 <th>RECIPIENT</th>
-                <th>AREA</th>
+                <th>AREA / REGION</th>
                 <th>DRIVER</th>
                 <th>DATE COMPLETED</th>
                 <th>POT</th>
@@ -139,7 +173,7 @@ export default function Archive() {
                   <tr key={order.id}>
                     <td>
                       <span className="waybill-link" onClick={() => navigate(`/delivery-orders/${order.id}`)} style={{ cursor: 'pointer', color: 'var(--primary)' }}>{order.waybillNo}</span>
-                      <div className="cell-sub">{order.orderDate.split(',')[0]}</div>
+                      <div className="cell-sub">{order.orderDate ? order.orderDate.split(',')[0] : 'No date'}</div>
                     </td>
                     <td>
                       <span className="cell-name">{order.clientName}</span>
@@ -149,11 +183,14 @@ export default function Archive() {
                       <span>{order.recipientName}</span>
                       <div className="cell-sub">{(order.recipientAddress || '').substring(0, 25)}...</div>
                     </td>
-                    <td>{order.area}</td>
+                    <td>
+                      <span>{order.area}</span>
+                      <div className="cell-sub">{getRegionForArea(order.area)}</div>
+                    </td>
                     <td>
                       <div className="driver-cell">
                         <div className="driver-avatar" style={{ background: order.driverColor }}>{order.driverInitials}</div>
-                        <span>{order.driverName.split(',')[0]}</span>
+                        <span>{order.driverName ? order.driverName.split(',')[0] : 'Unassigned'}</span>
                       </div>
                     </td>
                     <td className="text-sm">{order.dateCompleted || '—'}</td>
@@ -167,17 +204,20 @@ export default function Archive() {
               )}
             </tbody>
           </table>
+          </div>
           <div className="table-pagination">
             <span className="pagination-info">Showing {filteredOrders.length} archived records</span>
-            <div className="pagination-controls">
-              <button className="pagination-btn" disabled>‹</button>
-              <button className="pagination-btn active">1</button>
-              <button className="pagination-btn">2</button>
-              <button className="pagination-btn">3</button>
-              <span className="pagination-ellipsis">...</span>
-              <button className="pagination-btn">129</button>
-              <button className="pagination-btn">›</button>
-            </div>
+            {filteredOrders.length > 10 && (
+              <div className="pagination-controls">
+                <button className="pagination-btn" disabled>‹</button>
+                <button className="pagination-btn active">1</button>
+                <button className="pagination-btn">2</button>
+                <button className="pagination-btn">3</button>
+                <span className="pagination-ellipsis">...</span>
+                <button className="pagination-btn">129</button>
+                <button className="pagination-btn">›</button>
+              </div>
+            )}
           </div>
         </div>
       </div>

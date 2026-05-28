@@ -3,6 +3,7 @@ import { CheckCheck, Trash2, Eye, Check, Bell, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
+import EmptyState from '../../components/ui/EmptyState';
 import './Notifications.css';
 
 
@@ -89,35 +90,45 @@ export default function Notifications() {
               <span className="text-muted text-sm" style={{ marginLeft: 'auto' }}>{notifications.filter(n => !n.read).length} unread notifications</span>
             </div>
             <div className="notif-list">
-              {Object.entries(grouped).map(([date, items]) => (
-                <div key={date}>
-                  <div className="notif-date-header">{date.replace('March', 'MARCH').toUpperCase()}</div>
-                  {items.map(n => (
-                    <div
-                      key={n.id}
-                      className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''}`}
-                      onClick={() => setSelectedId(n.id)}
-                    >
-                      <input 
-                        type="checkbox" 
-                        className="notif-checkbox" 
-                        checked={checkedIds.includes(n.id)}
-                        onChange={(e) => handleToggleCheck(e, n.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div className="notif-item-content">
-                        <div className="notif-item-header">
-                          <strong>{n.title}</strong>
-                          {n.waybillNo && <span className="notif-waybill">{n.waybillNo}</span>}
-                          {n.statusBadge && <StatusBadge status={n.statusBadge} size="sm" />}
-                        </div>
-                        <p className="notif-item-desc">{n.description}</p>
-                        <span className="notif-item-meta">{n.timestamp} · {n.source}</span>
-                      </div>
-                    </div>
-                  ))}
+              {filtered.length === 0 ? (
+                <div style={{ padding: '48px 24px' }}>
+                  <EmptyState 
+                    icon={Bell} 
+                    title="No Notifications" 
+                    description={activeTab === 'all' ? "You don't have any notifications yet." : `You don't have any ${activeTab} notifications.`} 
+                  />
                 </div>
-              ))}
+              ) : (
+                Object.entries(grouped).map(([date, items]) => (
+                  <div key={date}>
+                    <div className="notif-date-header">{date.replace('March', 'MARCH').toUpperCase()}</div>
+                    {items.map(n => (
+                      <div
+                        key={n.id}
+                        className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''}`}
+                        onClick={() => setSelectedId(n.id)}
+                      >
+                        <input 
+                          type="checkbox" 
+                          className="notif-checkbox" 
+                          checked={checkedIds.includes(n.id)}
+                          onChange={(e) => handleToggleCheck(e, n.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="notif-item-content">
+                          <div className="notif-item-header">
+                            <strong>{n.title}</strong>
+                            {n.waybillNo && <span className="notif-waybill">{n.waybillNo}</span>}
+                            {n.statusBadge && <StatusBadge status={n.statusBadge} size="sm" />}
+                          </div>
+                          <p className="notif-item-desc">{n.description}</p>
+                          <span className="notif-item-meta">{n.timestamp} · {n.source}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

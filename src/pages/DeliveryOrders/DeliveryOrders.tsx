@@ -146,7 +146,8 @@ export default function DeliveryOrders() {
 
         {/* Orders Table */}
         <div className="card">
-          <table className="data-table">
+          <div className="table-responsive">
+            <table className="data-table">
             <thead>
               <tr>
                 <th>WAYBILL NO.</th>
@@ -227,7 +228,8 @@ export default function DeliveryOrders() {
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
           <div className="table-pagination">
             <span className="pagination-info">Showing {filteredOrders.length} records</span>
           </div>

@@ -10,6 +10,7 @@
   z-index: 100;
   overflow-y: auto;
   overflow-x: hidden;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-logo {
@@ -17,6 +18,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  position: absolute;
+  right: 16px;
+  top: 24px;
 }
 
 .logo-image {
@@ -206,4 +222,19 @@
 .profile-logout:hover {
   background: rgba(255, 255, 255, 0.08);
   color: white;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
 }

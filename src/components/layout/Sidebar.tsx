@@ -33,7 +33,12 @@ const systemLinks: NavLinkConfig[] = [
   { to: '/activity-logs', icon: Activity, label: 'Activity Logs' },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -54,11 +59,12 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
       <div className="sidebar-logo">
         <div className="login-logo" style={{ padding: '0', background: 'transparent' }}>
           <img src={logo} alt="30 Speedex Logo" style={{ height: '36px', objectFit: 'contain' }} />
         </div>
+        <button className="sidebar-close-btn" onClick={onClose}>×</button>
       </div>
 
       <div className="sidebar-role-section">

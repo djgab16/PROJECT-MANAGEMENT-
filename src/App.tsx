@@ -25,6 +25,7 @@ import DriverDeliveryDetail from './pages/DRIVER/DriverDeliveryDetail';
 import DriverSettings from './pages/DRIVER/DriverSettings';
 import PublicTracking from './pages/PublicTracking/PublicTracking';
 import { useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const RootRedirect = () => {
   const { user } = useAuth();
@@ -34,8 +35,9 @@ const RootRedirect = () => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
         {/* Auth Pages (no sidebar) */}
         <Route path="/login" element={<Login />} />
         <Route path="/account-locked" element={<AccountLocked />} />
@@ -86,5 +88,6 @@ export default function App() {
         <Route path="*" element={<RootRedirect />} />
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }

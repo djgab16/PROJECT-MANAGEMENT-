@@ -78,6 +78,27 @@
   --chart-gray: #E9EDF7;
 }
 
+/* ─── Dark Mode ─── */
+html.dark {
+  /* Backgrounds */
+  --bg-main: #0B1437;
+  --bg-card: #111C44;
+  --bg-header: #111C44;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A3AED0;
+  --text-tertiary: #8F9BBA;
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Shadows */
+  --shadow-card: 0px 18px 40px rgba(0, 0, 0, 0.3);
+}
+
 /* ─── Reset ─── */
 *,
 *::before,
@@ -378,4 +399,32 @@ h4 { font-size: 1.1rem; }
 
 .animate-scale-in {
   animation: scaleIn 0.2s ease-out;
+}
+
+/* ─── Responsive Utilities ─── */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .edit-grid,
+  .dashboard-stats-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --content-padding: 16px;
+    --card-padding: 16px;
+  }
+  
+  .flex-responsive {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
 }
