@@ -1,4 +1,4 @@
-import { Users, ClipboardList, CheckCircle2, Package } from 'lucide-react';
+import { Users, ClipboardList, CheckCircle2, Package, RefreshCw } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatCard from '../../components/ui/StatCard';
 
@@ -91,6 +91,41 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="dashboard-grid">
 
+          {/* Scheduled Re-deliveries */}
+          <div className="card dashboard-activity">
+            <div className="card-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={18} className="text-teal" />
+                Scheduled Re-deliveries
+              </h3>
+              <button className="text-link" onClick={() => navigate('/tasks')}>Manage Tasks</button>
+            </div>
+            <div className="activity-feed-list">
+              {deliveryOrders
+                .filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0)
+                .slice(0, 5).map((order) => (
+                <div key={order.id} className="activity-feed-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/delivery-orders/${order.id}`)}>
+                  <div className="activity-feed-dot" style={{ background: 'var(--status-failed)' }} />
+                  <div className="activity-feed-content" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <span className="activity-feed-text">
+                        <strong>{order.waybillNo}</strong> — Re-delivery attempt <strong>#{order.redeliveryAttemptCount}</strong>
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--status-failed)', background: 'var(--status-failed-bg)', padding: '2px 8px', borderRadius: '4px' }}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      Driver: <strong>{order.driverName}</strong> | Scheduled: <strong>{order.expectedDelivery}</strong>
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {deliveryOrders.filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0).length === 0 && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '16px 0', textAlign: 'center' }}>No active scheduled re-deliveries found.</p>
+              )}
+            </div>
+          </div>
 
           {/* Activity Feed */}
           <div className="card dashboard-activity">

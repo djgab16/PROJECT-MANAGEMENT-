@@ -55,14 +55,16 @@ export default function Tasks() {
   const isOpTeam = user?.role === 'OP. TEAM';
 
   const visibleOrders = isDriver 
-    ? deliveryOrders.filter(o => o.driverName === user?.name || !o.driverName)
+    ? deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && o.taskType !== 'Pickup')
     : isOpTeam
     ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
     : deliveryOrders;
   
-  const pending = visibleOrders.filter(o => o.status === 'Pending');
-  const inTransit = visibleOrders.filter(o => o.status === 'In Transit');
-  const completed = visibleOrders.filter(o => o.status === 'Delivered' || o.status === 'Completed');
+  const pending = visibleOrders.filter(o => o.status === 'Pending' && o.taskType !== 'Pickup');
+  const inTransit = visibleOrders.filter(o => o.status === 'In Transit' && o.taskType !== 'Pickup');
+  const failed = visibleOrders.filter(o => (o.status === 'Failed' || o.status === 'Returned') && o.taskType !== 'Pickup');
+  const completed = visibleOrders.filter(o => (o.status === 'Delivered' || o.status === 'Completed') && o.taskType !== 'Pickup');
+  const pickups = visibleOrders.filter(o => o.taskType === 'Pickup');
 
   return (
     <>
@@ -81,9 +83,11 @@ export default function Tasks() {
         <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
           {isDriver ? "Manage and monitor your assigned delivery tasks." : "Manage and monitor delivery tasks across different stages."}
         </p>
-        <div className="tasks-board-container">
+        <div className="tasks-board-container" style={{ overflowX: 'auto', paddingBottom: '16px' }}>
+          {!isDriver && <Column title="Pickups" orders={pickups} onNavigate={navigate} />}
           <Column title="Pending Dispatch" orders={pending} onNavigate={navigate} />
           <Column title="In Transit" orders={inTransit} onNavigate={navigate} />
+          <Column title="Failed / Returned" orders={failed} onNavigate={navigate} />
           <Column title="Delivered / Completed" orders={completed} onNavigate={navigate} />
         </div>
       </div>

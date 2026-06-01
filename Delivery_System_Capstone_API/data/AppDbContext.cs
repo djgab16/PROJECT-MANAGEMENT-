@@ -50,6 +50,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .HasForeignKey(x => x.DriverId)
              .OnDelete(DeleteBehavior.SetNull);
 
+            // Redelivery Driver relationship — SET NULL on delete
+            e.HasOne(x => x.RedeliveryDriver)
+             .WithMany()
+             .HasForeignKey(x => x.RedeliveryDriverId)
+             .OnDelete(DeleteBehavior.SetNull);
+
             // EncodedBy — RESTRICT delete (can't delete employee who has orders)
             e.HasOne(x => x.EncodedBy)
              .WithMany(d => d.EncodedOrders)

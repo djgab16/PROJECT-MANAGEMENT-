@@ -5,6 +5,7 @@ import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
 import type { DeliveryOrder, DeliveryStatus } from '../../types';
+import LiveTrackingMap from '../../components/map/LiveTrackingMap';
 import './TrackDelivery.css';
 
 export default function TrackDelivery() {
@@ -126,6 +127,21 @@ export default function TrackDelivery() {
                   <div><span className="label">ASSIGNED DRIVER</span><br /><strong>{trackedOrder.driverName || 'Unassigned'}</strong></div>
                   <div><span className="label">PACKAGE TYPE</span><br /><strong>{trackedOrder.packageType}</strong></div>
                 </div>
+              </div>
+              
+              {/* Live Tracking Map */}
+              <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '400px', marginBottom: '24px' }}>
+                <LiveTrackingMap
+                  orderId={trackedOrder.id}
+                  waybillNo={trackedOrder.waybillNo}
+                  status={trackedOrder.status}
+                  driverName={trackedOrder.driverName}
+                  driverInitials={trackedOrder.driverInitials}
+                  driverColor={trackedOrder.driverColor}
+                  recipientAddress={trackedOrder.recipientAddress}
+                  recipientCoordinates={trackedOrder.recipientCoordinates}
+                  liveCoordinates={trackedOrder.liveCoordinates}
+                />
               </div>
 
               {/* Status Timeline */}

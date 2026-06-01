@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Eye, Pencil, Trash2, Image, PackageX } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Pencil, Trash2, Image, PackageX, RefreshCw } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -167,6 +167,12 @@ export default function DeliveryOrders() {
                       {order.waybillNo}
                     </Link>
                     <div className="cell-sub">{order.orderDate}</div>
+                    {order.redeliveryAttemptCount && order.redeliveryAttemptCount > 0 ? (
+                      <div className="cell-sub" style={{ color: 'var(--status-failed)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <RefreshCw size={10} />
+                        Re-delivery #{order.redeliveryAttemptCount}
+                      </div>
+                    ) : null}
                   </td>
                   <td>
                     <span className="cell-name">{order.clientName}</span>

@@ -229,8 +229,17 @@ namespace SPXDeliveryAPI.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<DateTime?>("LastLiveUpdate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
+
+                    b.Property<double?>("LiveLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LiveLongitude")
+                        .HasColumnType("float");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -266,10 +275,29 @@ namespace SPXDeliveryAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<double?>("RecipientLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("RecipientLongitude")
+                        .HasColumnType("float");
+
                     b.Property<string>("RecipientName")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("RedeliveryAttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RedeliveryDriverId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RedeliveryRemarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RedeliveryScheduledDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Route")
                         .IsRequired()
@@ -292,6 +320,11 @@ namespace SPXDeliveryAPI.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<string>("TaskType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int>("UpdatedById")
                         .HasColumnType("int");
 
@@ -310,6 +343,8 @@ namespace SPXDeliveryAPI.Migrations
                     b.HasIndex("DriverId");
 
                     b.HasIndex("EncodedById");
+
+                    b.HasIndex("RedeliveryDriverId");
 
                     b.HasIndex("UpdatedById");
 
@@ -535,6 +570,11 @@ namespace SPXDeliveryAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SPXDeliveryAPI.Models.Employee", "RedeliveryDriver")
+                        .WithMany()
+                        .HasForeignKey("RedeliveryDriverId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SPXDeliveryAPI.Models.Employee", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -544,6 +584,8 @@ namespace SPXDeliveryAPI.Migrations
                     b.Navigation("Driver");
 
                     b.Navigation("EncodedBy");
+
+                    b.Navigation("RedeliveryDriver");
 
                     b.Navigation("UpdatedBy");
                 });

@@ -71,6 +71,7 @@ public class DeliveryOrderService(
     {
         var order = await db.DeliveryOrders
             .Include(o => o.Driver)
+            .Include(o => o.RedeliveryDriver)
             .Include(o => o.EncodedBy)
             .Include(o => o.UpdatedBy)
             .FirstOrDefaultAsync(o => o.WaybillNo == waybillNo.ToUpper());
@@ -96,6 +97,7 @@ public class DeliveryOrderService(
         var order = new DeliveryOrder
         {
             WaybillNo          = await GenerateWaybillNoAsync(),
+            TaskType           = request.TaskType,
             ClientName         = request.ClientName,
             ClientType         = request.ClientType,
             ContactNumber      = request.ContactNumber,
@@ -103,9 +105,9 @@ public class DeliveryOrderService(
             RecipientName      = request.RecipientName,
             RecipientContact   = request.RecipientContact,
             RecipientAddress   = request.RecipientAddress,
-            Area               = request.Area,
+            Area               = request.TaskType == "Pickup" ? "Manila" : request.Area,
             Landmark           = request.Landmark,
-            Route              = request.Route,
+            Route              = request.TaskType == "Pickup" ? "Manila" : request.Route,
             DriverId           = request.DriverId,
             PackageType        = request.PackageType,
             PackageDescription = request.PackageDescription,
@@ -141,6 +143,15 @@ public class DeliveryOrderService(
     {
         var order = await GetOrderOrThrowAsync(id);
 
+        if (request.TaskType        is not null) 
+        {
+            order.TaskType           = request.TaskType;
+            if (request.TaskType == "Pickup")
+            {
+                order.Area = "Manila";
+                order.Route = "Manila";
+            }
+        }
         if (request.ClientName      is not null) order.ClientName         = request.ClientName;
         if (request.ClientType      is not null) order.ClientType         = request.ClientType;
         if (request.ContactNumber   is not null) order.ContactNumber      = request.ContactNumber;
@@ -234,6 +245,65 @@ public class DeliveryOrderService(
 
         await LogActivityAsync(updatedById, "Assign",
             $"Assigned driver {driver.Name} to order {order.WaybillNo}",
+            order.WaybillNo);
+
+        await db.SaveChangesAsync();
+        return MapToResponse(await GetOrderOrThrowAsync(id));
+    }
+
+    // ─── SCHEDULE RE-DELIVERY ──────────────────────────────────────────────────
+    public async Task<DeliveryOrderResponse> ScheduleRedeliveryAsync(
+        int id, ScheduleRedeliveryRequest request, int updatedById)
+    {
+        var order = await GetOrderOrThrowAsync(id);
+
+        if (order.Status != "Failed")
+            throw new InvalidOperationException("Re-delivery can only be scheduled for orders previously marked as 'Failed Delivery'.");
+
+        var driver = await db.Employees.FindAsync(request.DriverId)
+            ?? throw new KeyNotFoundException($"Driver with ID {request.DriverId} not found.");
+
+        var fromStatus = order.Status;
+
+        // Update re-delivery info
+        order.RedeliveryScheduledDate = request.RedeliveryDate.ToUniversalTime();
+        order.RedeliveryDriverId = request.DriverId;
+        order.RedeliveryRemarks = request.Remarks;
+        order.RedeliveryAttemptCount++;
+
+        // Reset order for re-delivery cycle
+        order.Status = "Pending"; // Returns to dispatch queue
+        order.DriverId = request.DriverId; // Assign new driver as the active driver
+        order.PodImagePath = null;
+        order.PodStatus = "Not Submitted";
+        order.LastUpdated = DateTime.UtcNow;
+        order.UpdatedById = updatedById;
+
+        // Record history log
+        db.DeliveryHistoryLogs.Add(new DeliveryHistoryLog
+        {
+            DeliveryOrderId = id,
+            FromStatus      = fromStatus,
+            ToStatus        = "Pending",
+            Notes           = $"Scheduled re-delivery attempt #{order.RedeliveryAttemptCount} on {request.RedeliveryDate:yyyy-MM-dd}. Remarks: {request.Remarks}",
+            ChangedById     = updatedById,
+            ChangedAt       = DateTime.UtcNow
+        });
+
+        // Create alert notification
+        db.Notifications.Add(new Notification
+        {
+            Type            = "info",
+            Title           = "Re-delivery Scheduled",
+            WaybillNo       = order.WaybillNo,
+            Description     = $"Re-delivery attempt #{order.RedeliveryAttemptCount} scheduled with driver {driver.Name} for {request.RedeliveryDate:MM/DD/YYYY}",
+            StatusBadge     = "Pending",
+            DeliveryOrderId = id,
+            CreatedAt       = DateTime.UtcNow
+        });
+
+        await LogActivityAsync(updatedById, "Assign",
+            $"Scheduled re-delivery attempt #{order.RedeliveryAttemptCount} for {order.WaybillNo} with driver {driver.Name}",
             order.WaybillNo);
 
         await db.SaveChangesAsync();
@@ -383,6 +453,7 @@ public class DeliveryOrderService(
     {
         var order = await db.DeliveryOrders
             .Include(o => o.Driver)
+            .Include(o => o.RedeliveryDriver)
             .Include(o => o.EncodedBy)
             .Include(o => o.UpdatedBy)
             .FirstOrDefaultAsync(o => o.Id == id);
@@ -434,6 +505,7 @@ public class DeliveryOrderService(
     {
         Id                 = o.Id,
         WaybillNo          = o.WaybillNo,
+        TaskType           = o.TaskType,
         ClientName         = o.ClientName,
         ClientType         = o.ClientType,
         ContactNumber      = o.ContactNumber,
@@ -450,6 +522,15 @@ public class DeliveryOrderService(
             EmployeeId = o.Driver.EmployeeId,
             Name       = o.Driver.Name
         },
+        RedeliveryScheduledDate = o.RedeliveryScheduledDate,
+        RedeliveryDriver = o.RedeliveryDriver is null ? null : new DriverSummary
+        {
+            Id         = o.RedeliveryDriver.Id,
+            EmployeeId = o.RedeliveryDriver.EmployeeId,
+            Name       = o.RedeliveryDriver.Name
+        },
+        RedeliveryRemarks = o.RedeliveryRemarks,
+        RedeliveryAttemptCount = o.RedeliveryAttemptCount,
         Status             = o.Status,
         PodStatus          = o.PodStatus,
         PackageType        = o.PackageType,

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './PublicTracking.css';
 import TrackingSearch from './components/TrackingSearch';
 import TrackingTimeline from './components/TrackingTimeline';
-import StaticMapBox from './components/StaticMapBox';
+import LiveTrackingMap from '../../components/map/LiveTrackingMap';
 import SupportBanner from './components/SupportBanner';
 import { mockFetchTracking } from '../../api/publicTrackingApi';
 import type { PublicTrackingResponse } from '../../api/publicTrackingApi';
@@ -89,8 +89,18 @@ export default function PublicTracking() {
                   <TrackingTimeline events={data.events} currentStatus={data.currentStatus} />
                 </div>
                 
-                <div className="card map-container" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <StaticMapBox location={data.lastLocation} />
+                <div className="card map-container" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '420px' }}>
+                  <LiveTrackingMap
+                    orderId={data.id || '1'}
+                    waybillNo={data.waybillNo}
+                    status={data.currentStatus}
+                    driverName={data.driverName}
+                    driverInitials={data.driverInitials}
+                    driverColor={data.driverColor}
+                    recipientAddress={data.recipientAddress || 'Delivery Address'}
+                    recipientCoordinates={data.recipientCoordinates}
+                    liveCoordinates={data.liveCoordinates}
+                  />
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ namespace SPXDeliveryAPI.DTOs.DeliveryOrders;
 
 public class CreateDeliveryOrderRequest
 {
+    [Required] [MaxLength(20)] public string TaskType { get; set; } = "Delivery"; // Delivery | Pickup
     [Required] [MaxLength(150)] public string ClientName { get; set; } = string.Empty;
     [MaxLength(50)]  public string ClientType { get; set; } = "Corporate";
     [MaxLength(20)]  public string ContactNumber { get; set; } = string.Empty;
@@ -29,6 +30,7 @@ public class CreateDeliveryOrderRequest
 
 public class UpdateDeliveryOrderRequest
 {
+    [MaxLength(20)]  public string? TaskType { get; set; }
     [MaxLength(150)] public string? ClientName { get; set; }
     [MaxLength(50)]  public string? ClientType { get; set; }
     [MaxLength(20)]  public string? ContactNumber { get; set; }
@@ -62,6 +64,13 @@ public class AssignDriverRequest
     [Required] public int DriverId { get; set; }
 }
 
+public class ScheduleRedeliveryRequest
+{
+    [Required] public DateTime RedeliveryDate { get; set; }
+    [Required] public int DriverId { get; set; }
+    [MaxLength(500)] public string? Remarks { get; set; }
+}
+
 public class DeliveryOrderFilterRequest
 {
     public string? Status { get; set; }
@@ -80,6 +89,7 @@ public class DeliveryOrderResponse
 {
     public int Id { get; set; }
     public string WaybillNo { get; set; } = string.Empty;
+    public string TaskType { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;
     public string ClientType { get; set; } = string.Empty;
     public string ContactNumber { get; set; } = string.Empty;
@@ -108,6 +118,15 @@ public class DeliveryOrderResponse
     public DateTime LastUpdated { get; set; }
     public string UpdatedBy { get; set; } = string.Empty;
     public bool IsArchived { get; set; }
+    public DateTime? RedeliveryScheduledDate { get; set; }
+    public DriverSummary? RedeliveryDriver { get; set; }
+    public string? RedeliveryRemarks { get; set; }
+    public int RedeliveryAttemptCount { get; set; }
+    public double? LiveLatitude { get; set; }
+    public double? LiveLongitude { get; set; }
+    public double? RecipientLatitude { get; set; }
+    public double? RecipientLongitude { get; set; }
+    public DateTime? LastLiveUpdate { get; set; }
 }
 
 public class DriverSummary

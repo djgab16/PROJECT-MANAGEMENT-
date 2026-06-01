@@ -48,8 +48,12 @@ export default function EditDeliveryOrder() {
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
+  const isPickup = formData.taskType === 'Pickup';
+  const isAreaReadOnly = isReadOnly || isPickup;
+
   const getInputStyle = (field: string, extraStyle = {}) => {
-    const baseStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
+    const baseReadOnly = field === 'area' ? isAreaReadOnly : isReadOnly;
+    const baseStyle = baseReadOnly ? { background: 'var(--bg-main)' } : {};
     const errorStyle = errors[field] ? { borderColor: 'var(--status-failed)' } : {};
     return { ...baseStyle, ...errorStyle, ...extraStyle };
   };
@@ -83,29 +87,63 @@ export default function EditDeliveryOrder() {
         navigate('/tasks');
         return;
       }
-      setFormData({
-        waybillNo: `SPX-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-        orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        status: 'Pending',
-        potStatus: 'Not Submitted',
-        itemCount: 1,
-        weight: '0.0 kg',
-        declaredValue: '₱ 0.00',
-        encodedBy: user?.name || 'Unknown',
-        dateEncoded: new Date().toLocaleString(),
-        lastUpdated: new Date().toLocaleString(),
-        updatedBy: user?.name || 'Unknown',
-      });
+      if (!formData.waybillNo) {
+        setFormData({
+          waybillNo: `SPX-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+          orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          status: 'Pending',
+          taskType: 'Delivery',
+          potStatus: 'Not Submitted',
+          itemCount: 1,
+          weight: '0.0 kg',
+          declaredValue: '₱ 0.00',
+          encodedBy: user?.name || 'Unknown',
+          dateEncoded: new Date().toLocaleString(),
+          lastUpdated: new Date().toLocaleString(),
+          updatedBy: user?.name || 'Unknown',
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isNew, deliveryOrders, navigate, user]);
+  }, [id, isNew, deliveryOrders, navigate, user, formData.waybillNo]);
+
+  // Enforce Manila as Area and Route for Pickup tasks automatically
+  useEffect(() => {
+    if (formData.taskType === 'Pickup') {
+      if (formData.area !== 'Manila' || formData.route !== 'Manila') {
+        setFormData(prev => ({
+          ...prev,
+          area: 'Manila',
+          route: 'Manila'
+        }));
+        if (errors.area) {
+          setErrors(prev => ({ ...prev, area: '' }));
+        }
+      }
+    }
+  }, [formData.taskType, formData.area, formData.route, errors.area]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      if (name === 'taskType' && value === 'Pickup') {
+        updated.area = 'Manila';
+        if (!updated.route) {
+          updated.route = 'Manila';
+        }
+      }
+      return updated;
+    });
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    if (name === 'taskType' && value === 'Pickup') {
+      setErrors(prev => ({ ...prev, area: '' }));
     }
   };
 
@@ -269,7 +307,7 @@ export default function EditDeliveryOrder() {
                   {errors.expectedDelivery && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.expectedDelivery}</span>}
                 </div>
               </div>
-              <div className="form-row two-col" style={{ marginTop: '16px' }}>
+              <div className="form-row three-col" style={{ marginTop: '16px' }}>
                 <div className="form-group" ref={areaRef} style={{ position: 'relative' }}>
                   <label className="form-label">AREA / ROUTE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <input 
@@ -277,16 +315,22 @@ export default function EditDeliveryOrder() {
                     className="form-input" 
                     value={formData.area || ''} 
                     onChange={(e) => {
-                      handleChange(e);
-                      setShowAreaDropdown(true);
+                      if (!isAreaReadOnly) {
+                        handleChange(e);
+                        setShowAreaDropdown(true);
+                      }
                     }} 
-                    onFocus={() => setShowAreaDropdown(true)}
-                    placeholder="Search or select a city..." 
-                    readOnly={isReadOnly} 
-                    style={getInputStyle('area')} 
+                    onFocus={() => {
+                      if (!isAreaReadOnly) {
+                        setShowAreaDropdown(true);
+                      }
+                    }}
+                    placeholder={isPickup ? "Manila" : "Search or select a city..."} 
+                    readOnly={isAreaReadOnly} 
+                    style={getInputStyle('area', isPickup ? { cursor: 'not-allowed' } : {})} 
                     autoComplete="off"
                   />
-                  {showAreaDropdown && !isReadOnly && (
+                  {showAreaDropdown && !isAreaReadOnly && (
                     <div className="search-popover" style={{ top: 'calc(100% + 4px)', maxHeight: '250px', overflowY: 'auto' }}>
                       {REGIONS.map(region => {
                         const filteredCities = region.cities.filter(c => c.toLowerCase().includes((formData.area || '').toLowerCase()));
@@ -316,6 +360,13 @@ export default function EditDeliveryOrder() {
                     </div>
                   )}
                   {errors.area && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.area}</span>}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">TASK TYPE</label>
+                  <select name="taskType" className="form-input" value={formData.taskType || 'Delivery'} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
+                    <option value="Delivery">Delivery</option>
+                    <option value="Pickup">Pickup</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">STATUS</label>

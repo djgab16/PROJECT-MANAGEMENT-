@@ -57,6 +57,10 @@ public class DeliveryOrder
     // --- Status ---
     [Required]
     [MaxLength(20)]
+    public string TaskType { get; set; } = "Delivery"; // Delivery | Pickup
+
+    [Required]
+    [MaxLength(20)]
     public string Status { get; set; } = "Pending"; // Pending | In Transit | Delivered | Completed | Failed | Returned
 
     [Required]
@@ -110,6 +114,26 @@ public class DeliveryOrder
     public bool IsArchived { get; set; } = false;
 
     public DateTime? ArchivedAt { get; set; }
+
+    // --- Live Geolocation Telemetry Tracking ---
+    public double? LiveLatitude { get; set; }
+    public double? LiveLongitude { get; set; }
+    public double? RecipientLatitude { get; set; }
+    public double? RecipientLongitude { get; set; }
+    public DateTime? LastLiveUpdate { get; set; }
+
+    // --- Re-delivery Scheduling (PB-010) ---
+    public DateTime? RedeliveryScheduledDate { get; set; }
+
+    public int? RedeliveryDriverId { get; set; }
+
+    [ForeignKey(nameof(RedeliveryDriverId))]
+    public Employee? RedeliveryDriver { get; set; }
+
+    [MaxLength(500)]
+    public string? RedeliveryRemarks { get; set; }
+
+    public int RedeliveryAttemptCount { get; set; } = 0;
 
     // Navigation
     public ICollection<DeliveryHistoryLog> HistoryLogs { get; set; } = [];

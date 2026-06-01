@@ -1,7 +1,9 @@
+import { useState, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Pencil, RefreshCw, Download, Trash2, Image, Clock, MapPin, Package, User, FileText } from 'lucide-react';
+import { Pencil, RefreshCw, Download, Trash2, Image, Clock, MapPin, Package, User, FileText, Calendar } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Modal from '../../components/ui/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import type { DeliveryStatus, DeliveryOrder } from '../../types';
@@ -10,7 +12,7 @@ import './DeliveryOrderDetail.css';
 export default function DeliveryOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
+  const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
   const { user } = useAuth();
 
   const order = deliveryOrders.find(o => o.id === id);
@@ -27,6 +29,64 @@ export default function DeliveryOrderDetail() {
 
   const steps: DeliveryStatus[] = ['Pending', 'In Transit', 'Delivered', 'Completed'];
   const currentStep = steps.indexOf(order.status === 'Failed' ? 'In Transit' : order.status as DeliveryStatus);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState(employees.find(e => e.name === order.driverName)?.id || 'EMP-003');
+  const [redeliveryDate, setRedeliveryDate] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const drivers = employees.filter(e => e.role === 'DRIVER');
+
+  const handleScheduleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!redeliveryDate) {
+      setErrorMsg('Please select a re-delivery date.');
+      return;
+    }
+    if (!selectedDriverId) {
+      setErrorMsg('Please assign a driver.');
+      return;
+    }
+
+    if (order.status !== 'Failed') {
+      setErrorMsg('Re-delivery can only be scheduled for failed deliveries.');
+      return;
+    }
+
+    const selectedDriver = employees.find(e => e.id === selectedDriverId);
+
+    const updatePayload: Partial<DeliveryOrder> = {
+      status: 'Pending',
+      driverName: selectedDriver?.name || 'Test Driver',
+      driverInitials: selectedDriver?.name ? selectedDriver.name.split(' ').map(n => n[0]).join('') : 'TD',
+      driverColor: selectedDriver?.color || '#00A99D',
+      expectedDelivery: new Date(redeliveryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      redeliveryScheduledDate: new Date(redeliveryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      redeliveryDriverId: selectedDriverId,
+      redeliveryRemarks: remarks,
+      redeliveryAttemptCount: (order.redeliveryAttemptCount || 0) + 1,
+      lastUpdated: new Date().toLocaleString(),
+      updatedBy: user?.name || 'System'
+    };
+
+    updateDeliveryOrder(order.id, updatePayload);
+
+    addActivityLog({
+      id: Date.now().toString(),
+      timestamp: new Date().toLocaleString(),
+      userName: user?.name || 'System',
+      userRole: user?.role || 'Staff',
+      userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+      userColor: '#4318FF',
+      action: 'Update',
+      description: `Scheduled re-delivery attempt #${(order.redeliveryAttemptCount || 0) + 1} for ${order.waybillNo} with driver ${selectedDriver?.name}`,
+      reference: order.waybillNo
+    });
+
+    setIsModalOpen(false);
+  };
 
   const handleUpdateStatus = () => {
     const nextStatusMap: Record<string, DeliveryStatus> = {
@@ -80,7 +140,11 @@ export default function DeliveryOrderDetail() {
         actions={
           <div className="flex gap-sm">
             <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm"><Pencil size={14} /> Edit Order</Link>
-            <button className="btn btn-primary btn-sm" id="update-status-btn" onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
+            {order.status === 'Failed' ? (
+              <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
+            ) : (
+              <button className="btn btn-primary btn-sm" id="update-status-btn" onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
+            )}
           </div>
         }
       />
@@ -181,6 +245,15 @@ export default function DeliveryOrderDetail() {
                 {(order.status === 'Delivered' || order.status === 'Completed') && order.dateCompleted && (
                   <div className="info-full"><span className="label">DATE COMPLETED</span><strong style={{ color: 'var(--status-active)' }}>{order.dateCompleted}</strong></div>
                 )}
+                {order.redeliveryAttemptCount && order.redeliveryAttemptCount > 0 ? (
+                  <>
+                    <div><span className="label">RE-DELIVERY ATTEMPTS</span><strong style={{ color: 'var(--status-failed)' }}>{order.redeliveryAttemptCount} attempt(s)</strong></div>
+                    <div><span className="label">SCHEDULED REDELIVERY</span><strong>{order.redeliveryScheduledDate}</strong></div>
+                    {order.redeliveryRemarks && (
+                      <div className="info-full"><span className="label">REDELIVERY REMARKS</span><strong>{order.redeliveryRemarks}</strong></div>
+                    )}
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -234,7 +307,11 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <span className="label">QUICK ACTIONS</span>
               <div className="detail-actions">
-                <button className="btn btn-primary" onClick={handleUpdateStatus}><RefreshCw size={16} /> UPDATE STATUS</button>
+                {order.status === 'Failed' ? (
+                  <button className="btn btn-primary" id="schedule-redelivery-quick-btn" onClick={() => setIsModalOpen(true)}><RefreshCw size={16} /> SCHEDULE RE-DELIVERY</button>
+                ) : (
+                  <button className="btn btn-primary" onClick={handleUpdateStatus}><RefreshCw size={16} /> UPDATE STATUS</button>
+                )}
                 <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline"><Pencil size={16} /> EDIT ORDER</Link>
                 <button className="btn btn-outline" disabled><Download size={16} /> EXPORT AS PDF</button>
                 <button className="btn btn-danger" onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
@@ -258,6 +335,96 @@ export default function DeliveryOrderDetail() {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setErrorMsg('');
+        }}
+        title="Schedule Re-delivery Attempt"
+        size="md"
+        footer={
+          <div className="flex gap-sm justify-end" style={{ width: '100%' }}>
+            <button className="btn btn-outline btn-sm" onClick={() => { setIsModalOpen(false); setErrorMsg(''); }}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handleScheduleSubmit}>Schedule Re-delivery</button>
+          </div>
+        }
+      >
+        <form onSubmit={handleScheduleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {errorMsg && (
+            <div style={{ color: 'var(--status-failed)', background: 'var(--status-failed-bg)', padding: '10px 14px', borderRadius: '6px', fontSize: '0.82rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span>⚠️</span>
+              <strong>{errorMsg}</strong>
+            </div>
+          )}
+          
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ASSIGN REDELIVERY COURIER / DRIVER *</label>
+            <select
+              className="filter-select"
+              style={{ width: '100%', height: '40px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem' }}
+              value={selectedDriverId}
+              onChange={e => {
+                setSelectedDriverId(e.target.value);
+                setErrorMsg('');
+              }}
+            >
+              <option value="">Select a Driver</option>
+              {drivers.map(d => (
+                <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              SCHEDULED DATE * 
+              <span style={{ fontWeight: 500, color: 'var(--primary)', marginLeft: '8px', fontSize: '0.72rem', background: 'var(--status-transit-bg)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={10} /> Click field to open calendar
+              </span>
+            </label>
+            <div 
+              style={{ position: 'relative', cursor: 'pointer' }}
+              title="Click anywhere here to open the calendar date picker"
+              onClick={(e) => {
+                if (e.target !== dateInputRef.current) {
+                  try {
+                    dateInputRef.current?.showPicker();
+                  } catch (err) {
+                    console.warn('Native date picker trigger failed:', err);
+                  }
+                }
+              }}
+            >
+              <input
+                ref={dateInputRef}
+                type="date"
+                className="filter-select"
+                style={{ width: '100%', height: '40px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0 12px 0 40px', fontSize: '0.85rem', cursor: 'pointer' }}
+                value={redeliveryDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => {
+                  setRedeliveryDate(e.target.value);
+                  setErrorMsg('');
+                }}
+              />
+              <Calendar size={16} style={{ position: 'absolute', left: '14px', top: '12px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+            </div>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>REMARKS / SPECIAL INSTRUCTIONS</label>
+            <textarea
+              className="form-input form-textarea"
+              style={{ width: '100%', minHeight: '80px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '0.85rem' }}
+              placeholder="Provide context or instructions for this re-delivery attempt..."
+              value={remarks}
+              onChange={e => setRemarks(e.target.value)}
+            />
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

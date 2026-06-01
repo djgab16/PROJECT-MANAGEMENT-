@@ -11,6 +11,7 @@ public interface IDeliveryOrderService
     Task<DeliveryOrderResponse> UpdateAsync(int id, UpdateDeliveryOrderRequest request, int updatedById);
     Task<DeliveryOrderResponse> UpdateStatusAsync(int id, UpdateStatusRequest request, int updatedById);
     Task<DeliveryOrderResponse> AssignDriverAsync(int id, AssignDriverRequest request, int updatedById);
+    Task<DeliveryOrderResponse> ScheduleRedeliveryAsync(int id, ScheduleRedeliveryRequest request, int updatedById);
     Task<DeliveryOrderResponse> UploadPodAsync(int id, IFormFile file, int updatedById);
     Task ArchiveAsync(int id, int updatedById);
     Task RestoreAsync(int id, int updatedById);

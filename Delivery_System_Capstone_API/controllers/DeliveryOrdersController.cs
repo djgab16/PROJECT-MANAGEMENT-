@@ -188,6 +188,38 @@ public class DeliveryOrdersController(
         }
     }
 
+    // ─── PATCH /api/delivery-orders/{id}/schedule-redelivery ──────────────────
+    /// <summary>Schedule a re-delivery attempt for a failed delivery order.</summary>
+    [HttpPatch("{id:int}/schedule-redelivery")]
+    [Authorize(Policy = "OpTeamAndAbove")]
+    [ProducesResponseType(typeof(DeliveryOrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ScheduleRedelivery(int id, [FromBody] ScheduleRedeliveryRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        try
+        {
+            var employeeId = GetCurrentEmployeeDbId();
+            var result     = await service.ScheduleRedeliveryAsync(id, request, employeeId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error scheduling re-delivery for order {Id}.", id);
+            return StatusCode(500, new { message = "An error occurred while scheduling re-delivery." });
+        }
+    }
+
     // ─── POST /api/delivery-orders/{id}/pod ───────────────────────────────────
     /// <summary>Upload a POD (Proof of Delivery) image. Accepts JPG, PNG, WEBP. Max 5MB.</summary>
     [HttpPost("{id:int}/pod")]
