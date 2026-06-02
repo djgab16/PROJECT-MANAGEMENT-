@@ -1,8 +1,18 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Lock, Mail, ArrowLeft } from 'lucide-react';
 import './AccountLocked.css';
 
 export default function AccountLocked() {
+  const [lockedUser] = useState(() => {
+    const saved = localStorage.getItem('dts_locked_user');
+    return saved ? JSON.parse(saved) : { name: 'David Jr. M. Gabriel', id: 'EMP-002', email: 'd.gabriel@speedex.com.ph' };
+  });
+
+  const initials = lockedUser.name
+    ? lockedUser.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+    : 'US';
+
   return (
     <div className="locked-page">
       <div className="locked-card animate-scale-in">
@@ -27,10 +37,10 @@ export default function AccountLocked() {
         </div>
 
         <div className="locked-user-card">
-          <div className="locked-user-avatar">DG</div>
+          <div className="locked-user-avatar">{initials}</div>
           <div className="locked-user-info">
-            <strong>David Jr. M. Gabriel</strong>
-            <span>d.gabriel@speedex.com.ph</span>
+            <strong>{lockedUser.name}</strong>
+            <span>{lockedUser.email}</span>
           </div>
           <span className="locked-user-badge">
             <Lock size={12} /> Locked

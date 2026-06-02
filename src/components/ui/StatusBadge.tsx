@@ -24,6 +24,9 @@ const statusConfig: Record<string, { className: string; label?: string }> = {
   'Alert': { className: 'status-failed' },
   'System': { className: 'status-system' },
   'Excellent': { className: 'status-active' },
+  'Low': { className: 'status-low', label: 'Low Priority' },
+  'Medium': { className: 'status-medium', label: 'Medium Priority' },
+  'High': { className: 'status-high', label: 'High Priority' },
 };
 
 export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {

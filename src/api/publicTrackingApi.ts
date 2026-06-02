@@ -24,7 +24,8 @@ export interface PublicTrackingResponse {
 }
 
 /**
- * Fetch live package tracking details from the C# backend using Waybill number.
+ * Fetch live package tracking details from the local storage mock database,
+ * with a fallback to the C# backend if not found.
  */
 export async function mockFetchTracking(waybill: string): Promise<PublicTrackingResponse> {
   const cleanWaybill = waybill.trim().toUpperCase();
@@ -34,6 +35,71 @@ export async function mockFetchTracking(waybill: string): Promise<PublicTracking
     throw { status: 429, message: 'Too Many Requests' };
   }
 
+  // 1. Try local storage first (Mock / Offline Mode)
+  try {
+    const saved = localStorage.getItem('dts_orders');
+    if (saved) {
+      const orders = JSON.parse(saved);
+      const order = orders.find((o: any) => o.waybillNo?.trim().toUpperCase() === cleanWaybill);
+      
+      if (order) {
+        const events: PublicTrackingEvent[] = [
+          {
+            status: 'Pending',
+            timestamp: new Date(order.dateEncoded).toLocaleString(),
+            description: 'Order created and pending pickup.',
+          }
+        ];
+        
+        if (order.status !== 'Pending') {
+          events.push({
+            status: 'For Pickup',
+            timestamp: new Date(order.dateEncoded).toLocaleString(),
+            description: 'Package has been prepared for courier pickup.'
+          });
+          events.push({
+            status: 'In Transit',
+            timestamp: new Date(order.lastUpdated).toLocaleString(),
+            location: order.area || 'Metro Manila Hub',
+            description: 'Package is on its way to the delivery address.'
+          });
+        }
+
+        if (order.status === 'Delivered' || order.status === 'Completed') {
+          events.push({
+            status: 'Delivered',
+            timestamp: order.dateCompleted ? new Date(order.dateCompleted).toLocaleString() : new Date().toLocaleString(),
+            location: order.recipientAddress || 'Delivery Address',
+            description: 'Package has been successfully delivered.'
+          });
+        }
+
+        return {
+          id: order.id.toString(),
+          waybillNo: order.waybillNo,
+          currentStatus: order.status,
+          currentStatusHeadline: `Your package is ${order.status}`,
+          events: events,
+          lastLocation: order.liveCoordinates 
+            ? { lat: order.liveCoordinates.lat, lng: order.liveCoordinates.lng } 
+            : { lat: 14.5995, lng: 120.9842 },
+          potImage: order.potImage || order.podImage || undefined,
+          liveCoordinates: order.liveCoordinates,
+          recipientCoordinates: order.recipientCoordinates,
+          recipientAddress: order.recipientAddress,
+          driverName: order.driverName,
+          driverInitials: order.driverInitials || (order.driverName 
+            ? order.driverName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
+            : undefined),
+          driverColor: order.driverColor || '#00A99D'
+        };
+      }
+    }
+  } catch (localStorageError) {
+    console.warn('Error reading from localStorage, falling back to API:', localStorageError);
+  }
+
+  // 2. Fallback to API if not found in local storage
   try {
     const order = await trackDeliveryByWaybill(cleanWaybill);
 
@@ -90,7 +156,7 @@ export async function mockFetchTracking(waybill: string): Promise<PublicTracking
       driverInitials: order.driver?.name 
         ? order.driver.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
         : undefined,
-      driverColor: '#00A99D' // Default operational theme color
+      driverColor: '#00A99D'
     };
   } catch (error: any) {
     if (error.response?.status === 404) {

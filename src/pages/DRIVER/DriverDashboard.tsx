@@ -62,7 +62,10 @@ export default function DriverDashboard() {
             >
               <div className="card-header">
                 <span className="waybill-no">{order.waybillNo}</span>
-                <StatusBadge status={order.status} size="sm" />
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {order.priority && <StatusBadge status={order.priority} size="sm" />}
+                  <StatusBadge status={order.status} size="sm" />
+                </div>
               </div>
               
               <div className="card-body">

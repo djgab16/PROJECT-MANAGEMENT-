@@ -1,52 +1,42 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SPXDeliveryAPI.Models;
-
-public class Employee
+namespace SPXDeliveryAPI.Models
 {
-    [Key]
-    public int Id { get; set; }
+    public class Employee
+    {
+        [Key]
+        public int Id { get; set; }
 
-    /// <summary>
-    /// Human-readable employee ID (e.g. "EMP-001"). Unique, used as login username.
-    /// </summary>
-    [Required]
-    [MaxLength(20)]
-    public string EmployeeId { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(50)]
+        public string EmployeeId { get; set; } = string.Empty; // e.g. "EMP-001"
 
-    [Required]
-    [MaxLength(150)]
-    public string Name { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(100)]
+        public string Name { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(30)]
-    public string Role { get; set; } = string.Empty; // SUPER ADMIN | ADMIN | OP. TEAM | DRIVER
+        [Required]
+        [MaxLength(200)]
+        public string PasswordHash { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(100)]
-    public string SystemAccess { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = string.Empty; // "SUPER ADMIN", "ADMIN", "OP. TEAM", "DRIVER"
 
-    [Required]
-    [MaxLength(20)]
-    public string Status { get; set; } = "Active"; // Active | Pending | Locked
+        [Required]
+        [MaxLength(100)]
+        public string SystemAccess { get; set; } = string.Empty;
 
-    [Required]
-    public string PasswordHash { get; set; } = string.Empty; // Bcrypt hash
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Active"; // "Active", "Pending", "Locked"
 
-    public int FailedLoginAttempts { get; set; } = 0;
+        public int FailedAttempts { get; set; } = 0;
 
-    public DateTime? LockedAt { get; set; }
+        [MaxLength(2)]
+        public string Initials { get; set; } = string.Empty;
 
-    public DateTime? LastLoginAt { get; set; }
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    // Navigation properties
-    public ICollection<DeliveryOrder> EncodedOrders { get; set; } = [];
-    public ICollection<DeliveryOrder> AssignedOrders { get; set; } = [];
-    public ICollection<ActivityLog> ActivityLogs { get; set; } = [];
-    public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
+        [MaxLength(7)]
+        public string Color { get; set; } = "#6B7280"; // hex color tag
+    }
 }

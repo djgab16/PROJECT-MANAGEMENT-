@@ -1,46 +1,39 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SPXDeliveryAPI.Models;
-
-public class Notification
+namespace SPXDeliveryAPI.Models
 {
-    [Key]
-    public int Id { get; set; }
+    public class Notification
+    {
+        [Key]
+        public int Id { get; set; }
 
-    [Required]
-    [MaxLength(20)]
-    public string Type { get; set; } = string.Empty; // alert | success | system | info
+        [Required]
+        [MaxLength(20)]
+        public string Type { get; set; } = "info"; // "alert", "success", "system", "info"
 
-    [Required]
-    [MaxLength(150)]
-    public string Title { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(200)]
+        public string Title { get; set; } = string.Empty;
 
-    [MaxLength(30)]
-    public string? WaybillNo { get; set; }
+        [MaxLength(50)]
+        public string? WaybillNo { get; set; }
 
-    [Required]
-    [MaxLength(500)]
-    public string Description { get; set; } = string.Empty;
+        [Required]
+        public string Description { get; set; } = string.Empty;
 
-    [MaxLength(50)]
-    public string? StatusBadge { get; set; } // Urgent | Success | In Transit | New | etc.
+        [Required]
+        public string Timestamp { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Who/what generated this notification (employee name or "System" / "Automated Alert")
-    /// </summary>
-    [MaxLength(150)]
-    public string Source { get; set; } = "System";
+        [Required]
+        public string Date { get; set; } = string.Empty;
 
-    public bool IsRead { get; set; } = false;
+        [Required]
+        [MaxLength(100)]
+        public string Source { get; set; } = string.Empty;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool Read { get; set; } = false;
 
-    /// <summary>
-    /// Optional: link back to the delivery order if applicable
-    /// </summary>
-    public int? DeliveryOrderId { get; set; }
-
-    [ForeignKey(nameof(DeliveryOrderId))]
-    public DeliveryOrder? DeliveryOrder { get; set; }
+        [MaxLength(50)]
+        public string? StatusBadge { get; set; }
+    }
 }

@@ -1,20 +1,13 @@
-using SPXDeliveryAPI.DTOs.DeliveryOrders;
+using SPXDeliveryAPI.Models;
 
-namespace SPXDeliveryAPI.Services;
-
-public interface IDeliveryOrderService
+namespace SPXDeliveryAPI.Services
 {
-    Task<DeliveryOrderListResponse> GetAllAsync(DeliveryOrderFilterRequest filter);
-    Task<DeliveryOrderResponse> GetByIdAsync(int id);
-    Task<DeliveryOrderResponse> GetByWaybillAsync(string waybillNo);
-    Task<DeliveryOrderResponse> CreateAsync(CreateDeliveryOrderRequest request, int encodedById);
-    Task<DeliveryOrderResponse> UpdateAsync(int id, UpdateDeliveryOrderRequest request, int updatedById);
-    Task<DeliveryOrderResponse> UpdateStatusAsync(int id, UpdateStatusRequest request, int updatedById);
-    Task<DeliveryOrderResponse> AssignDriverAsync(int id, AssignDriverRequest request, int updatedById);
-    Task<DeliveryOrderResponse> ScheduleRedeliveryAsync(int id, ScheduleRedeliveryRequest request, int updatedById);
-    Task<DeliveryOrderResponse> UploadPodAsync(int id, IFormFile file, int updatedById);
-    Task ArchiveAsync(int id, int updatedById);
-    Task RestoreAsync(int id, int updatedById);
-    Task DeleteAsync(int id, int deletedById);
-    Task<List<DeliveryHistoryResponse>> GetHistoryAsync(int id);
+    public interface IDeliveryOrderService
+    {
+        Task<IEnumerable<DeliveryOrder>> GetAllOrdersAsync();
+        Task<DeliveryOrder?> GetOrderByIdAsync(int id);
+        Task<DeliveryOrder> CreateOrderAsync(DeliveryOrder order);
+        Task<DeliveryOrder?> UpdateOrderAsync(int id, DeliveryOrder order);
+        Task<bool> DeleteOrderAsync(int id);
+    }
 }

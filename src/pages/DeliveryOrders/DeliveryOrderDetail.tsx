@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Pencil, RefreshCw, Download, Trash2, Image, Clock, MapPin, Package, User, FileText, Calendar } from 'lucide-react';
+import { Pencil, RefreshCw, Download, Trash2, Image, Clock, MapPin, Package, User, FileText, Calendar, AlertCircle } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
@@ -45,6 +45,16 @@ export default function DeliveryOrderDetail() {
       setErrorMsg('Please select a re-delivery date.');
       return;
     }
+    
+    const selectedDate = new Date(redeliveryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      setErrorMsg('Re-delivery date cannot be in the past.');
+      return;
+    }
+
     if (!selectedDriverId) {
       setErrorMsg('Please assign a driver.');
       return;
@@ -156,7 +166,10 @@ export default function DeliveryOrderDetail() {
             <h2 className="banner-waybill">{order.waybillNo}</h2>
             <span className="banner-date">{order.dateEncoded}</span>
           </div>
-          <StatusBadge status={order.status} />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {order.priority && <StatusBadge status={order.priority} />}
+            <StatusBadge status={order.status} />
+          </div>
           <div className="detail-stepper">
             {steps.map((step, i) => (
               <div key={step} className={`stepper-item ${i <= currentStep ? 'stepper-done' : ''} ${i === currentStep ? 'stepper-current' : ''}`}>
@@ -176,6 +189,20 @@ export default function DeliveryOrderDetail() {
         <div className="detail-grid">
           {/* Left Column - Info Cards */}
           <div className="detail-left">
+            {/* Failed Delivery Details */}
+            {order.status === 'Failed' && (
+              <div className="card info-card" style={{ borderLeft: '4px solid var(--status-failed)' }}>
+                <div className="info-card-header">
+                  <AlertCircle size={18} className="info-icon red" style={{ color: 'var(--status-failed)' }} />
+                  <h4 style={{ color: 'var(--status-failed)' }}>Failed Delivery Details</h4>
+                </div>
+                <div className="info-grid">
+                  <div><span className="label">REASON FOR FAILURE</span><strong style={{ color: 'var(--status-failed)' }}>{order.failureReason || 'Not Specified'}</strong></div>
+                  <div className="info-full"><span className="label">FAILURE REMARKS</span><strong>{order.failureRemarks || 'No remarks provided.'}</strong></div>
+                </div>
+              </div>
+            )}
+
             {/* Order Info */}
             <div className="card info-card">
               <div className="info-card-header">
@@ -217,6 +244,7 @@ export default function DeliveryOrderDetail() {
                 <div><span className="label">WEIGHT</span><strong>{order.weight}</strong></div>
                 <div><span className="label">DECLARED VALUE</span><strong>{order.declaredValue}</strong></div>
                 <div><span className="label">EXPECTED DELIVERY</span><strong>{order.expectedDelivery}</strong></div>
+                {order.priority && <div><span className="label">PRIORITY</span><strong>{order.priority}</strong></div>}
                 {order.specialInstructions && <div className="info-full"><span className="label">SPECIAL INSTRUCTIONS</span><strong>{order.specialInstructions}</strong></div>}
               </div>
             </div>

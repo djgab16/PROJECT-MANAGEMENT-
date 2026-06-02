@@ -45,9 +45,14 @@
 .form-row { display: grid; gap: 16px; margin-bottom: 16px; }
 .two-col { grid-template-columns: 1fr 1fr; }
 .three-col { grid-template-columns: 1fr 1fr 1fr; }
+.four-col { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+@media (max-width: 992px) {
+  .four-col { grid-template-columns: 1fr 1fr; }
+}
 
 @media (max-width: 768px) {
-  .two-col, .three-col {
+  .two-col, .three-col, .four-col {
     grid-template-columns: 1fr;
   }
 }

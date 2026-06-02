@@ -8,6 +8,30 @@ import { useAuth } from '../../context/AuthContext';
 import type { DeliveryOrder } from '../../types';
 import './EditDeliveryOrder.css';
 
+const FAILURE_REASONS = [
+  "Customer Not Home",
+  "Incorrect Address",
+  "Damaged Parcel",
+  "Refused by Recipient",
+  "Incomplete Address",
+  "Weather / Force Majeure",
+  "Other"
+];
+
+const formatDateToInput = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().split('T')[0];
+};
+
+const formatDateFromInput = (dateStr: string) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
 const REGIONS = [
   {
     name: "National Capital Region (Metro Manila)",
@@ -164,7 +188,39 @@ export default function EditDeliveryOrder() {
 
   const handleSave = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.expectedDelivery) newErrors.expectedDelivery = 'Expected Delivery date is required';
+    
+    // Waybill automated validation
+    if (!formData.waybillNo) {
+      newErrors.waybillNo = 'Waybill number is required';
+    } else {
+      const startsWithSPX = formData.waybillNo.startsWith('SPX-');
+      const waybillPartAfterPrefix = formData.waybillNo.substring(4);
+      const hasLettersAfterPrefix = /[a-zA-Z]/.test(waybillPartAfterPrefix);
+      if (!startsWithSPX) {
+        newErrors.waybillNo = 'Waybill number must start with "SPX-"';
+      } else if (hasLettersAfterPrefix) {
+        newErrors.waybillNo = 'Waybill number cannot contain letters after "SPX-"';
+      }
+    }
+
+    if (!formData.expectedDelivery) {
+      newErrors.expectedDelivery = 'Expected Delivery date is required';
+    } else if (formData.orderDate) {
+      const orderD = new Date(formData.orderDate);
+      const expectedD = new Date(formData.expectedDelivery);
+      if (!isNaN(orderD.getTime()) && !isNaN(expectedD.getTime())) {
+        orderD.setHours(0, 0, 0, 0);
+        expectedD.setHours(0, 0, 0, 0);
+        if (expectedD < orderD) {
+          newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
+        }
+      }
+    }
+
+    if (formData.status === 'Failed' && !formData.failureReason) {
+      newErrors.failureReason = 'Failure Reason is required when status is Failed';
+    }
+
     if (!formData.area) newErrors.area = 'Area / Route is required';
     if (!formData.clientName) newErrors.clientName = 'Client Name is required';
     if (!formData.senderAddress) newErrors.senderAddress = 'Sender Address is required';
@@ -274,18 +330,31 @@ export default function EditDeliveryOrder() {
                     value={formData.waybillNo}
                     onChange={handleChange}
                     readOnly={!isNew}
-                    style={!isNew ? inputStyle : {}}
+                    style={!isNew ? inputStyle : getInputStyle('waybillNo')}
                   />
+                  {errors.waybillNo && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.waybillNo}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">ORDER DATE</label>
                   <div className="form-input-icon">
                     <Calendar size={16} className="icon-left" />
                     <input
+                      type="date"
                       name="orderDate"
                       className="form-input"
-                      value={formData.orderDate}
-                      onChange={handleChange}
+                      value={formatDateToInput(formData.orderDate)}
+                      onChange={(e) => {
+                        const newOrderDateStr = formatDateFromInput(e.target.value);
+                        // Automated expected delivery calculation (orderDate + 2 days)
+                        const expectedD = e.target.value ? new Date(new Date(e.target.value).getTime() + 86400000 * 2).toISOString().split('T')[0] : '';
+                        const formattedExpected = formatDateFromInput(expectedD);
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          orderDate: newOrderDateStr,
+                          expectedDelivery: formattedExpected 
+                        }));
+                        if (errors.expectedDelivery) setErrors(prev => ({ ...prev, expectedDelivery: '' }));
+                      }}
                       readOnly={isReadOnly}
                       style={{ paddingLeft: '42px', ...inputStyle }}
                     />
@@ -296,10 +365,15 @@ export default function EditDeliveryOrder() {
                   <div className="form-input-icon">
                     <Calendar size={16} className="icon-left" />
                     <input
+                      type="date"
                       name="expectedDelivery"
                       className="form-input"
-                      value={formData.expectedDelivery}
-                      onChange={handleChange}
+                      value={formatDateToInput(formData.expectedDelivery)}
+                      onChange={(e) => {
+                        const formatted = formatDateFromInput(e.target.value);
+                        setFormData(prev => ({ ...prev, expectedDelivery: formatted }));
+                        if (errors.expectedDelivery) setErrors(prev => ({ ...prev, expectedDelivery: '' }));
+                      }}
                       readOnly={isReadOnly}
                       style={getInputStyle('expectedDelivery', { paddingLeft: '42px' })}
                     />
@@ -307,7 +381,7 @@ export default function EditDeliveryOrder() {
                   {errors.expectedDelivery && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.expectedDelivery}</span>}
                 </div>
               </div>
-              <div className="form-row three-col" style={{ marginTop: '16px' }}>
+              <div className="form-row four-col" style={{ marginTop: '16px' }}>
                 <div className="form-group" ref={areaRef} style={{ position: 'relative' }}>
                   <label className="form-label">AREA / ROUTE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <input 
@@ -378,7 +452,49 @@ export default function EditDeliveryOrder() {
                     <option value="Failed">Failed</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">DELIVERY PRIORITY</label>
+                  <select name="priority" className="form-input" value={formData.priority || 'Medium'} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
               </div>
+
+              {formData.status === 'Failed' && (
+                <div className="form-row two-col" style={{ marginTop: '16px', background: 'var(--status-failed-bg)', padding: '16px', borderRadius: '8px', border: '1px solid #ffdcd9' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ color: 'var(--status-failed)' }}>REASON FOR FAILURE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                    <select 
+                      name="failureReason" 
+                      className="form-input" 
+                      value={formData.failureReason || ''} 
+                      onChange={handleChange} 
+                      disabled={isReadOnly} 
+                      style={getInputStyle('failureReason', { background: 'white' })}
+                    >
+                      <option value="">Select a Reason</option>
+                      {FAILURE_REASONS.map(reason => (
+                        <option key={reason} value={reason}>{reason}</option>
+                      ))}
+                    </select>
+                    {errors.failureReason && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.failureReason}</span>}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ color: 'var(--status-failed)' }}>FAILURE REMARKS (Optional)</label>
+                    <textarea 
+                      name="failureRemarks" 
+                      className="form-input form-textarea" 
+                      value={formData.failureRemarks || ''} 
+                      onChange={handleChange} 
+                      placeholder="Add detailed failure remarks..." 
+                      readOnly={isReadOnly} 
+                      style={{ ...inputStyle, minHeight: '80px', background: isReadOnly ? 'var(--bg-main)' : 'white' }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="form-row three-col" style={{ marginTop: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">PACKAGE TYPE / BOX</label>
@@ -488,6 +604,17 @@ export default function EditDeliveryOrder() {
                 )}
               </div>
             </div>
+
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ color: 'var(--status-failed)', background: 'var(--status-failed-bg)', padding: '12px 14px', borderRadius: '8px', border: '1px solid #ffdcd9', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginBottom: '12px', boxShadow: '0 2px 6px rgba(227,26,26,0.04)' }}>
+                <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}>⚠️ Please fill in all required fields:</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {Object.entries(errors).map(([key, val]) => (
+                    val ? <li key={key} style={{ listStyleType: 'disc' }}>{val}</li> : null
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={isSubmitting}>
               {isSubmitting ? 'SAVING...' : (

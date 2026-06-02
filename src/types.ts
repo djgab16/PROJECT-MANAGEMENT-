@@ -12,6 +12,7 @@ export interface Employee {
   role: UserRole;
   systemAccess: string;
   status: AccountStatus;
+  failedAttempts?: number;
 }
 
 export interface DeliveryOrder {
@@ -49,6 +50,7 @@ export interface DeliveryOrder {
   recipientCoordinates?: { lat: number; lng: number };
   failureReason?: string;
   failureRemarks?: string;
+  priority?: 'Low' | 'Medium' | 'High';
   specialInstructions?: string;
   orderDate: string;
   expectedDelivery: string;

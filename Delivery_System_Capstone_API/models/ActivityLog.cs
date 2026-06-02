@@ -1,38 +1,39 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SPXDeliveryAPI.Models;
-
-public class ActivityLog
+namespace SPXDeliveryAPI.Models
 {
-    [Key]
-    public int Id { get; set; }
+    public class ActivityLog
+    {
+        [Key]
+        public int Id { get; set; }
 
-    [Required]
-    public int EmployeeId { get; set; }
+        [Required]
+        public string Timestamp { get; set; } = string.Empty;
 
-    [ForeignKey(nameof(EmployeeId))]
-    public Employee Employee { get; set; } = null!;
+        [Required]
+        [MaxLength(100)]
+        public string UserName { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(30)]
-    public string Action { get; set; } = string.Empty; // Create | Update | Assign | POD Upload | Login | Archive | Delete
+        [Required]
+        [MaxLength(50)]
+        public string UserRole { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(500)]
-    public string Description { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(2)]
+        public string UserInitials { get; set; } = string.Empty;
 
-    /// <summary>
-    /// e.g. Waybill number or Employee ID being acted on
-    /// </summary>
-    [MaxLength(50)]
-    public string? Reference { get; set; }
+        [Required]
+        [MaxLength(7)]
+        public string UserColor { get; set; } = string.Empty;
 
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        [Required]
+        [MaxLength(50)]
+        public string Action { get; set; } = string.Empty; // "Create", "Update", "POT Upload", "Login", etc.
 
-    /// <summary>
-    /// Captured at log time (in case employee role changes later)
-    /// </summary>
-    [MaxLength(50)]
-    public string UserRoleSnapshot { get; set; } = string.Empty;
+        [Required]
+        public string Description { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string? Reference { get; set; }
+    }
 }

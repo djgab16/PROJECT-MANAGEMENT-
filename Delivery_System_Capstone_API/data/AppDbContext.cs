@@ -1,137 +1,47 @@
 using Microsoft.EntityFrameworkCore;
 using SPXDeliveryAPI.Models;
 
-namespace SPXDeliveryAPI.Data;
-
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+namespace SPXDeliveryAPI.Data
 {
-    // ─── Tables ───────────────────────────────────────────────────────────────
-    public DbSet<Employee> Employees { get; set; }
-    public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
-    public DbSet<DeliveryHistoryLog> DeliveryHistoryLogs { get; set; }
-    public DbSet<Notification> Notifications { get; set; }
-    public DbSet<ActivityLog> ActivityLogs { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<AppTask> Tasks { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder builder)
+    public class AppDbContext : DbContext
     {
-        base.OnModelCreating(builder);
-
-        // ─── Employee ──────────────────────────────────────────────────────────
-        builder.Entity<Employee>(e =>
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-            e.HasIndex(x => x.EmployeeId).IsUnique();
+        }
 
-            e.Property(x => x.Status)
-             .HasDefaultValue("Active");
+        public DbSet<Employee> Employees { get; set; }
+        public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
+        public DbSet<DeliveryHistoryLog> DeliveryHistoryLogs { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<AppTask> Tasks { get; set; }
 
-            e.Property(x => x.FailedLoginAttempts)
-             .HasDefaultValue(0);
-        });
-
-        // ─── DeliveryOrder ─────────────────────────────────────────────────────
-        builder.Entity<DeliveryOrder>(e =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            e.HasIndex(x => x.WaybillNo).IsUnique();
+            base.OnModelCreating(modelBuilder);
 
-            e.Property(x => x.Status)
-             .HasDefaultValue("Pending");
+            // Configure Uniqueness indexes
+            modelBuilder.Entity<DeliveryOrder>()
+                .HasIndex(o => o.WaybillNo)
+                .IsUnique();
 
-            e.Property(x => x.PodStatus)
-             .HasDefaultValue("Not Submitted");
+            modelBuilder.Entity<Employee>()
+                .HasIndex(e => e.EmployeeId)
+                .IsUnique();
 
-            e.Property(x => x.IsArchived)
-             .HasDefaultValue(false);
+            // Set up cascade behaviors or constraints if necessary
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(t => t.Employee)
+                .WithMany()
+                .HasForeignKey(t => t.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Driver relationship — SET NULL on delete (orders survive driver removal)
-            e.HasOne(x => x.Driver)
-             .WithMany(d => d.AssignedOrders)
-             .HasForeignKey(x => x.DriverId)
-             .OnDelete(DeleteBehavior.SetNull);
-
-            // Redelivery Driver relationship — SET NULL on delete
-            e.HasOne(x => x.RedeliveryDriver)
-             .WithMany()
-             .HasForeignKey(x => x.RedeliveryDriverId)
-             .OnDelete(DeleteBehavior.SetNull);
-
-            // EncodedBy — RESTRICT delete (can't delete employee who has orders)
-            e.HasOne(x => x.EncodedBy)
-             .WithMany(d => d.EncodedOrders)
-             .HasForeignKey(x => x.EncodedById)
-             .OnDelete(DeleteBehavior.Restrict);
-
-            // UpdatedBy — NO ACTION (avoid multiple cascade paths in SQL Server)
-            e.HasOne(x => x.UpdatedBy)
-             .WithMany()
-             .HasForeignKey(x => x.UpdatedById)
-             .OnDelete(DeleteBehavior.NoAction);
-        });
-
-        // ─── DeliveryHistoryLog ────────────────────────────────────────────────
-        builder.Entity<DeliveryHistoryLog>(e =>
-        {
-            e.HasOne(x => x.DeliveryOrder)
-             .WithMany(d => d.HistoryLogs)
-             .HasForeignKey(x => x.DeliveryOrderId)
-             .OnDelete(DeleteBehavior.Cascade);
-
-            e.HasOne(x => x.ChangedBy)
-             .WithMany()
-             .HasForeignKey(x => x.ChangedById)
-             .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // ─── Notification ──────────────────────────────────────────────────────
-        builder.Entity<Notification>(e =>
-        {
-            e.Property(x => x.IsRead)
-             .HasDefaultValue(false);
-
-            e.HasOne(x => x.DeliveryOrder)
-             .WithMany()
-             .HasForeignKey(x => x.DeliveryOrderId)
-             .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        // ─── ActivityLog ───────────────────────────────────────────────────────
-        builder.Entity<ActivityLog>(e =>
-        {
-            e.HasOne(x => x.Employee)
-             .WithMany(emp => emp.ActivityLogs)
-             .HasForeignKey(x => x.EmployeeId)
-             .OnDelete(DeleteBehavior.Restrict); // Keep logs even if employee is removed
-
-            // Useful query indexes
-            e.HasIndex(x => x.Timestamp);
-            e.HasIndex(x => x.Action);
-            e.HasIndex(x => x.Reference);
-        });
-
-        // ─── RefreshToken ──────────────────────────────────────────────────────
-        builder.Entity<RefreshToken>(e =>
-        {
-            e.HasOne(x => x.Employee)
-             .WithMany(emp => emp.RefreshTokens)
-             .HasForeignKey(x => x.EmployeeId)
-             .OnDelete(DeleteBehavior.Cascade);
-
-            e.HasIndex(x => x.Token);
-        });
-
-        // ─── AppTask ───────────────────────────────────────────────────────────
-        builder.Entity<AppTask>(e =>
-        {
-            e.HasOne(x => x.CreatedBy)
-             .WithMany()
-             .HasForeignKey(x => x.CreatedById)
-             .OnDelete(DeleteBehavior.Restrict);
-
-            e.HasOne(x => x.AssignedTo)
-             .WithMany()
-             .HasForeignKey(x => x.AssignedToId)
-             .OnDelete(DeleteBehavior.SetNull);
-        });
+            modelBuilder.Entity<AppTask>()
+                .HasOne(t => t.Employee)
+                .WithMany()
+                .HasForeignKey(t => t.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }

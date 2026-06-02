@@ -51,3 +51,12 @@
 
 .status-default { background: #F0F0F5; color: #6B7280; }
 .status-default .status-dot { background: #6B7280; }
+
+.status-low { background: #E0F2FE; color: #0369A1; }
+.status-low .status-dot { background: #0284C7; }
+
+.status-medium { background: #FEF3C7; color: #B45309; }
+.status-medium .status-dot { background: #D97706; }
+
+.status-high { background: #FFE4E6; color: #BE123C; }
+.status-high .status-dot { background: #E11D48; }

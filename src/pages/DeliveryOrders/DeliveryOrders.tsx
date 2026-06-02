@@ -163,9 +163,12 @@ export default function DeliveryOrders() {
               {filteredOrders.map(order => (
                 <tr key={order.id}>
                   <td>
-                    <Link to={`/delivery-orders/${order.id}`} className="waybill-link">
-                      {order.waybillNo}
-                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Link to={`/delivery-orders/${order.id}`} className="waybill-link">
+                        {order.waybillNo}
+                      </Link>
+                      {order.priority && <StatusBadge status={order.priority} size="sm" />}
+                    </div>
                     <div className="cell-sub">{order.orderDate}</div>
                     {order.redeliveryAttemptCount && order.redeliveryAttemptCount > 0 ? (
                       <div className="cell-sub" style={{ color: 'var(--status-failed)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>

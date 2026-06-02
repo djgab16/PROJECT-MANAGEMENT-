@@ -9,7 +9,7 @@ import './Login.css';
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { employees } = useData();
+  const { employees, updateEmployee, addActivityLog, addNotification } = useData();
 
   const [showPassword, setShowPassword] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
@@ -22,16 +22,75 @@ export default function Login() {
 
     const employee = employees.find(emp => emp.id === employeeId);
 
-    if (employee && password === 'password123') {
-      if (employee.status === 'Locked') {
-        navigate('/account-locked');
-        return;
-      }
+    // If account is already locked, prevent login attempts
+    if (employee && employee.status === 'Locked') {
+      localStorage.setItem('dts_locked_user', JSON.stringify({
+        name: employee.name,
+        id: employee.id,
+        email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@speedex.com.ph`
+      }));
+      navigate('/account-locked');
+      return;
+    }
 
+    if (employee && password === 'password123') {
+      // Reset failed attempts on success
+      updateEmployee(employee.id, { failedAttempts: 0 });
       login(employee);
-      navigate('/dashboard');
+      if (employee.role === 'DRIVER') {
+        navigate('/driver/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
-      setError('Invalid Employee ID or password. Please try again.');
+      if (employee) {
+        const currentFailed = (employee.failedAttempts || 0) + 1;
+        const remaining = 3 - currentFailed;
+
+        if (remaining <= 0) {
+          updateEmployee(employee.id, { status: 'Locked', failedAttempts: currentFailed });
+
+          // Audit log for admin transparency
+          addActivityLog({
+            id: Date.now().toString(),
+            timestamp: new Date().toLocaleString(),
+            userName: employee.name,
+            userRole: employee.role,
+            userInitials: employee.name ? employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'US',
+            userColor: '#E31A1A',
+            action: 'Update',
+            description: `Account ${employee.id} automatically locked due to 3 failed login attempts.`,
+            reference: employee.id
+          });
+
+          // System-wide security alert notification
+          addNotification({
+            id: 'n-' + Date.now(),
+            type: 'alert',
+            title: 'Account Locked Out',
+            description: `Employee ${employee.name} (${employee.id}) account has been locked due to consecutive failed login attempts.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date().toLocaleDateString(),
+            source: 'Security Monitor',
+            read: false,
+            statusBadge: 'Urgent'
+          });
+
+          // Cache details for personalized lockout page
+          localStorage.setItem('dts_locked_user', JSON.stringify({
+            name: employee.name,
+            id: employee.id,
+            email: `${employee.name.toLowerCase().replace(/\s+/g, '.')}@speedex.com.ph`
+          }));
+
+          navigate('/account-locked');
+        } else {
+          updateEmployee(employee.id, { failedAttempts: currentFailed });
+          setError(`Invalid Employee ID or password. ${remaining} attempt(s) remaining before lockout.`);
+        }
+      } else {
+        setError('Invalid Employee ID or password. Please try again.');
+      }
     }
   };
 

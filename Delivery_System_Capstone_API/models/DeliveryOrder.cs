@@ -1,140 +1,134 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SPXDeliveryAPI.Models;
-
-public class DeliveryOrder
+namespace SPXDeliveryAPI.Models
 {
-    [Key]
-    public int Id { get; set; }
+    public class DeliveryOrder
+    {
+        [Key]
+        public int Id { get; set; }
 
-    [Required]
-    [MaxLength(30)]
-    public string WaybillNo { get; set; } = string.Empty; // e.g. SPX-2026-0841
+        [Required]
+        [MaxLength(50)]
+        public string WaybillNo { get; set; } = string.Empty;
 
-    // --- Client / Sender ---
-    [Required]
-    [MaxLength(150)]
-    public string ClientName { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(100)]
+        public string ClientName { get; set; } = string.Empty;
 
-    [MaxLength(50)]
-    public string ClientType { get; set; } = string.Empty; // Corporate | Individual
+        [Required]
+        [MaxLength(50)]
+        public string ClientType { get; set; } = "Standard";
 
-    [MaxLength(20)]
-    public string ContactNumber { get; set; } = string.Empty;
+        [MaxLength(20)]
+        public string ContactNumber { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(300)]
-    public string SenderAddress { get; set; } = string.Empty;
+        [Required]
+        public string SenderAddress { get; set; } = string.Empty;
 
-    // --- Recipient ---
-    [Required]
-    [MaxLength(150)]
-    public string RecipientName { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(100)]
+        public string RecipientName { get; set; } = string.Empty;
 
-    [MaxLength(20)]
-    public string RecipientContact { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(20)]
+        public string RecipientContact { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(300)]
-    public string RecipientAddress { get; set; } = string.Empty;
+        [Required]
+        public string RecipientAddress { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string Area { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(100)]
+        public string Area { get; set; } = string.Empty;
 
-    [MaxLength(150)]
-    public string? Landmark { get; set; }
+        [MaxLength(100)]
+        public string? Landmark { get; set; }
 
-    [MaxLength(300)]
-    public string Route { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(100)]
+        public string Route { get; set; } = string.Empty;
 
-    // --- Driver (FK to Employee) ---
-    public int? DriverId { get; set; }
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Pending"; // "Pending", "In Transit", "Delivered", "Completed", "Failed", "Returned"
 
-    [ForeignKey(nameof(DriverId))]
-    public Employee? Driver { get; set; }
+        [MaxLength(20)]
+        public string TaskType { get; set; } = "Delivery"; // "Delivery", "Pickup"
 
-    // --- Status ---
-    [Required]
-    [MaxLength(20)]
-    public string TaskType { get; set; } = "Delivery"; // Delivery | Pickup
+        [Required]
+        [MaxLength(20)]
+        public string PotStatus { get; set; } = "Not Submitted";
 
-    [Required]
-    [MaxLength(20)]
-    public string Status { get; set; } = "Pending"; // Pending | In Transit | Delivered | Completed | Failed | Returned
+        [Required]
+        [MaxLength(20)]
+        public string PodStatus { get; set; } = "Not Submitted";
 
-    [Required]
-    [MaxLength(20)]
-    public string PodStatus { get; set; } = "Not Submitted"; // Submitted | No POD | Not Submitted
+        [MaxLength(50)]
+        public string PackageType { get; set; } = string.Empty;
 
-    // --- Package Details ---
-    [MaxLength(50)]
-    public string PackageType { get; set; } = string.Empty; // Parcel | Document | Fragile
+        public string PackageDescription { get; set; } = string.Empty;
 
-    [MaxLength(300)]
-    public string PackageDescription { get; set; } = string.Empty;
+        public int ItemCount { get; set; } = 1;
 
-    public int ItemCount { get; set; } = 1;
+        [MaxLength(20)]
+        public string Weight { get; set; } = "0.0 kg";
 
-    [MaxLength(20)]
-    public string Weight { get; set; } = string.Empty; // e.g. "1.2 kg"
+        [MaxLength(50)]
+        public string DeclaredValue { get; set; } = "₱ 0.00";
 
-    [MaxLength(30)]
-    public string DeclaredValue { get; set; } = string.Empty; // e.g. "₱ 2,500.00"
+        public string? PotImage { get; set; } // base64 payload or URL path
+        public string? PodImage { get; set; } // base64 payload or URL path
 
-    [MaxLength(500)]
-    public string? SpecialInstructions { get; set; }
+        // Redelivery fields
+        public string? RedeliveryScheduledDate { get; set; }
+        public string? RedeliveryRemarks { get; set; }
+        public int RedeliveryAttemptCount { get; set; } = 0;
+        public int? RedeliveryDriverId { get; set; }
 
-    // --- POD Image ---
-    [MaxLength(500)]
-    public string? PodImagePath { get; set; } // Stored file path / URL
+        // GPS coordinates
+        public double? LiveLatitude { get; set; }
+        public double? LiveLongitude { get; set; }
+        public string? LastLiveUpdate { get; set; }
 
-    // --- Dates ---
-    public DateTime OrderDate { get; set; }
+        public double? RecipientLatitude { get; set; }
+        public double? RecipientLongitude { get; set; }
 
-    public DateTime ExpectedDelivery { get; set; }
+        // Failure reasoning
+        public string? FailureReason { get; set; }
+        public string? FailureRemarks { get; set; }
 
-    public DateTime? DateCompleted { get; set; }
+        // Priority
+        [MaxLength(10)]
+        public string Priority { get; set; } = "Medium"; // "Low", "Medium", "High"
 
-    // --- Audit ---
-    public int EncodedById { get; set; }
+        public string? SpecialInstructions { get; set; }
 
-    [ForeignKey(nameof(EncodedById))]
-    public Employee EncodedBy { get; set; } = null!;
+        // Dates and Audits
+        [Required]
+        public string OrderDate { get; set; } = string.Empty;
 
-    public DateTime DateEncoded { get; set; } = DateTime.UtcNow;
+        [Required]
+        public string ExpectedDelivery { get; set; } = string.Empty;
 
-    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        public string? DateCompleted { get; set; }
 
-    public int UpdatedById { get; set; }
+        [Required]
+        [MaxLength(100)]
+        public string EncodedBy { get; set; } = string.Empty;
 
-    [ForeignKey(nameof(UpdatedById))]
-    public Employee UpdatedBy { get; set; } = null!;
+        [Required]
+        public string DateEncoded { get; set; } = string.Empty;
 
-    public bool IsArchived { get; set; } = false;
+        [Required]
+        public string LastUpdated { get; set; } = string.Empty;
 
-    public DateTime? ArchivedAt { get; set; }
+        [Required]
+        [MaxLength(100)]
+        public string UpdatedBy { get; set; } = string.Empty;
 
-    // --- Live Geolocation Telemetry Tracking ---
-    public double? LiveLatitude { get; set; }
-    public double? LiveLongitude { get; set; }
-    public double? RecipientLatitude { get; set; }
-    public double? RecipientLongitude { get; set; }
-    public DateTime? LastLiveUpdate { get; set; }
-
-    // --- Re-delivery Scheduling (PB-010) ---
-    public DateTime? RedeliveryScheduledDate { get; set; }
-
-    public int? RedeliveryDriverId { get; set; }
-
-    [ForeignKey(nameof(RedeliveryDriverId))]
-    public Employee? RedeliveryDriver { get; set; }
-
-    [MaxLength(500)]
-    public string? RedeliveryRemarks { get; set; }
-
-    public int RedeliveryAttemptCount { get; set; } = 0;
-
-    // Navigation
-    public ICollection<DeliveryHistoryLog> HistoryLogs { get; set; } = [];
+        // Relationships
+        public int? DriverId { get; set; }
+        [ForeignKey("DriverId")]
+        public virtual Employee? Driver { get; set; }
+    }
 }

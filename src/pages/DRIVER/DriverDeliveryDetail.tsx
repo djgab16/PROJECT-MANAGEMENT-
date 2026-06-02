@@ -140,7 +140,10 @@ export default function DriverDeliveryDetail() {
       <div className="detail-header-card">
         <div className="detail-header-top">
           <span className="waybill-no-large">{order.waybillNo}</span>
-          <StatusBadge status={order.status} size="sm" />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {order.priority && <StatusBadge status={order.priority} size="sm" />}
+            <StatusBadge status={order.status} size="sm" />
+          </div>
         </div>
         <p className="package-desc">{order.packageDescription || order.packageType} • {order.weight}</p>
       </div>

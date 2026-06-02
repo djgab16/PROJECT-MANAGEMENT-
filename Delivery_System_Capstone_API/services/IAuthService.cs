@@ -1,10 +1,10 @@
-using SPXDeliveryAPI.DTOs.Auth;
+using SPXDeliveryAPI.Models;
 
-namespace SPXDeliveryAPI.Services;
-
-public interface IAuthService
+namespace SPXDeliveryAPI.Services
 {
-    Task<LoginResponse> LoginAsync(LoginRequest request, string ipAddress);
-    Task<LoginResponse> RefreshTokenAsync(string refreshToken, string ipAddress);
-    Task LogoutAsync(string refreshToken);
+    public interface IAuthService
+    {
+        Task<string?> LoginAsync(string employeeId, string password);
+        Task<Employee?> GetProfileAsync(string employeeId);
+    }
 }
