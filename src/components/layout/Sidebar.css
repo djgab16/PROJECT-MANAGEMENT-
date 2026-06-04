@@ -66,8 +66,8 @@
 }
 
 .sidebar-role-badge.admin {
-  background: #2563EB; /* Bright Blue */
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  background: #01B574; /* Vibrant Green */
+  box-shadow: 0 4px 10px rgba(1, 181, 116, 0.3);
 }
 
 .sidebar-role-badge.op-team {
