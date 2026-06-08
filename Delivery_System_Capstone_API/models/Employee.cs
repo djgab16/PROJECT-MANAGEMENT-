@@ -33,6 +33,8 @@ namespace SPXDeliveryAPI.Models
 
         public int FailedAttempts { get; set; } = 0;
 
+        public DateTime? LockoutEnd { get; set; }
+
         [MaxLength(2)]
         public string Initials { get; set; } = string.Empty;
 

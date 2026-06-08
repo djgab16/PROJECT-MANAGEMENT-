@@ -16,7 +16,11 @@ export default function StatCard({ icon, iconColor, iconBg, label, value, subtit
   return (
     <div className="stat-card card animate-fade-in">
       <div className="stat-card-header">
-        <div className="stat-card-icon" style={{ color: iconColor, background: iconBg }}>
+        <div className="stat-card-icon" style={{ 
+          color: 'white', 
+          background: iconColor, 
+          boxShadow: `0 8px 16px ${iconColor}40` 
+        }}>
           {icon}
         </div>
         <span className="stat-card-label label">{label}</span>

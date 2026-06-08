@@ -2,7 +2,7 @@
 .track-search-row { display: flex; gap: 12px; }
 .track-search-input-wrapper { flex: 1; position: relative; }
 .track-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
-.track-search-input { width: 100%; padding: 14px 16px 14px 44px; border: 2px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); background: white; font-size: 1rem; color: var(--text-primary); }
+.track-search-input { width: 100%; padding: 14px 16px 14px 44px; border: 2px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 1rem; color: var(--text-primary); }
 .track-search-input:focus { border-color: var(--primary); }
 .track-btn { white-space: nowrap; }
 .track-result-text { font-size: 0.78rem; color: rgba(255,255,255,0.6); margin-top: 10px; }

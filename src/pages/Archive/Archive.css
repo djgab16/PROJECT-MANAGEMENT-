@@ -28,8 +28,8 @@
 }
 
 .archive-stat span {
-  font-size: 0.62rem;
-  color: rgba(255,255,255,0.5);
+  font-size: 0.72rem;              /* Bumped up from 0.62rem — was too tiny */
+  color: rgba(255,255,255,0.82);   /* Raised from 0.5 to 0.82 — fixes WCAG contrast */
   letter-spacing: 1px;
   font-weight: 600;
 }

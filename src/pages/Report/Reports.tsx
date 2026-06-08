@@ -58,8 +58,8 @@ export default function Reports() {
           delivered: 0, 
           failed: 0, 
           potCount: 0, 
-          initials: dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(), 
-          color: 'var(--primary)' 
+          initials: dName === 'Unassigned' ? '?' : dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(), 
+          color: dName === 'Unassigned' ? 'var(--text-tertiary)' : 'var(--primary)' 
         };
       }
       dMap[dName].totalOrders++;
@@ -231,25 +231,25 @@ export default function Reports() {
                 </thead>
                 <tbody>
                   {driverPerformance.map((d: any) => (
-                    <tr key={d.name}>
+                    <tr key={d.name} style={{ opacity: d.name === 'Unassigned' ? 0.7 : 1 }}>
                       <td>
                         <div className="driver-cell">
-                          <div className="driver-avatar" style={{ background: d.color }}>{d.initials}</div>
-                          <div><strong>{d.name}</strong></div>
+                          <div className="driver-avatar" style={{ background: d.color, color: '#fff' }}>{d.initials}</div>
+                          <div><strong style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'inherit' }}>{d.name}</strong></div>
                         </div>
                       </td>
-                      <td>{d.totalOrders}</td>
-                      <td style={{ color: 'var(--status-active)' }}>{d.delivered}</td>
-                      <td style={{ color: 'var(--status-failed)' }}>{d.failed}</td>
-                      <td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'inherit' }}>{d.totalOrders}</td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'var(--status-active)' }}>{d.delivered}</td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'var(--status-failed)' }}>{d.failed}</td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'inherit' }}>
                         <div className="rate-bar-wrapper">
-                          <div className="rate-bar"><div className="rate-bar-fill" style={{ width: d.potRate }} /></div>
+                          <div className="rate-bar"><div className="rate-bar-fill" style={{ width: d.potRate, background: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'var(--status-active)' }} /></div>
                           {d.potRate}
                         </div>
                       </td>
-                      <td>{d.successRate}</td>
-                      <td>{d.avgTime}</td>
-                      <td><span className="rating-badge">● {d.rating}</span></td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'inherit' }}>{d.successRate}</td>
+                      <td style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'inherit' }}>{d.avgTime}</td>
+                      <td><span className="rating-badge" style={{ color: d.name === 'Unassigned' ? 'var(--text-secondary)' : 'var(--status-active)' }}>● {d.rating}</span></td>
                     </tr>
                   ))}
                 </tbody>

@@ -6,18 +6,18 @@
 
 .driver-settings h2 {
   font-size: 1.5rem;
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .driver-profile-card {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: white;
+  background: var(--bg-card);
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  border: 1px solid #E9EDF7;
+  border: 1px solid var(--border);
 }
 
 .driver-profile-avatar {

@@ -1,9 +1,10 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, FileText, BarChart3,
-  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon
+  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon, Sun, Moon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import logo from '../../assets/logo.png';
 import './Sidebar.css';
 
@@ -42,6 +43,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -61,15 +63,15 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   return (
     <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
       <div className="sidebar-logo">
-        <div className="login-logo" style={{ padding: '0', background: 'transparent' }}>
-          <img src={logo} alt="30 Speedex Logo" style={{ height: '36px', objectFit: 'contain' }} />
+        <div className="sidebar-logo-wrapper">
+          <img src={logo} alt="Speedex Logo" className="sidebar-logo-img" />
         </div>
         <button className="sidebar-close-btn" onClick={onClose}>×</button>
       </div>
 
       <div className="sidebar-role-section">
         <div className={`sidebar-role-badge ${user?.role ? user.role.toLowerCase().replaceAll('.', '').replaceAll(' ', '-') : 'employee'}`}>
-          <div className="role-dot-inner" />
+          {theme === 'dark' ? <Moon size={14} className="role-icon" /> : <Sun size={14} className="role-icon" />}
           {user?.role || 'EMPLOYEE'}
         </div>
       </div>

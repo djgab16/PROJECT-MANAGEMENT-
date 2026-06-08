@@ -2,15 +2,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .status-sm {
-  padding: 2px 8px;
+  padding: 4px 10px;
   font-size: 0.7rem;
   gap: 4px;
 }
@@ -20,16 +23,17 @@
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
 }
 
-.status-active { background: var(--status-active-bg); color: var(--status-active); }
-.status-active .status-dot { background: var(--status-active); }
+.status-active   { background: var(--status-active-bg);  color: var(--status-active); }
+.status-active   .status-dot { background: var(--status-active); }
 
-.status-pending { background: var(--status-pending-bg); color: #C27800; }
-.status-pending .status-dot { background: var(--status-pending); }
+.status-pending  { background: var(--status-pending-bg); color: var(--status-pending); }
+.status-pending  .status-dot { background: var(--status-pending); }
 
-.status-transit { background: var(--status-transit-bg); color: var(--status-transit); }
-.status-transit .status-dot { background: var(--status-transit); }
+.status-transit  { background: var(--status-transit-bg); color: var(--status-transit); }
+.status-transit  .status-dot { background: var(--status-transit); }
 
 .status-delivered { background: var(--status-active-bg); color: var(--status-active); }
 .status-delivered .status-dot { background: var(--status-active); }
@@ -37,26 +41,28 @@
 .status-completed { background: var(--status-active-bg); color: var(--status-active); }
 .status-completed .status-dot { background: var(--status-active); }
 
-.status-failed { background: var(--status-failed-bg); color: var(--status-failed); }
-.status-failed .status-dot { background: var(--status-failed); }
+.status-failed   { background: var(--status-failed-bg);  color: var(--status-failed); }
+.status-failed   .status-dot { background: var(--status-failed); }
 
-.status-locked { background: var(--status-failed-bg); color: var(--status-failed); }
-.status-locked .status-dot { background: var(--status-failed); }
+.status-locked   { background: var(--status-failed-bg);  color: var(--status-failed); }
+.status-locked   .status-dot { background: var(--status-failed); }
 
-.status-new { background: var(--status-new-bg); color: var(--status-new); }
-.status-new .status-dot { background: var(--status-new); }
+.status-new      { background: var(--status-new-bg);     color: var(--status-new); }
+.status-new      .status-dot { background: var(--status-new); }
 
-.status-system { background: #F0F0F5; color: #6B7280; }
-.status-system .status-dot { background: #6B7280; }
+/* System / Default — theme-aware neutrals */
+.status-system   { background: var(--bg-main); color: var(--text-tertiary); border-color: var(--border); }
+.status-system   .status-dot { background: var(--text-tertiary); }
 
-.status-default { background: #F0F0F5; color: #6B7280; }
-.status-default .status-dot { background: #6B7280; }
+.status-default  { background: var(--bg-main); color: var(--text-tertiary); border-color: var(--border); }
+.status-default  .status-dot { background: var(--text-tertiary); }
 
-.status-low { background: #E0F2FE; color: #0369A1; }
-.status-low .status-dot { background: #0284C7; }
+/* Priority levels — dark-mode adaptive */
+.status-low    { background: var(--status-transit-bg); color: var(--status-transit); }
+.status-low    .status-dot { background: var(--status-transit); }
 
-.status-medium { background: #FEF3C7; color: #B45309; }
-.status-medium .status-dot { background: #D97706; }
+.status-medium { background: var(--status-pending-bg); color: var(--status-pending); }
+.status-medium .status-dot { background: var(--status-pending); }
 
-.status-high { background: #FFE4E6; color: #BE123C; }
-.status-high .status-dot { background: #E11D48; }
+.status-high   { background: var(--status-failed-bg);  color: var(--status-failed); }
+.status-high   .status-dot { background: var(--status-failed); }

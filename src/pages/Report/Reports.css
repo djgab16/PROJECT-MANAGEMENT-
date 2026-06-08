@@ -2,6 +2,8 @@
 
 /* Config Panel */
 .reports-config { position: sticky; top: 80px; height: fit-content; }
+.reports-config h4 { margin-bottom: 4px; font-size: 1.1rem; }
+.card-subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px; display: block; }
 .config-section { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 .radio-option { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
 .radio-option:hover { border-color: var(--border-hover); }

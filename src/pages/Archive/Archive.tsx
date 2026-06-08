@@ -189,11 +189,13 @@ export default function Archive() {
                     </td>
                     <td>
                       <div className="driver-cell">
-                        <div className="driver-avatar" style={{ background: order.driverColor }}>{order.driverInitials}</div>
-                        <span>{order.driverName ? order.driverName.split(',')[0] : 'Unassigned'}</span>
+                        <div className="driver-avatar" style={{ background: order.driverName ? order.driverColor : 'var(--text-tertiary)' }}>{order.driverName ? order.driverInitials : '?'}</div>
+                        <span style={{ color: order.driverName ? 'inherit' : 'var(--text-secondary)' }}>
+                          {order.driverName ? order.driverName.split(',')[0] : 'Unassigned'}
+                        </span>
                       </div>
                     </td>
-                    <td className="text-sm">{order.dateCompleted || '—'}</td>
+                    <td className="text-sm" style={{ color: 'var(--text-primary)' }}>{order.dateCompleted || '—'}</td>
                     <td><StatusBadge status={order.potStatus} size="sm" /></td>
                     <td className="cell-actions">
                       <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>

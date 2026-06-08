@@ -26,6 +26,6 @@
 }
 
 .role-driver {
-  background: #E9EDF7;
+  background: var(--bg-main);
   color: var(--text-primary);
 }

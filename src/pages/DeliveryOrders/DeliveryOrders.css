@@ -81,8 +81,9 @@
 }
 
 .filter-search-input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(0, 169, 157, 0.1);
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 4px rgba(0, 169, 157, 0.1);
 }
 
 .filter-select {
@@ -100,14 +101,16 @@
 }
 
 /* Waybill Link */
+.cell-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .waybill-link {
   font-weight: 700;
   color: var(--primary);
-  font-size: 0.88rem;
-}
-
-.waybill-link:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .cell-sub {

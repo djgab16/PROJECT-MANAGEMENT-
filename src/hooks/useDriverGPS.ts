@@ -19,7 +19,7 @@ export function getHaversineDistance(lat1: number, lon1: number, lat2: number, l
 }
 
 export function useDriverGPS(
-  order: DeliveryOrder,
+  order: DeliveryOrder | undefined,
   updateDeliveryOrder: (id: string, updated: Partial<DeliveryOrder>) => void
 ) {
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -73,8 +73,10 @@ export function useDriverGPS(
 
         const timestampStr = new Date().toLocaleString();
 
+        if (!order) return;
+
         // Update local context/state
-        updateDeliveryOrder(order.id, {
+        updateDeliveryOrder(order.id.toString(), {
           liveCoordinates: {
             lat,
             lng,
@@ -89,7 +91,7 @@ export function useDriverGPS(
           lng,
           timestamp: timestampStr,
           driverId: order.driverName || 'EMP-003',
-          orderId: order.id
+          orderId: order.id.toString()
         });
       },
       (error) => {
@@ -123,18 +125,21 @@ export function useDriverGPS(
 
   // Automatically start/stop tracking based on active status
   useEffect(() => {
-    const isTransit = order.status === 'In Transit';
+    const isTransit = order?.status === 'In Transit';
 
-    if (isTransit) {
-      startTracking();
-    } else {
-      stopTracking();
-    }
+    Promise.resolve().then(() => {
+      if (isTransit) {
+        startTracking();
+      } else {
+        stopTracking();
+      }
+    });
 
     return () => {
       stopTracking();
     };
-  }, [order.status, order.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, order?.id]);
 
   // Clean up on unmount
   useEffect(() => {

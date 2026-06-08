@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Pencil, RefreshCw, Download, Trash2, Image, Clock, MapPin, Package, User, FileText, Calendar, AlertCircle } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Modal from '../../components/ui/Modal';
@@ -17,6 +18,18 @@ export default function DeliveryOrderDetail() {
 
   const order = deliveryOrders.find(o => o.id === id);
 
+  const steps: DeliveryStatus[] = ['Pending', 'In Transit', 'Delivered', 'Completed'];
+  const currentStep = steps.indexOf(order?.status === 'Failed' ? 'In Transit' : (order?.status as DeliveryStatus) || 'Pending');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState(employees.find(e => e.name === order?.driverName)?.id || 'EMP-003');
+  const [redeliveryDate, setRedeliveryDate] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const drivers = employees.filter(e => e.role === 'DRIVER');
+
   if (!order) {
     return (
       <div className="page-content" style={{ padding: '40px', textAlign: 'center' }}>
@@ -26,18 +39,6 @@ export default function DeliveryOrderDetail() {
       </div>
     );
   }
-
-  const steps: DeliveryStatus[] = ['Pending', 'In Transit', 'Delivered', 'Completed'];
-  const currentStep = steps.indexOf(order.status === 'Failed' ? 'In Transit' : order.status as DeliveryStatus);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState(employees.find(e => e.name === order.driverName)?.id || 'EMP-003');
-  const [redeliveryDate, setRedeliveryDate] = useState('');
-  const [remarks, setRemarks] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-  const dateInputRef = useRef<HTMLInputElement>(null);
-
-  const drivers = employees.filter(e => e.role === 'DRIVER');
 
   const handleScheduleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +72,7 @@ export default function DeliveryOrderDetail() {
       status: 'Pending',
       driverName: selectedDriver?.name || 'Test Driver',
       driverInitials: selectedDriver?.name ? selectedDriver.name.split(' ').map(n => n[0]).join('') : 'TD',
-      driverColor: selectedDriver?.color || '#00A99D',
+      driverColor: '#00A99D',
       expectedDelivery: new Date(redeliveryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       redeliveryScheduledDate: new Date(redeliveryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       redeliveryDriverId: selectedDriverId,
@@ -358,6 +359,15 @@ export default function DeliveryOrderDetail() {
                 )}
                 <div className="summary-field"><span>POT Status</span><span className="summary-val" style={{ color: order.potStatus === 'Not Submitted' ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.potStatus}</span></div>
                 <div className="summary-field"><span>POD Status</span><span className="summary-val" style={{ color: (!order.podStatus || order.podStatus === 'Not Submitted') ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.podStatus || 'Not Submitted'}</span></div>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <h4>Waybill QR Code</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Scan this code to instantly retrieve tracking details.</p>
+              <div style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #E9EDF7', display: 'inline-block' }}>
+                <QRCodeSVG value={order.waybillNo} size={150} level="H" includeMargin={true} />
               </div>
             </div>
           </div>

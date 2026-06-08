@@ -33,12 +33,16 @@ export default function PublicTracking() {
 
   return (
     <div className="public-tracking-container">
+      {/* Mid ambient orb */}
+      <div className="public-tracking-orb-mid" />
+
       <div className="public-tracking-content">
         {/* Header / Logo */}
         <header className="public-header">
           <div className="logo-brand">
-            <img src={logo} alt="Speedex Logo" style={{ height: '40px', objectFit: 'contain' }} />
+            <img src={logo} alt="Speedex Logo" className="logo-brand-img" />
           </div>
+          <span className="header-tagline">Client Tracking Portal</span>
         </header>
 
         <main className="public-main">

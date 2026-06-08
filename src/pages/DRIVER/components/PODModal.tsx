@@ -15,6 +15,18 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient }: PODMod
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // PB-022 Validation
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit. Please choose a smaller image.");
+        e.target.value = '';
+        return;
+      }
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        alert("Unsupported format. Only JPEG or PNG images are allowed.");
+        e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPodImage(reader.result as string);

@@ -211,21 +211,25 @@ export default function LiveTrackingMap({
   // Fetch real turn-by-turn road routing path from OSRM API (with debouncing for lag-free sliding!)
   useEffect(() => {
     if (!driverPos || !recipientPos) {
-      setRouteCoordinates([]);
-      setOsrmTelemetry(null);
+      Promise.resolve().then(() => {
+        setRouteCoordinates([]);
+        setOsrmTelemetry(null);
+      });
       return;
     }
 
     // Instantly update the first point of the route line (driver position) in real-time,
     // keeping the rest of the street route intact. This prevents visual blinking and
     // makes the line stick perfectly to the moving car marker without any network lag!
-    setRouteCoordinates((prev) => {
-      if (prev.length > 0) {
-        const newCoords = [...prev];
-        newCoords[0] = driverPos;
-        return newCoords;
-      }
-      return [driverPos, recipientPos];
+    Promise.resolve().then(() => {
+      setRouteCoordinates((prev) => {
+        if (prev.length > 0) {
+          const newCoords = [...prev];
+          newCoords[0] = driverPos;
+          return newCoords;
+        }
+        return [driverPos, recipientPos];
+      });
     });
 
     let isMounted = true;

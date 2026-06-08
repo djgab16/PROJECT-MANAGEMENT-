@@ -1,104 +1,315 @@
-/* PublicTracking.css - Standardized enterprise styling */
+/* ═══════════════════════════════════════════
+   PUBLIC CLIENT PORTAL — always fixed branded
+   No light/dark mode switching — always navy
+   ═══════════════════════════════════════════ */
 
+/* Re-declare ALL theme tokens inside the portal so
+   html.dark rules have zero effect on it */
+.public-tracking-container {
+  --bg-main:           #F0F4FF;
+  --bg-body:           #F7F9FF;
+  --bg-card:           #FFFFFF;
+  --bg-input:          #F8FAFF;
+  --bg-header:         rgba(255,255,255,0.92);
+  --text-primary:      #0F172A;
+  --text-main:         #0F172A;
+  --text-secondary:    #374151;
+  --text-tertiary:     #6B7280;
+  --text-muted:        #9CA3AF;
+  --text-white:        #FFFFFF;
+  --border:            #E2E8F0;
+  --border-hover:      #CBD5E1;
+  --primary:           #00A99D;
+  --primary-hover:     #009189;
+  --status-active:     #059669;
+  --status-active-bg:  rgba(5,150,105,0.1);
+  --status-transit:    #0284C7;
+  --status-transit-bg: rgba(0,169,157,0.08);
+  --status-failed:     #DC2626;
+  --status-failed-bg:  rgba(220,38,38,0.1);
+  --status-pending:    #D97706;
+  --status-pending-bg: rgba(217,119,6,0.1);
+  --status-new:        #4F46E5;
+  --status-new-bg:     rgba(79,70,229,0.1);
+  --shadow-card:       0 4px 24px rgba(15,23,42,0.08);
+  --radius-sm: 8px; --radius-md: 12px;
+  --radius-lg: 18px; --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+/* Also forcibly neutralise html.dark input overrides inside portal */
+html.dark .public-tracking-container input,
+html.dark .public-tracking-container select,
+html.dark .public-tracking-container textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #0F172A !important;
+  border-color: transparent !important;
+}
+
+html.dark .public-tracking-container .card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  color: #0F172A !important;
+}
+
+html.dark .public-tracking-container .tracking-timeline-wrapper,
+html.dark .public-tracking-container .history-content h4,
+html.dark .public-tracking-container .history-content p,
+html.dark .public-tracking-container .history-time,
+html.dark .public-tracking-container .timeline-title,
+html.dark .public-tracking-container .step-label,
+html.dark .public-tracking-container .results-header-card h2,
+html.dark .public-tracking-container .results-header-card p {
+  color: #0F172A !important;
+}
+
+/* ── Base ── */
 .public-tracking-container {
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;         /* No page scroll ever */
+  height: 100vh;            /* Always exactly the viewport */
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #0B1437 0%, #1B254B 40%, #0D2B6B 70%, #0B1437 100%);
+  background-attachment: fixed;
+  color: #0F172A;
 }
 
-/* Layout */
+/* ── Ambient Orbs ── */
+.public-tracking-container::before {
+  content: '';
+  position: fixed;
+  top: -120px;
+  left: -120px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 169, 157, 0.18) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat1 12s ease-in-out infinite;
+}
+
+.public-tracking-container::after {
+  content: '';
+  position: fixed;
+  bottom: -100px;
+  right: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(67, 24, 255, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat2 16s ease-in-out infinite;
+}
+
+/* Third mid orb */
+.public-tracking-orb-mid {
+  position: fixed;
+  top: 45%;
+  right: 15%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat3 20s ease-in-out infinite;
+}
+
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 60px) scale(1.08); }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-50px, -40px) scale(1.06); }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -50px); }
+}
+
+/* ── Content wrapper sits above orbs ── */
 .public-tracking-content {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;             /* Fill the fixed container */
+  overflow: hidden;         /* No outer scroll */
 }
 
+/* ══ HEADER ══ */
 .public-header {
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2.5rem;
   display: flex;
   align-items: center;
-  background-color: var(--sidebar-bg); /* Dark background for white logo */
-  box-shadow: var(--shadow-sm);
+  justify-content: space-between;
+  background: rgba(11, 20, 55, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
 }
 
+/* Logo wrapper with glow */
 .logo-brand {
-  display: flex;
-  align-items: center;
-  /* Removed white background to let the dark header show through */
-  padding: 4px 12px;
-  border-radius: 6px;
+  display: inline-block;
+  position: relative;
 }
 
+.logo-brand::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.logo-brand-img {
+  height: 46px;
+  max-width: 220px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+  animation: logoFadeIn 0.8s ease-out;
+}
+
+.logo-brand:hover .logo-brand-img {
+  transform: scale(1.04) translateY(-2px);
+  filter: drop-shadow(0 8px 20px rgba(255,255,255,0.12));
+}
+
+.logo-brand:hover::before {
+  background: radial-gradient(circle, rgba(255,255,255,0.11) 0%, transparent 75%);
+}
+
+@keyframes logoFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header-tagline {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ══ MAIN CONTENT ══ */
 .public-main {
   flex: 1;
   max-width: 1000px;
   margin: 0 auto;
   width: 100%;
-  padding: 2rem;
+  padding: 1rem 2rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  overflow-y: auto;           /* Only this area scrolls, not the whole page */
+  justify-content: center;    /* Center search hero when no results */
 }
 
-/* Error Card */
-.tracking-error-card {
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
-  border: 1px solid var(--status-failed-bg);
-  background: #FFF1F1;
+/* Once results appear, stop centering */
+.public-main:has(.tracking-results-view) {
+  justify-content: flex-start;
 }
 
-.tracking-error-card h3 {
-  color: var(--status-failed);
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-}
-
-.tracking-error-card p {
-  color: var(--text-primary);
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-/* Results View */
-.tracking-results-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
+/* ══ RESULTS CARDS — white glassmorphism ══ */
 .results-header-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 2.5rem 2rem;
+  padding: 3rem 2rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+  color: #0F172A;
 }
 
 .results-header-card h2 {
   margin: 0 0 1rem 0;
   font-size: 2rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0F172A;
 }
 
 .waybill-badge {
-  background: var(--status-transit-bg);
-  color: var(--primary);
-  padding: 0.5rem 1rem;
-  border-radius: 30px;
-  font-weight: 600;
+  background: rgba(0, 169, 157, 0.1);
+  color: #00A99D;
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 700;
   letter-spacing: 1px;
   font-size: 0.9rem;
-  border: 1px solid var(--primary);
+  border: 1px solid rgba(0, 169, 157, 0.3);
+}
+
+/* Results grid cards inherit white glass */
+.tracking-results-view .card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  color: #0F172A;
+}
+
+.tracking-results-view .card h2,
+.tracking-results-view .card h3,
+.tracking-results-view .card p,
+.tracking-results-view .card span {
+  color: #0F172A;
+}
+
+/* ══ ERROR CARD ══ */
+.tracking-error-card {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.08);
+}
+
+.tracking-error-card h3 {
+  color: #DC2626;
+  margin: 0 0 0.5rem;
+}
+
+.tracking-error-card p {
+  color: #374151;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ══ RESULTS GRID ══ */
+.tracking-results-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .results-grid {
@@ -107,17 +318,11 @@
   gap: 1.5rem;
 }
 
-/* Responsive */
+/* ══ RESPONSIVE ══ */
 @media (max-width: 768px) {
-  .public-main {
-    padding: 1rem;
-  }
-  
-  .results-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .results-header-card h2 {
-    font-size: 1.5rem;
-  }
+  .public-header { padding: 1rem 1.25rem; }
+  .public-main   { padding: 2rem 1rem; }
+  .results-grid  { grid-template-columns: 1fr; }
+  .results-header-card h2 { font-size: 1.5rem; }
+  .header-tagline { display: none; }
 }

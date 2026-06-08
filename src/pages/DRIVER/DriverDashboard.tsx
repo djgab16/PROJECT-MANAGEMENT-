@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,13 @@ export default function DriverDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'Pending' | 'In Transit' | 'Delivered'>('Pending');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate a brief loading state for premium aesthetic
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, [activeTab]); // Retrigger animation slightly on tab change for that premium feel
 
   // Fetch deliveries assigned to this driver or unassigned
   const assignedRoutes = deliveryOrders.filter(
@@ -29,35 +36,35 @@ export default function DriverDashboard() {
       <div className="driver-tabs">
         <button 
           className={`driver-tab ${activeTab === 'Pending' ? 'active' : ''}`}
-          onClick={() => setActiveTab('Pending')}
+          onClick={() => { setIsLoading(true); setActiveTab('Pending'); }}
         >
           To Do
         </button>
         <button 
           className={`driver-tab ${activeTab === 'In Transit' ? 'active' : ''}`}
-          onClick={() => setActiveTab('In Transit')}
+          onClick={() => { setIsLoading(true); setActiveTab('In Transit'); }}
         >
           In Transit
         </button>
         <button 
           className={`driver-tab ${activeTab === 'Delivered' ? 'active' : ''}`}
-          onClick={() => setActiveTab('Delivered')}
+          onClick={() => { setIsLoading(true); setActiveTab('Delivered'); }}
         >
           Delivered
         </button>
       </div>
 
       <div className="route-list">
-        {assignedRoutes.length === 0 ? (
-          <div className="empty-state">
-            <Package size={48} color="var(--text-muted)" />
-            <p>No deliveries found for this status.</p>
+        {isLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="delivery-card skeleton" style={{ height: '160px' }}></div>
+            <div className="delivery-card skeleton" style={{ height: '160px' }}></div>
           </div>
-        ) : (
+        ) : assignedRoutes.length > 0 ? (
           assignedRoutes.map((order) => (
             <div 
               key={order.id} 
-              className={`delivery-card ${order.status === 'In Transit' ? 'active-transit' : ''}`}
+              className={`delivery-card animate-fade-in ${order.status === 'In Transit' ? 'active-transit' : ''}`}
               onClick={() => navigate(`/driver/delivery/${order.id}`)}
             >
               <div className="card-header">
@@ -89,6 +96,7 @@ export default function DriverDashboard() {
               <div className="card-footer">
                 <button 
                   className={`btn btn-block ${order.status === 'In Transit' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ width: '100%', justifyContent: 'center' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/driver/delivery/${order.id}`);
@@ -100,6 +108,11 @@ export default function DriverDashboard() {
               </div>
             </div>
           ))
+        ) : (
+          <div className="empty-state animate-fade-in">
+            <Package size={48} color="var(--text-muted)" />
+            <p>No deliveries found for this status.</p>
+          </div>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Set your C# ASP.NET Core API Base URL
-const API_BASE_URL = 'https://localhost:7081/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

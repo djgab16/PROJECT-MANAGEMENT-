@@ -12,7 +12,7 @@ import './DriverDeliveryDetail.css';
 export default function DriverDeliveryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { deliveryOrders, updateDeliveryOrder, addActivityLog } = useData();
+  const { deliveryOrders, updateDeliveryOrder, addActivityLog, activityLogs } = useData();
 
   const [order, setOrder] = useState(deliveryOrders.find(o => o.id === id));
   const [showPODModal, setShowPODModal] = useState(false);
@@ -23,10 +23,10 @@ export default function DriverDeliveryDetail() {
     setOrder(deliveryOrders.find(o => o.id === id));
   }, [id, deliveryOrders]);
 
-  if (!order) return <div style={{ padding: '20px', textAlign: 'center' }}>Delivery not found</div>;
-  
   // Continuous GPS watch tracking
   const { isTracking, gpsError } = useDriverGPS(order, updateDeliveryOrder);
+
+  if (!order) return <div style={{ padding: '20px', textAlign: 'center' }}>Delivery not found</div>;
 
   // Reusable GPS function
   const withLocation = (callback: (coords: { lat: number; lng: number } | null) => void) => {
@@ -76,7 +76,7 @@ export default function DriverDeliveryDetail() {
   const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
     withLocation((coords) => {
       updateDeliveryOrder(order.id, {
-        status: 'Delivered',
+        status: 'Completed',
         podStatus: 'Submitted',
         podImage: data.podImage,
         recipientName: data.recipientName,
@@ -209,16 +209,16 @@ export default function DriverDeliveryDetail() {
 
       {/* Sandbox Geolocation Simulator */}
       {order.status === 'In Transit' && (
-        <div className="detail-section sandbox-section" style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', marginTop: '16px', padding: '16px', borderRadius: '12px' }}>
+        <div className="detail-section sandbox-section" style={{ background: 'var(--bg-main)', border: '1px dashed var(--border)', marginTop: '16px', padding: '16px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#3b82f6', borderRadius: '50%', animation: 'dot-pulse 1.5s infinite alternate' }} />
-            <h3 style={{ margin: 0, fontSize: '14px', color: '#1e293b' }}>Sandbox Geolocation Simulator</h3>
+            <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)' }}>Sandbox Geolocation Simulator</h3>
           </div>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 12px 0' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
             Simulate driving along the route. Drag this slider to push live GPS coordinates to customer's map in real-time.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
               <span>Start (Manila)</span>
               <span>Destination ({order.area})</span>
             </div>
@@ -260,7 +260,7 @@ export default function DriverDeliveryDetail() {
               style={{ width: '100%', height: '6px', borderRadius: '3px', accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
             {order.liveCoordinates && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 <span>Lat: {order.liveCoordinates.lat.toFixed(5)}</span>
                 <span>Lng: {order.liveCoordinates.lng.toFixed(5)}</span>
                 <span>Updated: {order.liveCoordinates.lastUpdated.split(', ')[1] || 'Just now'}</span>
@@ -269,6 +269,38 @@ export default function DriverDeliveryDetail() {
           </div>
         </div>
       )}
+
+      {/* Tracking History (PB-018) */}
+      <div className="detail-section" style={{ marginTop: '16px', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h3 style={{ color: 'var(--text-primary)' }}>Tracking History</h3>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {activityLogs?.filter(log => log.reference === order.waybillNo).length > 0 ? (
+            activityLogs.filter(log => log.reference === order.waybillNo).map((log, index) => (
+              <div key={log.id} style={{ display: 'flex', gap: '12px', borderLeft: '2px solid var(--border)', paddingLeft: '16px', position: 'relative' }}>
+                <div style={{ position: 'absolute', left: '-6px', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: log.userColor || 'var(--primary)' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{log.action}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.timestamp}</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>{log.description}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: log.userColor, background: `${log.userColor}15`, padding: '2px 6px', borderRadius: '4px' }}>
+                      {log.userName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              No history available for this package yet.
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Action Buttons */}
       <div className="action-buttons-container">

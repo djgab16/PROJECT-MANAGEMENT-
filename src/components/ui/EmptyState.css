@@ -30,7 +30,7 @@
 .empty-state-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 

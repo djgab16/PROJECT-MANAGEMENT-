@@ -3,8 +3,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px var(--content-padding);
-  background: var(--bg-card);
+  background: var(--bg-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -65,7 +68,7 @@
   padding: 10px 14px 10px 42px;
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  background: #F8FAFD;
+  background: var(--bg-main);
   color: var(--text-primary);
   font-size: 0.85rem;
   transition: all 0.2s ease;
@@ -73,7 +76,7 @@
 
 .header-search-input:focus {
   border-color: var(--primary);
-  background: white;
+  background: var(--bg-card);
   box-shadow: 0 0 0 4px rgba(0, 169, 157, 0.05);
 }
 
@@ -82,11 +85,11 @@
   height: 40px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8F9BBA;
+  color: var(--text-tertiary);
   position: relative;
   transition: all 0.2s ease;
 }
@@ -103,9 +106,9 @@
   right: 12px;
   width: 6px;
   height: 6px;
-  background: #E31A1A;
+  background: var(--status-failed);
   border-radius: 50%;
-  border: 1.5px solid white;
+  border: 1.5px solid var(--bg-card);
 }
 
 .header-refresh-btn {
@@ -115,13 +118,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F4F7FE;
-  color: #8F9BBA;
+  background: var(--bg-main);
+  color: var(--text-tertiary);
   transition: all 0.2s ease;
 }
 
 .header-refresh-btn:hover {
-  background: #E9EDF7;
+  background: var(--bg-main);
   color: var(--text-primary);
 }
 
@@ -130,7 +133,7 @@
   top: calc(100% + 8px);
   left: 0;
   width: 100%;
-  background: white;
+  background: var(--bg-card);
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
@@ -159,7 +162,7 @@
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  background: #f8fafc;
+  background: var(--bg-main);
 }
 
 .search-item {
@@ -169,11 +172,11 @@
   padding: 10px 12px;
   cursor: pointer;
   transition: background 0.2s;
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .search-item:hover {
-  background: #f1f5f9;
+  background: var(--bg-main);
   color: var(--primary);
 }
 
