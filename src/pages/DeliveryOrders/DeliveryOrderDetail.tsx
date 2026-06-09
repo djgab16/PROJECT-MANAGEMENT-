@@ -8,24 +8,46 @@ import Modal from '../../components/ui/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import type { DeliveryStatus, DeliveryOrder } from '../../types';
+import { downloadWaybillPdfBlob, restoreDeliveryOrder } from '../../api/deliveryApi';
 import './DeliveryOrderDetail.css';
 
 export default function DeliveryOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
+  const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog, refreshOrders } = useData();
   const { user } = useAuth();
 
   const order = deliveryOrders.find(o => o.id === id);
 
-  const steps: DeliveryStatus[] = ['Pending', 'In Transit', 'Delivered', 'Completed'];
-  const currentStep = steps.indexOf(order?.status === 'Failed' ? 'In Transit' : (order?.status as DeliveryStatus) || 'Pending');
+  const isPickup = order?.taskType === 'Pickup';
+  const steps: string[] = isPickup
+    ? ['Pending', 'Processing', 'Preparing', 'Ready for Pickup', 'Picked Up']
+    : ['Pending', 'Processing', 'Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
+
+  const getStepIndex = (status: string) => {
+    if (status === 'Failed') {
+      return isPickup ? 2 : 4; // Preparing or In Transit
+    }
+    if (status === 'Cancelled') {
+      return -1;
+    }
+    if (isPickup) {
+      if (status === 'Completed' || status === 'Picked Up') return 4;
+      return steps.indexOf(status);
+    } else {
+      if (status === 'Completed' || status === 'Delivered') return 6;
+      return steps.indexOf(status);
+    }
+  };
+
+  const currentStep = order ? getStepIndex(order.status) : -1;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState(employees.find(e => e.name === order?.driverName)?.id || 'EMP-003');
   const [redeliveryDate, setRedeliveryDate] = useState('');
   const [remarks, setRemarks] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const drivers = employees.filter(e => e.role === 'DRIVER');
@@ -40,8 +62,9 @@ export default function DeliveryOrderDetail() {
     );
   }
 
-  const handleScheduleSubmit = (e: React.FormEvent) => {
+  const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!redeliveryDate) {
       setErrorMsg('Please select a re-delivery date.');
       return;
@@ -61,8 +84,8 @@ export default function DeliveryOrderDetail() {
       return;
     }
 
-    if (order.status !== 'Failed') {
-      setErrorMsg('Re-delivery can only be scheduled for failed deliveries.');
+    if (order.status !== 'Failed' && order.status !== 'Cancelled') {
+      setErrorMsg('Re-delivery can only be scheduled for failed or cancelled deliveries.');
       return;
     }
 
@@ -78,37 +101,101 @@ export default function DeliveryOrderDetail() {
       redeliveryDriverId: selectedDriverId,
       redeliveryRemarks: remarks,
       redeliveryAttemptCount: (order.redeliveryAttemptCount || 0) + 1,
+      redeliveryStatus: 'Approved',
       lastUpdated: new Date().toLocaleString(),
       updatedBy: user?.name || 'System'
     };
 
-    updateDeliveryOrder(order.id, updatePayload);
+    try {
+      setIsSubmitting(true);
+      setErrorMsg('');
+      await updateDeliveryOrder(order.id, updatePayload);
 
-    addActivityLog({
-      id: Date.now().toString(),
-      timestamp: new Date().toLocaleString(),
-      userName: user?.name || 'System',
-      userRole: user?.role || 'Staff',
-      userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-      userColor: '#4318FF',
-      action: 'Update',
-      description: `Scheduled re-delivery attempt #${(order.redeliveryAttemptCount || 0) + 1} for ${order.waybillNo} with driver ${selectedDriver?.name}`,
-      reference: order.waybillNo
-    });
+      await addActivityLog({
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleString(),
+        userName: user?.name || 'System',
+        userRole: user?.role || 'Staff',
+        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+        userColor: '#4318FF',
+        action: 'Update',
+        description: `Scheduled re-delivery attempt #${(order.redeliveryAttemptCount || 0) + 1} for ${order.waybillNo} with driver ${selectedDriver?.name}`,
+        reference: order.waybillNo
+      });
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.message || err.message || "Failed to schedule re-delivery.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleUpdateStatus = () => {
-    const nextStatusMap: Record<string, DeliveryStatus> = {
-      'Pending': 'In Transit',
-      'In Transit': 'Delivered',
-      'Delivered': 'Completed',
-      'Completed': 'Pending',
-      'Failed': 'In Transit'
-    };
+  const handleRejectReschedule = async () => {
+    if (isSubmitting) return;
+    if (window.confirm('Are you sure you want to reject this reschedule request?')) {
+      const updatePayload: Partial<DeliveryOrder> = {
+        redeliveryStatus: 'Rejected',
+        lastUpdated: new Date().toLocaleString(),
+        updatedBy: user?.name || 'System'
+      };
+
+      try {
+        setIsSubmitting(true);
+        await updateDeliveryOrder(order.id, updatePayload);
+
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: user?.name || 'System',
+          userRole: user?.role || 'Staff',
+          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+          userColor: '#E11D48',
+          action: 'Update',
+          description: `Rejected client re-delivery reschedule request for waybill ${order.waybillNo}`,
+          reference: order.waybillNo
+        });
+        
+        alert('Reschedule request has been rejected.');
+      } catch (err: any) {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || 'Failed to reject request.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (isSubmitting) return;
+    const nextStatusMap: Record<string, DeliveryStatus> = isPickup
+      ? {
+          'Pending': 'Processing',
+          'Processing': 'Preparing',
+          'Preparing': 'Ready for Pickup',
+          'Ready for Pickup': 'Picked Up',
+          'Picked Up': 'Pending',
+          'Failed': 'Processing'
+        }
+      : {
+          'Pending': 'Processing',
+          'Processing': 'Assigned',
+          'Assigned': 'Picked Up',
+          'Picked Up': 'In Transit',
+          'In Transit': 'Out for Delivery',
+          'Out for Delivery': 'Delivered',
+          'Delivered': 'Completed',
+          'Completed': 'Pending',
+          'Failed': 'In Transit'
+        };
 
     const nextStatus = nextStatusMap[order.status] || 'Pending';
+
+    if (!isPickup && nextStatus === 'Assigned' && !order.driverName) {
+      alert("Please edit the order to assign a courier/driver before transitioning to the 'Assigned' state.");
+      return;
+    }
 
     const updatePayload: Partial<DeliveryOrder> = {
       status: nextStatus,
@@ -116,29 +203,44 @@ export default function DeliveryOrderDetail() {
       updatedBy: user?.name || 'System'
     };
 
-    if (nextStatus === 'Delivered' || nextStatus === 'Completed') {
+    if (nextStatus === 'Delivered' || nextStatus === 'Completed' || nextStatus === 'Picked Up') {
       updatePayload.dateCompleted = new Date().toLocaleString();
     }
 
-    updateDeliveryOrder(order.id, updatePayload);
+    try {
+      setIsSubmitting(true);
+      await updateDeliveryOrder(order.id, updatePayload);
 
-    addActivityLog({
-      id: Date.now().toString(),
-      timestamp: new Date().toLocaleString(),
-      userName: user?.name || 'System',
-      userRole: user?.role || 'Staff',
-      userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-      userColor: '#00A99D',
-      action: 'Update',
-      description: `Updated status of ${order.waybillNo} to ${nextStatus}`,
-      reference: order.waybillNo
-    });
+      await addActivityLog({
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleString(),
+        userName: user?.name || 'System',
+        userRole: user?.role || 'Staff',
+        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+        userColor: '#00A99D',
+        action: 'Update',
+        description: `Updated status of ${order.waybillNo} to ${nextStatus}`,
+        reference: order.waybillNo
+      });
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (isSubmitting) return;
     if (window.confirm('Are you sure you want to delete this order?')) {
-      deleteDeliveryOrder(order.id);
-      navigate('/delivery-orders');
+      try {
+        setIsSubmitting(true);
+        await deleteDeliveryOrder(order.id);
+        navigate('/delivery-orders');
+      } catch (err: any) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -150,11 +252,38 @@ export default function DeliveryOrderDetail() {
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         actions={
           <div className="flex gap-sm">
-            <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm"><Pencil size={14} /> Edit Order</Link>
-            {order.status === 'Failed' ? (
-              <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
+            {order.isArchived ? (
+              <button 
+                className="btn btn-primary btn-sm"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  if (isSubmitting) return;
+                  if (window.confirm("Are you sure you want to restore this archived order? This will reset the status to Pending.")) {
+                    try {
+                      setIsSubmitting(true);
+                      await restoreDeliveryOrder(Number(order.id));
+                      await refreshOrders();
+                      alert("Order restored successfully.");
+                    } catch (err: any) {
+                      console.error(err);
+                      alert(err.response?.data?.message || "Failed to restore order.");
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }
+                }}
+              >
+                <RefreshCw size={14} /> Restore Order
+              </button>
             ) : (
-              <button className="btn btn-primary btn-sm" id="update-status-btn" onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
+              <>
+                <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={14} /> Edit Order</Link>
+                {['Failed', 'Cancelled'].includes(order.status) ? (
+                  <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
+                ) : (
+                  <button className="btn btn-primary btn-sm" id="update-status-btn" disabled={isSubmitting} onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
+                )}
+              </>
             )}
           </div>
         }
@@ -190,6 +319,55 @@ export default function DeliveryOrderDetail() {
         <div className="detail-grid">
           {/* Left Column - Info Cards */}
           <div className="detail-left">
+            {/* Pending Re-delivery Reschedule Request Review */}
+            {order.redeliveryStatus === 'Pending Approval' && (
+              <div className="card info-card animate-fade-in" style={{ borderLeft: '4px solid var(--primary)', background: 'var(--status-transit-bg)', padding: '20px' }}>
+                <div className="info-card-header" style={{ marginBottom: '12px' }}>
+                  <RefreshCw size={18} className="info-icon purple" style={{ color: 'var(--primary)' }} />
+                  <h4 style={{ color: 'var(--primary)', fontWeight: 600 }}>Pending Re-delivery Reschedule Request</h4>
+                </div>
+                <div className="info-grid">
+                  <div>
+                    <span className="label" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>CLIENT REQUESTED DATE</span>
+                    <strong style={{ fontSize: '0.95rem' }}>{order.redeliveryRequestedDate || 'Not specified'}</strong>
+                  </div>
+                  <div className="info-full" style={{ marginTop: '8px' }}>
+                    <span className="label" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>CLIENT REMARKS / REASON</span>
+                    <strong style={{ display: 'block', padding: '10px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '6px', marginTop: '4px', fontWeight: 500, color: 'var(--text-main)' }}>
+                      {order.redeliveryRemarks || 'No remarks provided.'}
+                    </strong>
+                  </div>
+                  <div className="info-full" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        if (order.redeliveryRequestedDate) {
+                          try {
+                            const parsedDate = new Date(order.redeliveryRequestedDate);
+                            if (!isNaN(parsedDate.getTime())) {
+                              setRedeliveryDate(parsedDate.toISOString().split('T')[0]);
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }
+                        setRemarks(order.redeliveryRemarks || '');
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      ✓ Approve & Assign Driver
+                    </button>
+                    <button 
+                      className="btn btn-danger btn-sm"
+                      onClick={handleRejectReschedule}
+                    >
+                      ✗ Reject Request
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Failed Delivery Details */}
             {order.status === 'Failed' && (
               <div className="card info-card" style={{ borderLeft: '4px solid var(--status-failed)' }}>
@@ -259,12 +437,14 @@ export default function DeliveryOrderDetail() {
               <div className="info-grid">
                 <div>
                   <span className="label">ASSIGNED DRIVER</span>
-                  {order.driverName ? (
+                  {isPickup ? (
+                    <strong className="text-muted" style={{ display: 'block', marginTop: '4px' }}>Not Applicable (Office Pickup)</strong>
+                  ) : order.driverName ? (
                     <div className="driver-cell" style={{ marginTop: '4px' }}>
                       <div className="driver-avatar" style={{ background: order.driverColor }}>{order.driverInitials}</div>
                       <strong>{order.driverName}</strong>
                     </div>
-                  ) : <strong className="text-muted">Unassigned</strong>}
+                  ) : <strong className="text-muted" style={{ display: 'block', marginTop: '4px' }}>Unassigned</strong>}
                 </div>
                 <div><span className="label">ROUTE</span><strong>{order.route || order.area}</strong></div>
                 <div><span className="label">ENCODED BY</span><strong>{order.encodedBy}</strong></div>
@@ -336,14 +516,62 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <span className="label">QUICK ACTIONS</span>
               <div className="detail-actions">
-                {order.status === 'Failed' ? (
-                  <button className="btn btn-primary" id="schedule-redelivery-quick-btn" onClick={() => setIsModalOpen(true)}><RefreshCw size={16} /> SCHEDULE RE-DELIVERY</button>
+                {order.isArchived ? (
+                  <button 
+                    className="btn btn-primary"
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      if (isSubmitting) return;
+                      if (window.confirm("Are you sure you want to restore this archived order? This will reset the status to Pending.")) {
+                        try {
+                          setIsSubmitting(true);
+                          await restoreDeliveryOrder(Number(order.id));
+                          await refreshOrders();
+                          alert("Order restored successfully.");
+                        } catch (err: any) {
+                          console.error(err);
+                          alert(err.response?.data?.message || "Failed to restore order.");
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }
+                    }}
+                  >
+                    <RefreshCw size={16} /> RESTORE ORDER
+                  </button>
                 ) : (
-                  <button className="btn btn-primary" onClick={handleUpdateStatus}><RefreshCw size={16} /> UPDATE STATUS</button>
+                  <>
+                    {['Failed', 'Cancelled'].includes(order.status) ? (
+                      <button className="btn btn-primary" id="schedule-redelivery-quick-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={16} /> SCHEDULE RE-DELIVERY</button>
+                    ) : (
+                      <button className="btn btn-primary" disabled={isSubmitting} onClick={handleUpdateStatus}><RefreshCw size={16} /> UPDATE STATUS</button>
+                    )}
+                    <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={16} /> EDIT ORDER</Link>
+                  </>
                 )}
-                <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline"><Pencil size={16} /> EDIT ORDER</Link>
-                <button className="btn btn-outline" disabled><Download size={16} /> EXPORT AS PDF</button>
-                <button className="btn btn-danger" onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
+                <button 
+                  className="btn btn-outline"
+                  disabled={isSubmitting}
+                  onClick={async () => {
+                    try {
+                      const blob = await downloadWaybillPdfBlob(Number(order.id));
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `Waybill-${order.waybillNo}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error("Failed to download waybill PDF", err);
+                      alert("Failed to download waybill PDF.");
+                    }
+                  }}
+                >
+                  <Download size={16} /> EXPORT AS PDF
+                </button>
+                <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
               </div>
             </div>
 
@@ -384,8 +612,8 @@ export default function DeliveryOrderDetail() {
         size="md"
         footer={
           <div className="flex gap-sm justify-end" style={{ width: '100%' }}>
-            <button className="btn btn-outline btn-sm" onClick={() => { setIsModalOpen(false); setErrorMsg(''); }}>Cancel</button>
-            <button className="btn btn-primary btn-sm" onClick={handleScheduleSubmit}>Schedule Re-delivery</button>
+            <button className="btn btn-outline btn-sm" disabled={isSubmitting} onClick={() => { setIsModalOpen(false); setErrorMsg(''); }}>Cancel</button>
+            <button className="btn btn-primary btn-sm" disabled={isSubmitting} onClick={handleScheduleSubmit}>Schedule Re-delivery</button>
           </div>
         }
       >

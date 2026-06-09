@@ -21,32 +21,48 @@ export default function DriverDashboard() {
 
   // Fetch deliveries assigned to this driver or unassigned
   const assignedRoutes = deliveryOrders.filter(
-    (order) => 
-      (order.driverName === user?.name || !order.driverName) && 
-      order.status === activeTab
+    (order) =>
+      (order.driverName === user?.name || !order.driverName) &&
+      (activeTab === 'Delivered'
+        ? (order.status === 'Delivered' || order.status === 'Completed')
+        : order.status === activeTab)
   );
 
   return (
     <div className="driver-dashboard">
       <div className="driver-greeting">
-        <h2>Hello, {user?.name?.split(' ')[0] || 'Driver'}</h2>
-        <p>You have {deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && (o.status === 'Pending' || o.status === 'In Transit')).length} active deliveries today.</p>
+        <div className="driver-greeting-content">
+          <div className="driver-greeting-text">
+            <h2>Hello, {user?.name?.split(' ')[0] || 'Driver'}!</h2>
+            <p className="driver-role">Speedex Courier</p>
+            <p className="driver-active-count">
+              You have {deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && (o.status === 'Pending' || o.status === 'In Transit')).length} active deliveries today.
+            </p>
+          </div>
+          <div className="driver-avatar-wrapper">
+            <img
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120"
+              alt="Driver Avatar"
+              className="driver-avatar-img"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="driver-tabs">
-        <button 
+        <button
           className={`driver-tab ${activeTab === 'Pending' ? 'active' : ''}`}
           onClick={() => { setIsLoading(true); setActiveTab('Pending'); }}
         >
           To Do
         </button>
-        <button 
+        <button
           className={`driver-tab ${activeTab === 'In Transit' ? 'active' : ''}`}
           onClick={() => { setIsLoading(true); setActiveTab('In Transit'); }}
         >
           In Transit
         </button>
-        <button 
+        <button
           className={`driver-tab ${activeTab === 'Delivered' ? 'active' : ''}`}
           onClick={() => { setIsLoading(true); setActiveTab('Delivered'); }}
         >
@@ -62,8 +78,8 @@ export default function DriverDashboard() {
           </div>
         ) : assignedRoutes.length > 0 ? (
           assignedRoutes.map((order) => (
-            <div 
-              key={order.id} 
+            <div
+              key={order.id}
               className={`delivery-card animate-fade-in ${order.status === 'In Transit' ? 'active-transit' : ''}`}
               onClick={() => navigate(`/driver/delivery/${order.id}`)}
             >
@@ -74,7 +90,7 @@ export default function DriverDashboard() {
                   <StatusBadge status={order.status} size="sm" />
                 </div>
               </div>
-              
+
               <div className="card-body">
                 <div className="info-row">
                   <Package size={16} className="info-icon" />
@@ -83,7 +99,7 @@ export default function DriverDashboard() {
                     <span className="info-value">{order.recipientName}</span>
                   </div>
                 </div>
-                
+
                 <div className="info-row">
                   <MapPin size={16} className="info-icon" />
                   <div className="info-content">
@@ -94,7 +110,7 @@ export default function DriverDashboard() {
               </div>
 
               <div className="card-footer">
-                <button 
+                <button
                   className={`btn btn-block ${order.status === 'In Transit' ? 'btn-primary' : 'btn-outline'}`}
                   style={{ width: '100%', justifyContent: 'center' }}
                   onClick={(e) => {

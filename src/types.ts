@@ -1,4 +1,4 @@
-export type DeliveryStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Completed' | 'Failed' | 'Returned';
+export type DeliveryStatus = 'Pending' | 'Processing' | 'Assigned' | 'Picked Up' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Completed' | 'Failed' | 'Returned' | 'Cancelled' | 'Preparing' | 'Ready for Pickup';
 export type POTStatus = 'Submitted' | 'No POT' | 'Not Submitted';
 export type PODStatus = 'Submitted' | 'No POD' | 'Not Submitted';
 export type UserRole = 'ADMIN' | 'OP. TEAM' | 'DRIVER';
@@ -13,6 +13,8 @@ export interface Employee {
   systemAccess: string;
   status: AccountStatus;
   failedAttempts?: number;
+  initials: string;
+  color: string;
 }
 
 export interface DeliveryOrder {
@@ -42,6 +44,8 @@ export interface DeliveryOrder {
   redeliveryDriverId?: string;
   redeliveryRemarks?: string;
   redeliveryAttemptCount?: number;
+  redeliveryStatus?: 'Pending Approval' | 'Approved' | 'Rejected' | 'None';
+  redeliveryRequestedDate?: string;
   potImage?: string;
   podStatus: PODStatus;
   podImage?: string;
@@ -60,6 +64,10 @@ export interface DeliveryOrder {
   lastUpdated: string;
   updatedBy: string;
   route: string;
+  isArchived: boolean;
+  archivedReason?: string;
+  completedAt?: string;
+  driverId?: number;
 }
 
 export interface Notification {

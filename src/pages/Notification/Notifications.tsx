@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCheck, Trash2, Eye, Check, Bell, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -6,15 +7,18 @@ import { useData } from '../../context/DataContext';
 import EmptyState from '../../components/ui/EmptyState';
 import './Notifications.css';
 
-
-
 export default function Notifications() {
-  const { notifications, markNotificationRead, markAllNotificationsRead, deleteNotification, clearAllNotifications } = useData();
+  const navigate = useNavigate();
+  const { notifications, deliveryOrders, markNotificationRead, markAllNotificationsRead, deleteNotification, clearAllNotifications, refreshOrders } = useData();
+
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders]);
   const [activeTab, setActiveTab] = useState('all');
   const [selectedId, setSelectedId] = useState(notifications.length > 0 ? notifications[0].id : '');
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   
-  const selected = notifications.find(n => n.id === selectedId) || notifications[0];
+  const selected = selectedId ? notifications.find(n => n.id === selectedId) : null;
   const filtered = activeTab === 'all' ? notifications : activeTab === 'read' ? notifications.filter(n => n.read) : notifications.filter(n => n.type === activeTab && !n.read);
 
   const handleToggleCheck = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
@@ -169,7 +173,23 @@ export default function Notifications() {
 
               <span className="label" style={{ marginTop: '16px' }}>ACTIONS</span>
               <div className="detail-actions">
-                <button className="btn btn-primary"><Eye size={16} /> View Order Details</button>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    if (selected.waybillNo) {
+                      const matched = deliveryOrders.find(o => o.waybillNo?.trim().toUpperCase() === selected.waybillNo?.trim().toUpperCase());
+                      if (matched) {
+                        navigate(`/delivery-orders/${matched.id}`);
+                      } else {
+                        alert(`Order with Waybill ${selected.waybillNo} was not found.`);
+                      }
+                    } else {
+                      alert('This notification is not linked to any Waybill.');
+                    }
+                  }}
+                >
+                  <Eye size={16} /> View Order Details
+                </button>
                 <button className="btn btn-outline" onClick={() => { markNotificationRead(selected.id); setSelectedId(''); }}><Check size={16} /> Mark as Read</button>
                 <button className="btn btn-danger" onClick={() => { deleteNotification(selected.id); setSelectedId(''); }}><Trash2 size={16} /> Delete Notification</button>
               </div>

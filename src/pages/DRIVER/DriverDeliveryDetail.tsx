@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
@@ -14,14 +14,10 @@ export default function DriverDeliveryDetail() {
   const navigate = useNavigate();
   const { deliveryOrders, updateDeliveryOrder, addActivityLog, activityLogs } = useData();
 
-  const [order, setOrder] = useState(deliveryOrders.find(o => o.id === id));
+  const order = deliveryOrders.find(o => o.id === id);
   const [showPODModal, setShowPODModal] = useState(false);
   const [showFailureModal, setShowFailureModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-
-  useEffect(() => {
-    setOrder(deliveryOrders.find(o => o.id === id));
-  }, [id, deliveryOrders]);
 
   // Continuous GPS watch tracking
   const { isTracking, gpsError } = useDriverGPS(order, updateDeliveryOrder);
@@ -29,110 +25,135 @@ export default function DriverDeliveryDetail() {
   if (!order) return <div style={{ padding: '20px', textAlign: 'center' }}>Delivery not found</div>;
 
   // Reusable GPS function
-  const withLocation = (callback: (coords: { lat: number; lng: number } | null) => void) => {
+  const withLocation = (callback: (coords: { lat: number; lng: number } | null) => Promise<void> | void) => {
     setIsUpdating(true);
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
-      callback(null);
-      setIsUpdating(false);
+      Promise.resolve(callback(null)).then(() => setIsUpdating(false));
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        callback({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setIsUpdating(false);
+      async (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+        try {
+          await callback(coords);
+        } catch (err) {
+          console.error("Callback error", err);
+        } finally {
+          setIsUpdating(false);
+        }
       },
-      (error) => {
+      async (error) => {
         console.error("Error obtaining location", error);
         alert("Could not get location. Proceeding without GPS tag.");
-        callback(null);
-        setIsUpdating(false);
+        try {
+          await callback(null);
+        } catch (err) {
+          console.error("Callback error", err);
+        } finally {
+          setIsUpdating(false);
+        }
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
   const handleStartTransit = () => {
-    withLocation((coords) => {
-      updateDeliveryOrder(order.id, {
-        status: 'In Transit',
-        gpsCoordinates: coords || undefined
-      });
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: order.driverName || 'Driver',
-        userRole: 'DRIVER',
-        userInitials: order.driverInitials || 'DR',
-        userColor: order.driverColor || '#000',
-        action: 'Update',
-        description: `Started transit for ${order.waybillNo}${coords ? ' (GPS Tagged)' : ''}`,
-        reference: order.waybillNo
-      });
+    withLocation(async (coords) => {
+      try {
+        await updateDeliveryOrder(order.id, {
+          status: 'In Transit',
+          gpsCoordinates: coords || undefined
+        });
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: order.driverName || 'Driver',
+          userRole: 'DRIVER',
+          userInitials: order.driverInitials || 'DR',
+          userColor: order.driverColor || '#000',
+          action: 'Update',
+          description: `Started transit for ${order.waybillNo}${coords ? ' (GPS Tagged)' : ''}`,
+          reference: order.waybillNo
+        });
+      } catch (err: any) {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || "Failed to start transit.");
+      }
     });
   };
 
   const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
-    withLocation((coords) => {
-      updateDeliveryOrder(order.id, {
-        status: 'Completed',
-        podStatus: 'Submitted',
-        podImage: data.podImage,
-        recipientName: data.recipientName,
-        dateCompleted: new Date().toLocaleString(),
-        gpsCoordinates: coords || undefined
-      });
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: order.driverName || 'Driver',
-        userRole: 'DRIVER',
-        userInitials: order.driverInitials || 'DR',
-        userColor: order.driverColor || '#000',
-        action: 'POT Upload',
-        description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
-        reference: order.waybillNo
-      });
-      setShowPODModal(false);
-      navigate('/driver/dashboard');
+    withLocation(async (coords) => {
+      try {
+        await updateDeliveryOrder(order.id, {
+          status: 'Completed',
+          podStatus: 'Submitted',
+          podImage: data.podImage,
+          recipientName: data.recipientName,
+          dateCompleted: new Date().toLocaleString(),
+          gpsCoordinates: coords || undefined
+        });
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: order.driverName || 'Driver',
+          userRole: 'DRIVER',
+          userInitials: order.driverInitials || 'DR',
+          userColor: order.driverColor || '#000',
+          action: 'POT Upload',
+          description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
+          reference: order.waybillNo
+        });
+        setShowPODModal(false);
+        navigate('/driver/dashboard');
+      } catch (err: any) {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || "Failed to submit POD.");
+      }
     });
   };
 
   const handleFailureSubmit = (data: { reason: string; remarks: string }) => {
-    withLocation((coords) => {
-      updateDeliveryOrder(order.id, {
-        status: 'Failed',
-        failureReason: data.reason,
-        failureRemarks: data.remarks,
-        gpsCoordinates: coords || undefined
-      });
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: order.driverName || 'Driver',
-        userRole: 'DRIVER',
-        userInitials: order.driverInitials || 'DR',
-        userColor: order.driverColor || '#000',
-        action: 'Update',
-        description: `Marked ${order.waybillNo} as Failed (${data.reason})${coords ? ' (GPS Tagged)' : ''}`,
-        reference: order.waybillNo
-      });
-      setShowFailureModal(false);
-      navigate('/driver/dashboard');
+    withLocation(async (coords) => {
+      try {
+        await updateDeliveryOrder(order.id, {
+          status: 'Failed',
+          failureReason: data.reason,
+          failureRemarks: data.remarks,
+          gpsCoordinates: coords || undefined
+        });
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: order.driverName || 'Driver',
+          userRole: 'DRIVER',
+          userInitials: order.driverInitials || 'DR',
+          userColor: order.driverColor || '#000',
+          action: 'Update',
+          description: `Marked ${order.waybillNo} as Failed (${data.reason})${coords ? ' (GPS Tagged)' : ''}`,
+          reference: order.waybillNo
+        });
+        setShowFailureModal(false);
+        navigate('/driver/dashboard');
+      } catch (err: any) {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || "Failed to record failure.");
+      }
     });
   };
 
   return (
     <div className="driver-delivery-detail">
       {isTracking && (
-        <div className="live-gps-streaming-badge" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '10px 14px', borderRadius: '10px', color: '#065f46', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(16,185,129,0.08)' }}>
-          <span className="pulse-dot-live" style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px #10b981', animation: 'dot-pulse 1.5s infinite alternate' }} />
+        <div className="live-gps-streaming-badge" style={{ background: 'var(--status-active-bg)', border: '1px solid var(--status-active)', padding: '10px 14px', borderRadius: '10px', color: 'var(--status-active)', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0, 169, 157, 0.08)' }}>
+          <span className="pulse-dot-live" style={{ width: '8px', height: '8px', background: 'var(--status-active)', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px var(--status-active)', animation: 'dot-pulse 1.5s infinite alternate' }} />
           📡 Live GPS Tracking is ACTIVE. Your movement is streamed to client.
         </div>
       )}
       {gpsError && (
-        <div style={{ background: '#fff1f1', border: '1px solid #fecaca', padding: '10px 14px', borderRadius: '10px', color: '#991b1b', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+        <div style={{ background: 'var(--status-failed-bg)', border: '1px solid var(--status-failed)', padding: '10px 14px', borderRadius: '10px', color: 'var(--status-failed)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <AlertCircle size={16} /> {gpsError}
         </div>
       )}
@@ -189,7 +210,7 @@ export default function DriverDeliveryDetail() {
       {order.podImage && (
         <div className="detail-section" style={{ marginTop: '16px' }}>
           <h3>Proof of Delivery</h3>
-          <div className="pot-preview-container" style={{ marginTop: '12px', background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
+          <div className="pot-preview-container" style={{ marginTop: '12px', background: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <img 
               src={order.podImage} 
               alt="Proof of Delivery" 
@@ -277,7 +298,7 @@ export default function DriverDeliveryDetail() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {activityLogs?.filter(log => log.reference === order.waybillNo).length > 0 ? (
-            activityLogs.filter(log => log.reference === order.waybillNo).map((log, index) => (
+            activityLogs.filter(log => log.reference === order.waybillNo).map((log) => (
               <div key={log.id} style={{ display: 'flex', gap: '12px', borderLeft: '2px solid var(--border)', paddingLeft: '16px', position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-6px', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: log.userColor || 'var(--primary)' }} />
                 <div style={{ flex: 1 }}>

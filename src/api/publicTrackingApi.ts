@@ -1,4 +1,4 @@
-import { trackDeliveryByWaybill } from './deliveryApi';
+import apiClient from './apiClient';
 
 export interface PublicTrackingEvent {
   status: string;
@@ -21,11 +21,14 @@ export interface PublicTrackingResponse {
   driverName?: string;
   driverInitials?: string;
   driverColor?: string;
+  redeliveryStatus?: 'Pending Approval' | 'Approved' | 'Rejected' | 'None';
+  redeliveryRequestedDate?: string;
+  redeliveryRemarks?: string;
+  taskType?: 'Delivery' | 'Pickup';
 }
 
 /**
- * Fetch live package tracking details from the local storage mock database,
- * with a fallback to the C# backend if not found.
+ * Fetch live package tracking details from the backend.
  */
 export async function mockFetchTracking(waybill: string): Promise<PublicTrackingResponse> {
   const cleanWaybill = waybill.trim().toUpperCase();
@@ -35,133 +38,41 @@ export async function mockFetchTracking(waybill: string): Promise<PublicTracking
     throw { status: 429, message: 'Too Many Requests' };
   }
 
-  // 1. Try local storage first (Mock / Offline Mode)
   try {
-    const saved = localStorage.getItem('dts_orders');
-    if (saved) {
-      const orders = JSON.parse(saved);
-      const order = orders.find((o: any) => o.waybillNo?.trim().toUpperCase() === cleanWaybill);
-      
-      if (order) {
-        const events: PublicTrackingEvent[] = [
-          {
-            status: 'Pending',
-            timestamp: new Date(order.dateEncoded).toLocaleString(),
-            description: 'Order created and pending pickup.',
-          }
-        ];
-        
-        if (order.status !== 'Pending') {
-          events.push({
-            status: 'For Pickup',
-            timestamp: new Date(order.dateEncoded).toLocaleString(),
-            description: 'Package has been prepared for courier pickup.'
-          });
-          events.push({
-            status: 'In Transit',
-            timestamp: new Date(order.lastUpdated).toLocaleString(),
-            location: order.area || 'Metro Manila Hub',
-            description: 'Package is on its way to the delivery address.'
-          });
-        }
-
-        if (order.status === 'Delivered' || order.status === 'Completed') {
-          events.push({
-            status: 'Delivered',
-            timestamp: order.dateCompleted ? new Date(order.dateCompleted).toLocaleString() : new Date().toLocaleString(),
-            location: order.recipientAddress || 'Delivery Address',
-            description: 'Package has been successfully delivered.'
-          });
-        }
-
-        return {
-          id: order.id.toString(),
-          waybillNo: order.waybillNo,
-          currentStatus: order.status,
-          currentStatusHeadline: `Your package is ${order.status}`,
-          events: events,
-          lastLocation: order.liveCoordinates 
-            ? { lat: order.liveCoordinates.lat, lng: order.liveCoordinates.lng } 
-            : { lat: 14.5995, lng: 120.9842 },
-          potImage: order.potImage || order.podImage || undefined,
-          liveCoordinates: order.liveCoordinates,
-          recipientCoordinates: order.recipientCoordinates,
-          recipientAddress: order.recipientAddress,
-          driverName: order.driverName,
-          driverInitials: order.driverInitials || (order.driverName 
-            ? order.driverName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
-            : undefined),
-          driverColor: order.driverColor || '#00A99D'
-        };
-      }
-    }
-  } catch (localStorageError) {
-    console.warn('Error reading from localStorage, falling back to API:', localStorageError);
-  }
-
-  // 2. Fallback to API if not found in local storage
-  try {
-    const order = await trackDeliveryByWaybill(cleanWaybill);
-
-    const events: PublicTrackingEvent[] = [
-      {
-        status: 'Pending',
-        timestamp: new Date(order.dateEncoded).toLocaleString(),
-        description: 'Order created and pending pickup.',
-      }
-    ];
-    
-    if (order.status !== 'Pending') {
-      events.push({
-        status: 'For Pickup',
-        timestamp: new Date(order.dateEncoded).toLocaleString(),
-        description: 'Package has been prepared for courier pickup.'
-      });
-      events.push({
-        status: 'In Transit',
-        timestamp: new Date(order.lastUpdated).toLocaleString(),
-        location: order.area || 'Metro Manila Hub',
-        description: 'Package is on its way to the delivery address.'
-      });
-    }
-
-    if (order.status === 'Delivered' || order.status === 'Completed') {
-      events.push({
-        status: 'Delivered',
-        timestamp: order.dateCompleted ? new Date(order.dateCompleted).toLocaleString() : new Date().toLocaleString(),
-        location: order.recipientAddress || 'Delivery Address',
-        description: 'Package has been successfully delivered.'
-      });
-    }
-
-    return {
-      id: order.id.toString(),
-      waybillNo: order.waybillNo,
-      currentStatus: order.status,
-      currentStatusHeadline: `Your package is ${order.status}`,
-      events: events,
-      lastLocation: { lat: order.liveLatitude || 14.5995, lng: order.liveLongitude || 120.9842 },
-      potImage: order.podImagePath || undefined,
-      liveCoordinates: order.liveLatitude && order.liveLongitude ? { 
-        lat: order.liveLatitude, 
-        lng: order.liveLongitude, 
-        lastUpdated: order.lastLiveUpdate ? new Date(order.lastLiveUpdate).toLocaleString() : new Date().toLocaleString() 
-      } : undefined,
-      recipientCoordinates: order.recipientLatitude && order.recipientLongitude ? { 
-        lat: order.recipientLatitude, 
-        lng: order.recipientLongitude 
-      } : undefined,
-      recipientAddress: order.recipientAddress,
-      driverName: order.driver?.name,
-      driverInitials: order.driver?.name 
-        ? order.driver.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
-        : undefined,
-      driverColor: '#00A99D'
-    };
+    const response = await apiClient.get<PublicTrackingResponse>('/delivery-orders/track', {
+      params: { waybill: cleanWaybill },
+    });
+    return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       throw { status: 404, message: 'Waybill not found' };
     }
-    throw error;
+    throw {
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || 'An unexpected error occurred.',
+    };
+  }
+}
+
+/**
+ * Submit rescheduling request to the backend.
+ */
+export async function mockSubmitRescheduleRequest(
+  waybill: string,
+  requestedDate: string,
+  remarks?: string
+): Promise<void> {
+  const cleanWaybill = waybill.trim().toUpperCase();
+  try {
+    await apiClient.post('/delivery-orders/track/reschedule', {
+      waybillNo: cleanWaybill,
+      requestedDate,
+      remarks: remarks || '',
+    });
+  } catch (error: any) {
+    throw {
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to submit request.',
+    };
   }
 }

@@ -22,12 +22,20 @@ const formatDateToInput = (dateStr?: string) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const formatDateFromInput = (dateStr: string) => {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+  const day = parseInt(parts[2], 10);
+  const d = new Date(year, month, day);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
@@ -58,13 +66,15 @@ const REGIONS = [
 export default function EditDeliveryOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { deliveryOrders, addDeliveryOrder, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
+  const { employees, deliveryOrders, addDeliveryOrder, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
   const { user } = useAuth();
 
   const isNew = id === 'new';
   const isDriver = user?.role === 'DRIVER';
-  const isReadOnly = !isNew || isDriver;
+  const isReadOnly = isDriver;
   const inputStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
+  const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const todayInputVal = formatDateToInput(todayStr);
 
   const [formData, setFormData] = useState<Partial<DeliveryOrder>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -186,7 +196,7 @@ export default function EditDeliveryOrder() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newErrors: Record<string, string> = {};
     
     // Waybill automated validation
@@ -203,16 +213,36 @@ export default function EditDeliveryOrder() {
       }
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (isNew && formData.orderDate) {
+      const orderD = new Date(formData.orderDate);
+      if (!isNaN(orderD.getTime())) {
+        orderD.setHours(0, 0, 0, 0);
+        if (orderD < today) {
+          newErrors.orderDate = 'Order Date cannot be in the past';
+        }
+      }
+    }
+
     if (!formData.expectedDelivery) {
       newErrors.expectedDelivery = 'Expected Delivery date is required';
-    } else if (formData.orderDate) {
-      const orderD = new Date(formData.orderDate);
+    } else {
       const expectedD = new Date(formData.expectedDelivery);
-      if (!isNaN(orderD.getTime()) && !isNaN(expectedD.getTime())) {
-        orderD.setHours(0, 0, 0, 0);
+      if (!isNaN(expectedD.getTime())) {
         expectedD.setHours(0, 0, 0, 0);
-        if (expectedD < orderD) {
-          newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
+        
+        if (isNew && expectedD < today) {
+          newErrors.expectedDelivery = 'Expected Delivery date cannot be in the past';
+        } else if (formData.orderDate) {
+          const orderD = new Date(formData.orderDate);
+          if (!isNaN(orderD.getTime())) {
+            orderD.setHours(0, 0, 0, 0);
+            if (expectedD < orderD) {
+              newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
+            }
+          }
         }
       }
     }
@@ -221,11 +251,49 @@ export default function EditDeliveryOrder() {
       newErrors.failureReason = 'Failure Reason is required when status is Failed';
     }
 
+    // Weight validation
+    if (!formData.weight) {
+      newErrors.weight = 'Weight is required';
+    } else {
+      const weightNum = parseFloat(formData.weight.toString().replace(/kg/i, '').trim());
+      if (isNaN(weightNum) || weightNum <= 0) {
+        newErrors.weight = 'Weight must be a positive number greater than 0';
+      }
+    }
+
+    // Item Count validation
+    if (formData.itemCount === undefined || formData.itemCount === null || String(formData.itemCount).trim() === '') {
+      newErrors.itemCount = 'Item Count is required';
+    } else {
+      const count = Number(formData.itemCount);
+      if (!Number.isInteger(count) || count <= 0) {
+        newErrors.itemCount = 'Item Count must be a positive whole number';
+      }
+    }
+
+    // Contact number validations
+    if (formData.contactNumber) {
+      const cleanPhone = formData.contactNumber.replace(/[^0-9]/g, '');
+      const validPhoneChar = /^[0-9+\s()-]+$/.test(formData.contactNumber);
+      if (!validPhoneChar || cleanPhone.length < 7) {
+        newErrors.contactNumber = 'Please enter a valid contact number (at least 7 digits)';
+      }
+    }
+
+    if (!formData.recipientContact) {
+      newErrors.recipientContact = 'Recipient Contact is required';
+    } else {
+      const cleanPhone = formData.recipientContact.replace(/[^0-9]/g, '');
+      const validPhoneChar = /^[0-9+\s()-]+$/.test(formData.recipientContact);
+      if (!validPhoneChar || cleanPhone.length < 7) {
+        newErrors.recipientContact = 'Please enter a valid contact number (at least 7 digits)';
+      }
+    }
+
     if (!formData.area) newErrors.area = 'Area / Route is required';
     if (!formData.clientName) newErrors.clientName = 'Client Name is required';
     if (!formData.senderAddress) newErrors.senderAddress = 'Sender Address is required';
     if (!formData.recipientName) newErrors.recipientName = 'Recipient Name is required';
-    if (!formData.recipientContact) newErrors.recipientContact = 'Recipient Contact is required';
     if (!formData.recipientAddress) newErrors.recipientAddress = 'Delivery Address is required';
 
     if (Object.keys(newErrors).length > 0) {
@@ -239,15 +307,15 @@ export default function EditDeliveryOrder() {
     setErrors({});
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
       if (isNew) {
         const newOrder = {
           ...formData,
           id: Math.random().toString(36).substr(2, 9),
         } as DeliveryOrder;
 
-        addDeliveryOrder(newOrder);
-        addActivityLog({
+        await addDeliveryOrder(newOrder);
+        await addActivityLog({
           id: Date.now().toString(),
           timestamp: new Date().toLocaleString(),
           userName: user?.name || 'System',
@@ -260,8 +328,13 @@ export default function EditDeliveryOrder() {
         });
         navigate('/delivery-orders');
       } else {
-        updateDeliveryOrder(id!, formData);
-        addActivityLog({
+        const updatedOrder = {
+          ...formData,
+          updatedBy: user?.name || 'Unknown',
+          lastUpdated: new Date().toLocaleString()
+        };
+        await updateDeliveryOrder(id!, updatedOrder);
+        await addActivityLog({
           id: Date.now().toString(),
           timestamp: new Date().toLocaleString(),
           userName: user?.name || 'System',
@@ -274,25 +347,37 @@ export default function EditDeliveryOrder() {
         });
         navigate(isDriver ? '/tasks' : `/delivery-orders/${id}`);
       }
+    } catch (err: any) {
+      console.error("Save failed:", err);
+      // DataContext already alerts the error, but we log it here
+    } finally {
       setIsSubmitting(false);
-    }, 600);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (isSubmitting) return;
     if (window.confirm('Are you sure you want to delete this order?')) {
-      deleteDeliveryOrder(id!);
-      addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#E31A1A',
-        action: 'Delete',
-        description: `Deleted delivery order ${formData.waybillNo}`,
-        reference: formData.waybillNo
-      });
-      navigate('/delivery-orders');
+      try {
+        setIsSubmitting(true);
+        await deleteDeliveryOrder(id!);
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: user?.name || 'System',
+          userRole: user?.role || 'Staff',
+          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+          userColor: '#E31A1A',
+          action: 'Delete',
+          description: `Deleted delivery order ${formData.waybillNo}`,
+          reference: formData.waybillNo
+        });
+        navigate('/delivery-orders');
+      } catch (err) {
+        console.error("Delete failed:", err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -343,22 +428,47 @@ export default function EditDeliveryOrder() {
                       name="orderDate"
                       className="form-input"
                       value={formatDateToInput(formData.orderDate)}
+                      min={isNew ? todayInputVal : undefined}
                       onChange={(e) => {
-                        const newOrderDateStr = formatDateFromInput(e.target.value);
-                        // Automated expected delivery calculation (orderDate + 2 days)
-                        const expectedD = e.target.value ? new Date(new Date(e.target.value).getTime() + 86400000 * 2).toISOString().split('T')[0] : '';
-                        const formattedExpected = formatDateFromInput(expectedD);
+                        const targetValue = e.target.value;
+                        const newOrderDateStr = formatDateFromInput(targetValue);
+                        
+                        let formattedExpected = '';
+                        if (targetValue) {
+                          const parts = targetValue.split('-');
+                          if (parts.length === 3) {
+                            const year = parseInt(parts[0], 10);
+                            const month = parseInt(parts[1], 10) - 1;
+                            const day = parseInt(parts[2], 10);
+                            const orderD = new Date(year, month, day);
+                            const expectedD = new Date(orderD.getTime() + 86400000 * 2);
+                            formattedExpected = expectedD.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                          }
+                        }
+                        
                         setFormData(prev => ({ 
                           ...prev, 
                           orderDate: newOrderDateStr,
                           expectedDelivery: formattedExpected 
                         }));
-                        if (errors.expectedDelivery) setErrors(prev => ({ ...prev, expectedDelivery: '' }));
+
+                        // Immediate validation
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (newOrderDateStr) {
+                          const orderD = new Date(newOrderDateStr);
+                          if (isNew && !isNaN(orderD.getTime()) && orderD < today) {
+                            setErrors(prev => ({ ...prev, orderDate: 'Order Date cannot be in the past' }));
+                            return;
+                          }
+                        }
+                        setErrors(prev => ({ ...prev, orderDate: '', expectedDelivery: '' }));
                       }}
                       readOnly={isReadOnly}
-                      style={{ paddingLeft: '42px', ...inputStyle }}
+                      style={getInputStyle('orderDate', { paddingLeft: '42px' })}
                     />
                   </div>
+                  {errors.orderDate && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.orderDate}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">EXPECTED DELIVERY <span style={{ color: 'var(--status-failed)' }}>*</span></label>
@@ -369,10 +479,44 @@ export default function EditDeliveryOrder() {
                       name="expectedDelivery"
                       className="form-input"
                       value={formatDateToInput(formData.expectedDelivery)}
+                      min={isNew ? (formatDateToInput(formData.orderDate) || todayInputVal) : formatDateToInput(formData.orderDate)}
                       onChange={(e) => {
-                        const formatted = formatDateFromInput(e.target.value);
+                        const val = e.target.value;
+                        const formatted = formatDateFromInput(val);
                         setFormData(prev => ({ ...prev, expectedDelivery: formatted }));
-                        if (errors.expectedDelivery) setErrors(prev => ({ ...prev, expectedDelivery: '' }));
+                        
+                        if (!formatted) {
+                          setErrors(prev => ({ ...prev, expectedDelivery: 'Expected Delivery date is required' }));
+                          return;
+                        }
+                        
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const expectedD = new Date(formatted);
+                        
+                        if (isNew && !isNaN(expectedD.getTime()) && expectedD < today) {
+                          setErrors(prev => ({ 
+                            ...prev, 
+                            expectedDelivery: 'Expected Delivery date cannot be in the past' 
+                          }));
+                          return;
+                        }
+
+                        if (formData.orderDate) {
+                          const orderD = new Date(formData.orderDate);
+                          if (!isNaN(orderD.getTime()) && !isNaN(expectedD.getTime())) {
+                            orderD.setHours(0, 0, 0, 0);
+                            expectedD.setHours(0, 0, 0, 0);
+                            if (expectedD < orderD) {
+                              setErrors(prev => ({ 
+                                ...prev, 
+                                expectedDelivery: 'Expected Delivery date cannot be before the Order Date' 
+                              }));
+                              return;
+                            }
+                          }
+                        }
+                        setErrors(prev => ({ ...prev, expectedDelivery: '' }));
                       }}
                       readOnly={isReadOnly}
                       style={getInputStyle('expectedDelivery', { paddingLeft: '42px' })}
@@ -462,6 +606,40 @@ export default function EditDeliveryOrder() {
                 </div>
               </div>
 
+              {!isPickup && (
+                <div className="form-row two-col" style={{ marginTop: '16px' }}>
+                  <div className="form-group">
+                    <label className="form-label">ASSIGNED COURIER / DRIVER</label>
+                    <select
+                      name="driverId"
+                      className="form-input"
+                      value={formData.driverId || ''}
+                      onChange={(e) => {
+                        const drvId = e.target.value;
+                        const selectedDriver = employees.find(emp => emp.id === drvId);
+                        setFormData(prev => ({
+                          ...prev,
+                          driverId: drvId ? Number(drvId) : undefined,
+                          driverName: selectedDriver?.name || '',
+                          driverInitials: selectedDriver?.name ? selectedDriver.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '',
+                          driverColor: selectedDriver?.color || '#6B7280'
+                        }));
+                      }}
+                      disabled={isReadOnly}
+                      style={inputStyle}
+                    >
+                      <option value="">Unassigned</option>
+                      {employees.filter(e => e.role === 'DRIVER').map(drv => (
+                        <option key={drv.id} value={drv.id}>{drv.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    {/* Hanger for layout balance */}
+                  </div>
+                </div>
+              )}
+
               {formData.status === 'Failed' && (
                 <div className="form-row two-col" style={{ marginTop: '16px', background: 'var(--status-failed-bg)', padding: '16px', borderRadius: '8px', border: '1px solid #ffdcd9' }}>
                   <div className="form-group">
@@ -508,12 +686,14 @@ export default function EditDeliveryOrder() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">WEIGHT</label>
-                  <input name="weight" className="form-input" value={formData.weight || ''} onChange={handleChange} placeholder="e.g. 1.5 kg" readOnly={isReadOnly} style={inputStyle} />
+                  <label className="form-label">WEIGHT <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input name="weight" className="form-input" value={formData.weight || ''} onChange={handleChange} placeholder="e.g. 1.5 kg" readOnly={isReadOnly} style={getInputStyle('weight')} />
+                  {errors.weight && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.weight}</span>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">ITEM COUNT</label>
-                  <input type="number" name="itemCount" className="form-input" value={formData.itemCount || ''} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                  <label className="form-label">ITEM COUNT <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input type="number" name="itemCount" className="form-input" value={formData.itemCount || ''} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('itemCount')} />
+                  {errors.itemCount && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.itemCount}</span>}
                 </div>
               </div>
             </div>
@@ -528,7 +708,8 @@ export default function EditDeliveryOrder() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">CONTACT NUMBER</label>
-                  <input name="contactNumber" className="form-input" value={formData.contactNumber} onChange={handleChange} readOnly={isReadOnly} style={inputStyle} />
+                  <input name="contactNumber" className="form-input" value={formData.contactNumber || ''} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('contactNumber')} />
+                  {errors.contactNumber && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.contactNumber}</span>}
                 </div>
               </div>
               <div className="form-group">
@@ -621,8 +802,8 @@ export default function EditDeliveryOrder() {
                 <><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</>
               )}
             </button>
-            <button className="btn btn-outline" onClick={() => navigate(-1)}><Undo2 size={16} /> {isDriver ? 'Back' : 'Discard'}</button>
-            {!isNew && !isDriver && <button className="btn btn-danger" onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
+            <button className="btn btn-outline" disabled={isSubmitting} onClick={() => navigate(-1)}><Undo2 size={16} /> {isDriver ? 'Back' : 'Discard'}</button>
+            {!isNew && !isDriver && <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
           </div>
         </div>
       </div>

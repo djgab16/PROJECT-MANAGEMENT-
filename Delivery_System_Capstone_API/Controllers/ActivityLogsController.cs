@@ -1,0 +1,49 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SPXDeliveryAPI.Data;
+using SPXDeliveryAPI.Models;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace SPXDeliveryAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [Route("api/activity-logs")]
+    [Route("api/logs")]
+    [ApiController]
+    [Authorize]
+    public class ActivityLogsController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public ActivityLogsController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var logs = await _context.ActivityLogs
+                .OrderByDescending(l => l.Id)
+                .ToListAsync();
+            return Ok(logs);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] ActivityLog log)
+        {
+            if (string.IsNullOrEmpty(log.Timestamp))
+            {
+                log.Timestamp = DateTime.UtcNow.ToString("O");
+            }
+
+            await _context.ActivityLogs.AddAsync(log);
+            await _context.SaveChangesAsync();
+
+            return Ok(log);
+        }
+    }
+}

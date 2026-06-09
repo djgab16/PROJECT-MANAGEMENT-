@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
-import { Home, ScanLine, Settings, ArrowLeft } from 'lucide-react';
+import { Home, ScanLine, Settings, ArrowLeft, Menu, Bell } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import './DriverLayout.css';
 
@@ -18,8 +18,20 @@ export default function DriverLayout() {
               <ArrowLeft size={24} />
             </button>
           ) : (
-            <img src={logo} alt="Speedex Logo" className="driver-logo" />
+            <button className="icon-btn-plain" aria-label="Menu">
+              <Menu size={24} />
+            </button>
           )}
+        </div>
+        
+        <div className="driver-header-center">
+          <img src={logo} alt="Speedex Logo" className="driver-logo" />
+        </div>
+
+        <div className="driver-header-right">
+          <button className="icon-btn-plain" onClick={() => navigate('/notifications')} aria-label="Notifications">
+            <Bell size={24} />
+          </button>
         </div>
       </header>
       

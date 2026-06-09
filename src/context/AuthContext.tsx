@@ -28,6 +28,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           console.error("Failed to restore session", error);
           localStorage.removeItem('dts_token');
+          localStorage.removeItem('dts_user');
+          localStorage.removeItem('dts_user_profile');
           setUser(null);
         }
       }
@@ -45,16 +47,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profileRes = await apiClient.get('/api/auth/profile');
       const emp = profileRes.data;
       const employeeData = { ...emp, id: String(emp.id) };
+      
+      // Store in localStorage for persistence
+      localStorage.setItem('dts_user_profile', JSON.stringify(employeeData));
+      localStorage.setItem('dts_user', JSON.stringify({
+        accessToken: token,
+        refreshToken: 'api_refresh_token',
+        ...employeeData
+      }));
+      
       setUser(employeeData);
       return employeeData;
     } catch (error: any) {
-      throw error.response?.data?.message || "Login failed";
+      console.error("API login failed:", error);
+      throw error.response?.data?.message || "Invalid Employee ID or password. Please try again.";
     }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('dts_token');
+    localStorage.removeItem('dts_user');
+    localStorage.removeItem('dts_user_profile');
   };
 
   const isAuthenticated = !!user;

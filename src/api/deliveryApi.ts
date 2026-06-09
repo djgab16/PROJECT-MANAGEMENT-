@@ -43,6 +43,9 @@ export interface DeliveryOrderResponse {
   redeliveryDriver?: DriverSummary;
   redeliveryRemarks?: string;
   redeliveryAttemptCount: number;
+  redeliveryStatus?: 'Pending Approval' | 'Approved' | 'Rejected' | 'None';
+  redeliveryRequestedDate?: string;
+  failureReason?: string;
   liveLatitude?: number;
   liveLongitude?: number;
   recipientLatitude?: number;
@@ -145,8 +148,40 @@ export interface AnalyticsReportResponse {
  * Fetch all delivery orders with filters and pagination.
  */
 export async function getDeliveryOrders(params?: DeliveryOrderFilterParams): Promise<DeliveryOrderListResponse> {
-  const response = await apiClient.get<DeliveryOrderListResponse>('/delivery-orders', { params });
-  return response.data;
+  const response = await apiClient.get<DeliveryOrderResponse[]>('/delivery-orders', {
+    params: {
+      isArchived: params?.isArchived,
+      status: params?.status,
+      search: params?.search
+    }
+  });
+  let items = response.data;
+  
+  // Additional frontend filters (area, clientName, podStatus)
+  if (params?.area && params.area !== 'All Areas') {
+    items = items.filter(o => o.area?.toLowerCase() === params.area?.toLowerCase());
+  }
+  if (params?.clientName) {
+    items = items.filter(o => o.clientName?.toLowerCase() === params.clientName?.toLowerCase());
+  }
+  if (params?.podStatus) {
+    items = items.filter(o => o.podStatus?.toLowerCase() === params.podStatus?.toLowerCase());
+  }
+
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 10;
+  const totalCount = items.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const paginatedItems = items.slice(startIndex, startIndex + pageSize);
+
+  return {
+    items: paginatedItems,
+    totalCount,
+    page,
+    pageSize,
+    totalPages
+  };
 }
 
 /**

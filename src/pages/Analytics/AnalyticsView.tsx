@@ -36,7 +36,7 @@ export default function AnalyticsView() {
   const computedDailyDeliveries = generateDailyDeliveries();
 
   const generateStatusDistribution = () => {
-    const counts = { Pending: 0, 'In Transit': 0, Delivered: 0, Completed: 0, Failed: 0, Returned: 0 };
+    const counts: Record<string, number> = { Pending: 0, 'In Transit': 0, Delivered: 0, Completed: 0, Failed: 0, Returned: 0, Cancelled: 0 };
     deliveryOrders.forEach(o => {
       if (counts[o.status] !== undefined) counts[o.status]++;
     });
@@ -44,7 +44,7 @@ export default function AnalyticsView() {
       { name: 'Pending', value: counts.Pending, color: '#A3AED0' },
       { name: 'In Transit', value: counts['In Transit'], color: '#4318FF' },
       { name: 'Delivered', value: counts.Delivered + counts.Completed, color: '#00A99D' },
-      { name: 'Failed/Returned', value: counts.Failed + counts.Returned, color: '#E31A1A' }
+      { name: 'Failed/Returned/Cancelled', value: counts.Failed + counts.Returned + counts.Cancelled, color: '#E31A1A' }
     ].filter(d => d.value > 0);
   };
   const computedStatusDist = generateStatusDistribution();

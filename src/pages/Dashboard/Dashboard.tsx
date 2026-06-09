@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Users, ClipboardList, CheckCircle2, Package, RefreshCw } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatCard from '../../components/ui/StatCard';
@@ -9,12 +10,21 @@ import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } fro
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { employees, deliveryOrders, activityLogs } = useData();
+  const { employees, deliveryOrders, activityLogs, refreshOrders } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const activeTasks = deliveryOrders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
-  const completedTasks = deliveryOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
+  useEffect(() => {
+    refreshOrders();
+  }, []);
+
+  const isOpTeam = user?.role === 'OP. TEAM';
+  const visibleOrders = isOpTeam 
+    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
+    : deliveryOrders;
+
+  const activeTasks = visibleOrders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
+  const completedTasks = visibleOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -22,7 +32,7 @@ export default function Dashboard() {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const data = days.map(day => ({ day, weekday: 0, weekend: 0, peak: 0 }));
 
-    deliveryOrders.forEach(order => {
+    visibleOrders.forEach(order => {
       if (order.status !== 'Pending') {
         const dateStr = order.dateCompleted || order.lastUpdated || order.orderDate;
         if (!dateStr) return;
@@ -101,7 +111,7 @@ export default function Dashboard() {
               <button className="text-link" onClick={() => navigate('/tasks')}>Manage Tasks</button>
             </div>
             <div className="activity-feed-list">
-              {deliveryOrders
+              {visibleOrders
                 .filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0)
                 .slice(0, 5).map((order) => (
                 <div key={order.id} className="activity-feed-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/delivery-orders/${order.id}`)}>
@@ -121,7 +131,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {deliveryOrders.filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0).length === 0 && (
+              {visibleOrders.filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0).length === 0 && (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '16px 0', textAlign: 'center' }}>No active scheduled re-deliveries found.</p>
               )}
             </div>
@@ -180,7 +190,7 @@ export default function Dashboard() {
                 </div>
                 <div className="system-info">
                   <span className="system-name">Delivery Management</span>
-                  <span className="system-detail">{deliveryOrders.length} total orders</span>
+                  <span className="system-detail">{visibleOrders.length} total orders</span>
                 </div>
                 <span className="system-uptime">99.7%</span>
               </div>

@@ -12,7 +12,7 @@ interface StatCardProps {
   accentColor?: string;
 }
 
-export default function StatCard({ icon, iconColor, iconBg, label, value, subtitle, subtitleColor, accentColor }: StatCardProps) {
+export default function StatCard({ icon, iconColor, iconBg: _iconBg, label, value, subtitle, subtitleColor, accentColor }: StatCardProps) {
   return (
     <div className="stat-card card animate-fade-in">
       <div className="stat-card-header">

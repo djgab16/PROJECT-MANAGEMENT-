@@ -46,9 +46,9 @@
   height: 100% !important;
 }
 
-/* Force the video feed to not be mirrored */
+/* Force the video feed to be mirrored */
 .scanner-frame-wrapper video {
-  transform: scaleX(1) !important;
+  transform: scaleX(-1) !important;
 }
 
 .scanner-error {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Header from '../../components/layout/Header';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -67,9 +68,13 @@ const Column = ({ title, orders, onNavigate, colorClass, icon: Icon }: ColumnPro
 );
 
 export default function Tasks() {
-  const { deliveryOrders } = useData();
+  const { deliveryOrders, refreshOrders } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
   
   const isDriver = user?.role === 'DRIVER';
   const isOpTeam = user?.role === 'OP. TEAM';

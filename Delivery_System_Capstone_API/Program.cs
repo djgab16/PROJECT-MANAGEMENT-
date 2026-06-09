@@ -105,21 +105,15 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // ─── Seed Database ─────────────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
-{
-    await DbSeeder.SeedAsync(app);
-}
+await DbSeeder.SeedAsync(app);
 
 // ─── Middleware Pipeline ───────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "SPX Delivery API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "SPX Delivery API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseCors("FrontendDev");
 app.UseAuthentication();

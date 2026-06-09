@@ -84,6 +84,8 @@ namespace SPXDeliveryAPI.Models
         public string? RedeliveryRemarks { get; set; }
         public int RedeliveryAttemptCount { get; set; } = 0;
         public int? RedeliveryDriverId { get; set; }
+        public string? RedeliveryStatus { get; set; } = "None"; // "None", "Pending Approval", "Approved", "Rejected"
+        public string? RedeliveryRequestedDate { get; set; }
 
         // GPS coordinates
         public double? LiveLatitude { get; set; }
@@ -111,6 +113,10 @@ namespace SPXDeliveryAPI.Models
         public string ExpectedDelivery { get; set; } = string.Empty;
 
         public string? DateCompleted { get; set; }
+
+        public bool IsArchived { get; set; } = false;
+        public string? CompletedAt { get; set; }
+        public string? ArchivedReason { get; set; }
 
         [Required]
         [MaxLength(100)]
