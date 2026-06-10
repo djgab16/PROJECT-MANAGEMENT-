@@ -1,7 +1,6 @@
 {
   "format": 1,
   "restore": {
-<<<<<<< HEAD
     "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {}
   },
   "projects": {
@@ -13,19 +12,6 @@
         "projectPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
         "packagesPath": "C:\\Users\\gab\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\obj\\",
-=======
-    "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {}
-  },
-  "projects": {
-    "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
-        "projectName": "SPXDeliveryAPI",
-        "projectPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
-        "packagesPath": "C:\\Users\\gab\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone\\Delivery_System_Capstone_API\\obj\\",
->>>>>>> c894e696f845f436533eb3980901f5c8e7fb2f19
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -43,15 +29,9 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-<<<<<<< HEAD
           "net10.0": {
             "framework": "net10.0",
             "targetAlias": "net10.0",
-=======
-          "net9.0": {
-            "framework": "net9.0",
-            "targetAlias": "net9.0",
->>>>>>> c894e696f845f436533eb3980901f5c8e7fb2f19
             "projectReferences": {}
           }
         },
@@ -68,15 +48,9 @@
         "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
-<<<<<<< HEAD
         "net10.0": {
           "framework": "net10.0",
           "targetAlias": "net10.0",
-=======
-        "net9.0": {
-          "framework": "net9.0",
-          "targetAlias": "net9.0",
->>>>>>> c894e696f845f436533eb3980901f5c8e7fb2f19
           "dependencies": {
             "BCrypt.Net-Next": {
               "target": "Package",
@@ -142,24 +116,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[9.0.16, 9.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[9.0.16, 9.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[9.0.16, 9.0.16]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[9.0.16, 9.0.16]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -168,7 +124,6 @@
               "privateAssets": "all"
             }
           },
-<<<<<<< HEAD
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
@@ -584,9 +539,6 @@
             "System.Xml.XPath": "(,4.3.32767]",
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
-=======
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
->>>>>>> c894e696f845f436533eb3980901f5c8e7fb2f19
         }
       }
     }

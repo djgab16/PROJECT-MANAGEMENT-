@@ -392,7 +392,7 @@ namespace SPXDeliveryAPI.Services
                 {
                     order.PodImage = updatedOrder.PodImage;
                     order.PodStatus = "Submitted";
-                    newStatus = "Completed";
+                    newStatus = "Delivered";
                 }
 
                 // Failure Remarks
@@ -420,7 +420,7 @@ namespace SPXDeliveryAPI.Services
                 if (!string.IsNullOrEmpty(order.PodImage) && order.PodStatus == "Not Submitted")
                 {
                     order.PodStatus = "Submitted";
-                    newStatus = "Completed";
+                    newStatus = "Delivered";
                 }
             }
 
@@ -433,7 +433,7 @@ namespace SPXDeliveryAPI.Services
                 order.Status = newStatus;
 
                 // Set completion timestamp and auto-archive if status is terminal
-                bool isTerminal = newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Picked Up" || newStatus == "Failed" || newStatus == "Cancelled";
+                bool isTerminal = newStatus == "Completed" || newStatus == "Picked Up" || newStatus == "Failed" || newStatus == "Cancelled";
                 if (isTerminal)
                 {
                     order.IsArchived = true;
@@ -546,7 +546,7 @@ namespace SPXDeliveryAPI.Services
             if (oldStatus == newStatus) return;
 
             // Terminal status checks
-            bool isTerminal = oldStatus == "Delivered" || oldStatus == "Completed" || oldStatus == "Picked Up" || oldStatus == "Failed" || oldStatus == "Cancelled";
+            bool isTerminal = oldStatus == "Completed" || oldStatus == "Picked Up" || oldStatus == "Failed" || oldStatus == "Cancelled";
             
             // Allow rescheduling failed or cancelled orders back to Pending/Assigned
             if (isTerminal && (newStatus == "Pending" || newStatus == "Assigned"))
@@ -583,6 +583,7 @@ namespace SPXDeliveryAPI.Services
                 else if (oldStatus == "Picked Up" && (newStatus == "In Transit" || newStatus == "Cancelled")) isValid = true;
                 else if (oldStatus == "In Transit" && (newStatus == "Out for Delivery" || newStatus == "Failed" || newStatus == "Cancelled")) isValid = true;
                 else if (oldStatus == "Out for Delivery" && (newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled")) isValid = true;
+                else if (oldStatus == "Delivered" && (newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled" || newStatus == "Pending" || newStatus == "Assigned")) isValid = true;
 
                 if (!isValid)
                 {

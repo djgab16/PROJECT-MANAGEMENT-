@@ -6,7 +6,7 @@ import LiveTrackingMap from '../../components/map/LiveTrackingMap';
 import SupportBanner from './components/SupportBanner';
 import Modal from '../../components/ui/Modal';
 import { Calendar, AlertCircle, Clock, MapPin } from 'lucide-react';
-import { mockFetchTracking, mockSubmitRescheduleRequest } from '../../api/publicTrackingApi';
+import { mockFetchTracking, mockSubmitRescheduleRequest, submitConfirmDelivery } from '../../api/publicTrackingApi';
 import type { PublicTrackingResponse } from '../../api/publicTrackingApi';
 import logo from '../../assets/logo.png';
 
@@ -129,6 +129,45 @@ export default function PublicTracking() {
                   Track Another Package
                 </button>
               </div>
+
+              {/* Client Confirmation Panel */}
+              {data.currentStatus === 'Delivered' && (
+                <div className="card confirm-delivery-card animate-fade-in" style={{ background: 'var(--status-active-bg)', border: '1px solid var(--status-active)', padding: '20px', borderRadius: '16px', marginBottom: '20px', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ padding: '10px', background: 'var(--status-active)', color: 'white', borderRadius: '10px', display: 'flex', alignItems: 'center' }}>
+                        <Clock size={22} style={{ color: 'white' }} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 700 }}>Confirm Receipt of Package</h3>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          If you have successfully received your package, please click "Confirm Delivery" to mark the transaction as complete.
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={async () => {
+                        if (window.confirm("Are you sure you want to confirm receipt of this delivery?")) {
+                          try {
+                            setLoading(true);
+                            await submitConfirmDelivery(data.waybillNo);
+                            const updated = await mockFetchTracking(data.waybillNo);
+                            setData(updated);
+                            alert("Thank you! Your delivery confirmation has been recorded.");
+                          } catch (err: any) {
+                            alert(err.message || "Failed to confirm delivery.");
+                          } finally {
+                            setLoading(false);
+                          }
+                        }
+                      }}
+                    >
+                      Confirm Delivery
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Client Re-delivery Rescheduling Panel */}
               {['Failed', 'Cancelled'].includes(data.currentStatus) && (

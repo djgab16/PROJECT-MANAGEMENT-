@@ -25,6 +25,8 @@ export default function DriverDashboard() {
       (order.driverName === user?.name || !order.driverName) &&
       (activeTab === 'Delivered'
         ? (order.status === 'Delivered' || order.status === 'Completed')
+        : activeTab === 'In Transit'
+        ? (order.status === 'In Transit' || order.status === 'Out for Delivery')
         : order.status === activeTab)
   );
 

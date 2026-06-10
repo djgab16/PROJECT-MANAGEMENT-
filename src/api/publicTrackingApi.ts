@@ -76,3 +76,20 @@ export async function mockSubmitRescheduleRequest(
     };
   }
 }
+
+/**
+ * Submit client confirmation of delivery to the backend.
+ */
+export async function submitConfirmDelivery(waybill: string): Promise<void> {
+  const cleanWaybill = waybill.trim().toUpperCase();
+  try {
+    await apiClient.post('/delivery-orders/track/confirm', {
+      waybillNo: cleanWaybill,
+    });
+  } catch (error: any) {
+    throw {
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to confirm delivery.',
+    };
+  }
+}

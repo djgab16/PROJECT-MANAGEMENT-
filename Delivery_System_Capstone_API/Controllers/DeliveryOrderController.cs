@@ -279,7 +279,7 @@ namespace SPXDeliveryAPI.Controllers
                 }
 
                 order.UpdatedBy = User.Identity?.Name ?? "Driver";
-                order.Status = "Completed";
+                order.Status = "Delivered";
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
@@ -578,6 +578,119 @@ namespace SPXDeliveryAPI.Controllers
 
             return File(pdfData, "application/pdf", $"waybill_{order.WaybillNo}.pdf");
         }
+
+        [HttpPatch("bulk-assign-driver")]
+        [Authorize(Policy = "OpTeamAndAbove")]
+        public async Task<IActionResult> BulkAssignDriver([FromBody] BulkDriverAssignmentModel model)
+        {
+            if (model == null || model.OrderIds == null || model.OrderIds.Count == 0)
+            {
+                return BadRequest(new { message = "No order IDs provided." });
+            }
+
+            try
+            {
+                var userName = User.Identity?.Name ?? "System Admin";
+                foreach (var id in model.OrderIds)
+                {
+                    var order = await _service.GetOrderByIdAsync(id);
+                    if (order != null)
+                    {
+                        order.DriverId = model.DriverId;
+                        order.UpdatedBy = userName;
+                        await _service.UpdateOrderAsync(id, order);
+                    }
+                }
+
+                return Ok(new { message = "Successfully assigned driver to orders." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("track/confirm")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TrackConfirm([FromBody] TrackConfirmModel model)
+        {
+            if (string.IsNullOrEmpty(model.WaybillNo)) return BadRequest("Waybill is required.");
+
+            var order = await _context.DeliveryOrders
+                .Include(o => o.Driver)
+                .FirstOrDefaultAsync(o => o.WaybillNo.ToLower() == model.WaybillNo.Trim().ToLower());
+
+            if (order == null) return NotFound(new { message = "Waybill not found" });
+
+            if (order.Status != "Delivered")
+            {
+                return BadRequest("Delivery can only be confirmed for delivered orders.");
+            }
+
+            string oldStatus = order.Status;
+            order.Status = "Completed";
+            order.IsArchived = true;
+            order.CompletedAt = DateTime.UtcNow.ToString("O");
+            order.DateCompleted = DateTime.UtcNow.ToString("O");
+            order.ArchivedReason = "Completed Transaction (Confirmed by Client)";
+            order.UpdatedBy = "Client Portal";
+            order.LastUpdated = DateTime.UtcNow.ToString("O");
+
+            // Save history log
+            var historyLog = new DeliveryHistoryLog
+            {
+                DeliveryOrderId = order.Id,
+                FromStatus = oldStatus,
+                ToStatus = "Completed",
+                Notes = "Delivery confirmed by client via tracking portal.",
+                ChangedBy = "Client Portal",
+                ChangedAt = DateTime.UtcNow.ToString("O")
+            };
+            await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+
+            // Save activity log
+            var activityLog = new ActivityLog
+            {
+                Timestamp = DateTime.UtcNow.ToString("O"),
+                UserName = "Client Portal",
+                UserRole = "CLIENT",
+                UserInitials = "CL",
+                UserColor = "#7C3AED",
+                Action = "Update",
+                Description = $"Client confirmed delivery of package {order.WaybillNo}",
+                Reference = order.WaybillNo
+            };
+            await _context.ActivityLogs.AddAsync(activityLog);
+
+            // Create notification for admin/operations
+            var notification = new Notification
+            {
+                Type = "success",
+                Title = "Delivery Confirmed by Client",
+                WaybillNo = order.WaybillNo,
+                Description = $"Client has confirmed receipt of package {order.WaybillNo}. Order status auto-updated to Completed.",
+                Timestamp = DateTime.UtcNow.ToString("t"),
+                Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                Source = "Client Portal",
+                Read = false,
+                StatusBadge = "Confirmed"
+            };
+            await _context.Notifications.AddAsync(notification);
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Delivery confirmed successfully." });
+        }
+    }
+
+    public class BulkDriverAssignmentModel
+    {
+        public List<int> OrderIds { get; set; } = new();
+        public int DriverId { get; set; }
+    }
+
+    public class TrackConfirmModel
+    {
+        public string WaybillNo { get; set; } = string.Empty;
     }
 
     public class StatusPatchModel

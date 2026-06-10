@@ -6,9 +6,10 @@ interface PODModalProps {
   onClose: () => void;
   onSubmit: (data: { podImage: string; recipientName: string }) => void;
   defaultRecipient: string;
+  orderStatus?: string;
 }
 
-export default function POTModal({ onClose, onSubmit, defaultRecipient }: PODModalProps) {
+export default function POTModal({ onClose, onSubmit, defaultRecipient, orderStatus }: PODModalProps) {
   const [podImage, setPodImage] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState(defaultRecipient);
 
@@ -86,7 +87,7 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient }: PODMod
 
         <div className="modal-footer">
           <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={!podImage || !recipientName}>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!podImage || !recipientName || orderStatus !== 'Out for Delivery'}>
             Submit POD
           </button>
         </div>

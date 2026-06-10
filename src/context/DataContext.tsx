@@ -13,6 +13,7 @@ interface DataContextType {
   deleteEmployee: (id: string) => void;
   addDeliveryOrder: (order: Omit<DeliveryOrder, 'id'>) => Promise<void>;
   updateDeliveryOrder: (id: string, order: Partial<DeliveryOrder>) => Promise<void>;
+  bulkAssignDriver: (orderIds: string[], driverId: number) => Promise<void>;
   deleteDeliveryOrder: (id: string) => Promise<void>;
   addNotification: (notification: Notification) => void;
   markNotificationRead: (id: string) => void;
@@ -170,6 +171,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const bulkAssignDriver = async (orderIds: string[], driverId: number) => {
+    try {
+      await apiClient.patch('/api/deliveryorder/bulk-assign-driver', {
+        orderIds: orderIds.map(Number),
+        driverId
+      });
+      await refreshOrders();
+    } catch (error: any) {
+      console.error("API error bulk assigning driver:", error);
+      alert(error.response?.data?.message || "Failed to bulk assign driver.");
+      throw error;
+    }
+  };
+
   const deleteDeliveryOrder = async (id: string) => {
     try {
       await apiClient.delete(`/api/deliveryorder/${id}`);
@@ -242,6 +257,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteEmployee,
       addDeliveryOrder,
       updateDeliveryOrder,
+      bulkAssignDriver,
       deleteDeliveryOrder,
       addNotification,
       markNotificationRead,

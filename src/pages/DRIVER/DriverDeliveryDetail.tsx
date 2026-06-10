@@ -84,11 +84,36 @@ export default function DriverDeliveryDetail() {
     });
   };
 
+  const handleOutForDelivery = () => {
+    withLocation(async (coords) => {
+      try {
+        await updateDeliveryOrder(order.id, {
+          status: 'Out for Delivery',
+          gpsCoordinates: coords || undefined
+        });
+        await addActivityLog({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          userName: order.driverName || 'Driver',
+          userRole: 'DRIVER',
+          userInitials: order.driverInitials || 'DR',
+          userColor: order.driverColor || '#000',
+          action: 'Update',
+          description: `Marked ${order.waybillNo} as Out for Delivery${coords ? ' (GPS Tagged)' : ''}`,
+          reference: order.waybillNo
+        });
+      } catch (err: any) {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || "Failed to mark Out for Delivery.");
+      }
+    });
+  };
+
   const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
     withLocation(async (coords) => {
       try {
         await updateDeliveryOrder(order.id, {
-          status: 'Completed',
+          status: 'Delivered',
           podStatus: 'Submitted',
           podImage: data.podImage,
           recipientName: data.recipientName,
@@ -339,6 +364,27 @@ export default function DriverDeliveryDetail() {
         {order.status === 'In Transit' && (
           <div className="split-actions">
             <button 
+              className="btn btn-primary btn-massive"
+              onClick={handleOutForDelivery}
+              disabled={isUpdating}
+            >
+              <Navigation size={20} />
+              OUT FOR DELIVERY
+            </button>
+            <button 
+              className="btn btn-danger btn-massive"
+              onClick={() => setShowFailureModal(true)}
+              disabled={isUpdating}
+            >
+              <XCircle size={20} />
+              FAILED
+            </button>
+          </div>
+        )}
+
+        {order.status === 'Out for Delivery' && (
+          <div className="split-actions">
+            <button 
               className="btn btn-success btn-massive"
               onClick={() => setShowPODModal(true)}
               disabled={isUpdating}
@@ -364,6 +410,7 @@ export default function DriverDeliveryDetail() {
           onClose={() => setShowPODModal(false)}
           onSubmit={handlePODSubmit}
           defaultRecipient={order.recipientName}
+          orderStatus={order.status}
         />
       )}
 

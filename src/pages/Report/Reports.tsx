@@ -9,6 +9,7 @@ import './Reports.css';
 export default function Reports() {
   const { deliveryOrders } = useData();
   const [driverFilter, setDriverFilter] = useState('All Drivers');
+  const [reportType, setReportType] = useState('daily');
 
   const filteredOrders = useMemo(() => {
     return deliveryOrders.filter(o => {
@@ -129,8 +130,24 @@ export default function Reports() {
             <p className="card-subtitle">Select options to generate your report</p>
             <div className="config-section">
               <span className="label">REPORT TYPE</span>
-              <label className="radio-option"><input type="radio" name="type" defaultChecked /> Daily Report<br /><span className="radio-desc">Today's delivery breakdown</span></label>
-              <label className="radio-option active"><input type="radio" name="type" /> Monthly Report<br /><span className="radio-desc">Full month at a glance</span></label>
+              <label className={`radio-option ${reportType === 'daily' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="type" 
+                  checked={reportType === 'daily'} 
+                  onChange={() => setReportType('daily')} 
+                /> Daily Report<br />
+                <span className="radio-desc">Today's delivery breakdown</span>
+              </label>
+              <label className={`radio-option ${reportType === 'monthly' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="type" 
+                  checked={reportType === 'monthly'} 
+                  onChange={() => setReportType('monthly')} 
+                /> Monthly Report<br />
+                <span className="radio-desc">Full month at a glance</span>
+              </label>
             </div>
             
             <div className="config-section">

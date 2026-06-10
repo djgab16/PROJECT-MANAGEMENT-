@@ -77,6 +77,7 @@ export default function EditDeliveryOrder() {
   const todayInputVal = formatDateToInput(todayStr);
 
   const [formData, setFormData] = useState<Partial<DeliveryOrder>>({});
+  const [customPackageName, setCustomPackageName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
@@ -84,6 +85,9 @@ export default function EditDeliveryOrder() {
 
   const isPickup = formData.taskType === 'Pickup';
   const isAreaReadOnly = isReadOnly || isPickup;
+  const isCustomPackageSelected = formData.packageType === 'Custom' || 
+    (formData.packageType !== undefined && formData.packageType !== '' && 
+     !['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType));
 
   const getInputStyle = (field: string, extraStyle = {}) => {
     const baseReadOnly = field === 'area' ? isAreaReadOnly : isReadOnly;
@@ -112,6 +116,9 @@ export default function EditDeliveryOrder() {
         }
         if (formData.id !== id) {
           setFormData(order);
+          if (order.packageType && !['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch', ''].includes(order.packageType)) {
+            setCustomPackageName(order.packageType);
+          }
         }
       } else {
         navigate(isDriver ? '/tasks' : '/delivery-orders');
@@ -251,6 +258,15 @@ export default function EditDeliveryOrder() {
       newErrors.failureReason = 'Failure Reason is required when status is Failed';
     }
 
+    let finalPackageType = formData.packageType;
+    if (isCustomPackageSelected) {
+      if (!customPackageName.trim()) {
+        newErrors.customPackageName = 'Custom Package Type is required';
+      } else {
+        finalPackageType = customPackageName;
+      }
+    }
+
     // Weight validation
     if (!formData.weight) {
       newErrors.weight = 'Weight is required';
@@ -311,6 +327,7 @@ export default function EditDeliveryOrder() {
       if (isNew) {
         const newOrder = {
           ...formData,
+          packageType: finalPackageType,
           id: Math.random().toString(36).substr(2, 9),
         } as DeliveryOrder;
 
@@ -330,6 +347,7 @@ export default function EditDeliveryOrder() {
       } else {
         const updatedOrder = {
           ...formData,
+          packageType: finalPackageType,
           updatedBy: user?.name || 'Unknown',
           lastUpdated: new Date().toLocaleString()
         };
@@ -676,7 +694,31 @@ export default function EditDeliveryOrder() {
               <div className="form-row three-col" style={{ marginTop: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">PACKAGE TYPE / BOX</label>
-                  <select name="packageType" className="form-input" value={formData.packageType || ''} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
+                  <select 
+                    name="packageType" 
+                    className="form-input" 
+                    value={
+                      formData.packageType === '' || ['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType || '')
+                        ? formData.packageType || ''
+                        : 'Custom'
+                    } 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Custom') {
+                        setFormData(prev => ({ ...prev, packageType: 'Custom' }));
+                        setCustomPackageName('');
+                      } else {
+                        setFormData(prev => ({ ...prev, packageType: val }));
+                        setCustomPackageName('');
+                      }
+                      if (errors.packageType) {
+                        setErrors(prev => ({ ...prev, packageType: '' }));
+                      }
+                      setErrors(prev => ({ ...prev, customPackageName: '' }));
+                    }}
+                    disabled={isReadOnly} 
+                    style={inputStyle}
+                  >
                     <option value="">Select Box Type</option>
                     <option value="Small Box">Small Box</option>
                     <option value="Medium Box">Medium Box</option>
@@ -685,6 +727,27 @@ export default function EditDeliveryOrder() {
                     <option value="Custom">Custom / Other</option>
                   </select>
                 </div>
+                {isCustomPackageSelected && (
+                  <div className="form-group animate-fade-in" style={{ marginTop: '12px' }}>
+                    <label className="form-label">CUSTOM PACKAGE TYPE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      name="customPackageName"
+                      className="form-input" 
+                      value={customPackageName} 
+                      onChange={(e) => {
+                        setCustomPackageName(e.target.value);
+                        if (errors.customPackageName) {
+                          setErrors(prev => ({ ...prev, customPackageName: '' }));
+                        }
+                      }} 
+                      placeholder="Specify custom package type..." 
+                      readOnly={isReadOnly} 
+                      style={getInputStyle('customPackageName')} 
+                    />
+                    {errors.customPackageName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.customPackageName}</span>}
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">WEIGHT <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <input name="weight" className="form-input" value={formData.weight || ''} onChange={handleChange} placeholder="e.g. 1.5 kg" readOnly={isReadOnly} style={getInputStyle('weight')} />
