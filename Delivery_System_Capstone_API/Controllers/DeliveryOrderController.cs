@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,19 @@ namespace SPXDeliveryAPI.Controllers
         {
             var query = _context.DeliveryOrders.Include(o => o.Driver).AsQueryable();
 
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
+            {
+                query = query.Where(o => o.Driver != null && o.Driver.EmployeeId == employeeId && o.TaskType != "Pickup");
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                query = query.Where(o => o.EncodedBy == userName || o.UpdatedBy == userName);
+            }
+
             if (isArchived.HasValue)
             {
                 query = query.Where(o => o.IsArchived == isArchived.Value);
@@ -64,6 +78,26 @@ namespace SPXDeliveryAPI.Controllers
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
+            {
+                if (order.Driver == null || order.Driver.EmployeeId != employeeId)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
+
             return Ok(order);
         }
 
@@ -126,6 +160,28 @@ namespace SPXDeliveryAPI.Controllers
         [HttpGet("{id}/history")]
         public async Task<IActionResult> GetHistory(int id)
         {
+            var order = await _service.GetOrderByIdAsync(id);
+            if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
+            {
+                if (order.Driver == null || order.Driver.EmployeeId != employeeId)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
+
             var history = await _context.DeliveryHistoryLogs
                 .Where(h => h.DeliveryOrderId == id)
                 .OrderByDescending(h => h.Id)
@@ -149,12 +205,62 @@ namespace SPXDeliveryAPI.Controllers
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
 
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
+            {
+                if (order.Driver == null || order.Driver.EmployeeId != employeeId)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
+
             try
             {
-                order.Status = model.Status;
+                if (!string.IsNullOrEmpty(model.Status))
+                {
+                    order.Status = model.Status;
+                }
                 order.UpdatedBy = User.Identity?.Name ?? "System";
-                order.FailureRemarks = model.Notes;
-                order.RedeliveryRemarks = model.Notes;
+                
+                if (!string.IsNullOrEmpty(model.Notes))
+                {
+                    order.FailureRemarks = model.Notes;
+                    order.RedeliveryRemarks = model.Notes;
+                }
+
+                if (!string.IsNullOrEmpty(model.RecipientName))
+                {
+                    order.RecipientName = model.RecipientName;
+                }
+
+                if (model.Latitude.HasValue && model.Longitude.HasValue)
+                {
+                    order.LiveLatitude = model.Latitude.Value;
+                    order.LiveLongitude = model.Longitude.Value;
+                    order.LastLiveUpdate = DateTime.UtcNow.ToString("O");
+                    
+                    if (model.Status == "Delivered" || order.Status == "Delivered")
+                    {
+                        order.RecipientLatitude = model.Latitude.Value;
+                        order.RecipientLongitude = model.Longitude.Value;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(model.PodImage))
+                {
+                    order.PodImage = model.PodImage;
+                    order.PodStatus = "Submitted";
+                }
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
@@ -175,6 +281,17 @@ namespace SPXDeliveryAPI.Controllers
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
 
             try
             {
@@ -265,6 +382,13 @@ namespace SPXDeliveryAPI.Controllers
 
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userRole == "DRIVER" && (order.Driver == null || order.Driver.EmployeeId != employeeId))
+            {
+                return Forbid();
+            }
 
             try
             {
@@ -363,7 +487,8 @@ namespace SPXDeliveryAPI.Controllers
                 redeliveryStatus = order.RedeliveryStatus ?? "None",
                 redeliveryRequestedDate = order.RedeliveryRequestedDate,
                 redeliveryRemarks = order.RedeliveryRemarks,
-                taskType = order.TaskType
+                taskType = order.TaskType,
+                redeliveryAttemptCount = order.RedeliveryAttemptCount
             };
 
             return Ok(response);
@@ -384,6 +509,11 @@ namespace SPXDeliveryAPI.Controllers
             if (order.Status != "Failed" && order.Status != "Cancelled")
             {
                 return BadRequest("Re-delivery reschedule can only be requested for failed or cancelled orders.");
+            }
+
+            if (order.RedeliveryAttemptCount >= 3)
+            {
+                return BadRequest(new { message = "Cannot schedule redelivery. Maximum attempt limit (3 attempts) has been reached. Package must be returned to sender." });
             }
 
             order.RedeliveryStatus = "Pending Approval";
@@ -707,6 +837,10 @@ namespace SPXDeliveryAPI.Controllers
     {
         public string Status { get; set; } = string.Empty;
         public string? Notes { get; set; }
+        public string? RecipientName { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+        public string? PodImage { get; set; }
     }
 
     public class DriverAssignmentModel

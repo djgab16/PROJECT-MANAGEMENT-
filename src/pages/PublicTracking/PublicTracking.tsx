@@ -177,7 +177,19 @@ export default function PublicTracking() {
               {/* Client Re-delivery Rescheduling Panel */}
               {['Failed', 'Cancelled'].includes(data.currentStatus) && (
                 <div className="card redelivery-card animate-fade-in">
-                  {data.redeliveryStatus === 'Pending Approval' ? (
+                  {(data.redeliveryAttemptCount || 0) >= 3 ? (
+                    <div className="redelivery-status-container">
+                      <div className="redelivery-icon-wrapper failed" style={{ background: 'var(--status-failed)', color: 'white' }}>
+                        <AlertCircle size={22} style={{ color: 'white' }} />
+                      </div>
+                      <div className="redelivery-text-content">
+                        <h3 className="redelivery-title" style={{ color: 'var(--status-failed)' }}>Maximum Re-delivery Attempts Reached</h3>
+                        <p className="redelivery-description">
+                          This shipment has reached the maximum limit of 3 delivery attempts. The package is currently being returned to the origin sender.
+                        </p>
+                      </div>
+                    </div>
+                  ) : data.redeliveryStatus === 'Pending Approval' ? (
                     <div className="redelivery-status-container">
                       <div className="redelivery-icon-wrapper pending">
                         <Clock size={22} />

@@ -132,9 +132,31 @@ namespace SPXDeliveryAPI.Models
         [MaxLength(100)]
         public string UpdatedBy { get; set; } = string.Empty;
 
+        [NotMapped]
+        public CoordinateModel? RecipientCoordinates { get; set; }
+
+        [NotMapped]
+        public CoordinateModel? GpsCoordinates { get; set; }
+
+        [NotMapped]
+        public LiveCoordinateModel? LiveCoordinates { get; set; }
+
         // Relationships
         public int? DriverId { get; set; }
         [ForeignKey("DriverId")]
         public virtual Employee? Driver { get; set; }
+    }
+
+    public class CoordinateModel
+    {
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+    }
+
+    public class LiveCoordinateModel
+    {
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+        public string LastUpdated { get; set; } = string.Empty;
     }
 }

@@ -23,8 +23,8 @@ export default function Dashboard() {
     ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
     : deliveryOrders;
 
-  const activeTasks = visibleOrders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
-  const completedTasks = visibleOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
+  const activeTasks = visibleOrders.filter(o => !o.isArchived).length;
+  const completedTasks = visibleOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered' || (o.taskType === 'Pickup' && o.status === 'Picked Up')).length;
 
   const isAdmin = user?.role === 'ADMIN';
 

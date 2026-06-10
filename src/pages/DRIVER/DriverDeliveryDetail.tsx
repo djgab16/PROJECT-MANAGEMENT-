@@ -127,7 +127,7 @@ export default function DriverDeliveryDetail() {
           userRole: 'DRIVER',
           userInitials: order.driverInitials || 'DR',
           userColor: order.driverColor || '#000',
-          action: 'POT Upload',
+          action: 'POD Upload',
           description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
           reference: order.waybillNo
         });

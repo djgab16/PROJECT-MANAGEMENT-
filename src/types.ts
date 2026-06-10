@@ -1,10 +1,10 @@
-export type DeliveryStatus = 'Pending' | 'Processing' | 'Assigned' | 'Picked Up' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Completed' | 'Failed' | 'Returned' | 'Cancelled' | 'Preparing' | 'Ready for Pickup';
+export type DeliveryStatus = 'Pending' | 'Processing' | 'Assigned' | 'Picked Up' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Completed' | 'Failed' | 'Returning' | 'Returned' | 'Cancelled' | 'Preparing' | 'Ready for Pickup';
 export type POTStatus = 'Submitted' | 'No POT' | 'Not Submitted';
 export type PODStatus = 'Submitted' | 'No POD' | 'Not Submitted';
 export type UserRole = 'ADMIN' | 'OP. TEAM' | 'DRIVER';
 export type AccountStatus = 'Active' | 'Pending' | 'Locked';
 export type NotificationType = 'alert' | 'success' | 'system' | 'info';
-export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'Login' | 'Archive' | 'Delete';
+export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'POD Upload' | 'Login' | 'Archive' | 'Delete';
 
 export interface Employee {
   id: string;

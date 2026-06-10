@@ -24,10 +24,10 @@ export default function DriverDashboard() {
     (order) =>
       order.driverName === user?.name &&
       (activeTab === 'Delivered'
-        ? (order.status === 'Delivered' || order.status === 'Completed')
+        ? (order.status === 'Delivered' || order.status === 'Completed' || order.status === 'Returned')
         : activeTab === 'In Transit'
         ? (order.status === 'In Transit' || order.status === 'Out for Delivery')
-        : order.status === activeTab)
+        : (order.status === 'Pending' || order.status === 'Assigned' || order.status === 'Picked Up' || order.status === 'Returning'))
   );
 
   return (
@@ -38,7 +38,7 @@ export default function DriverDashboard() {
             <h2>Hello, {user?.name?.split(' ')[0] || 'Driver'}!</h2>
             <p className="driver-role">Speedex Courier</p>
             <p className="driver-active-count">
-              You have {deliveryOrders.filter(o => o.driverName === user?.name && (o.status === 'Pending' || o.status === 'In Transit' || o.status === 'Out for Delivery')).length} active deliveries today.
+              You have {deliveryOrders.filter(o => o.driverName === user?.name && (o.status === 'Pending' || o.status === 'Assigned' || o.status === 'Picked Up' || o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Returning')).length} active deliveries today.
             </p>
           </div>
           <div className="driver-avatar-wrapper">

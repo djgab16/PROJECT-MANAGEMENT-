@@ -16,7 +16,12 @@ namespace SPXDeliveryAPI.Services
         public async Task<IEnumerable<DeliveryOrder>> GetAllOrdersAsync()
         {
             await AutoExpireReadyPickupsAsync();
-            return await _context.DeliveryOrders.Include(o => o.Driver).ToListAsync();
+            var orders = await _context.DeliveryOrders.Include(o => o.Driver).ToListAsync();
+            foreach (var order in orders)
+            {
+                PopulateVirtualCoordinates(order);
+            }
+            return orders;
         }
 
         public async Task<DeliveryOrder?> GetOrderByIdAsync(int id)
@@ -31,7 +36,33 @@ namespace SPXDeliveryAPI.Services
                     order = await _context.DeliveryOrders.Include(o => o.Driver).FirstOrDefaultAsync(o => o.Id == id);
                 }
             }
+            if (order != null)
+            {
+                PopulateVirtualCoordinates(order);
+            }
             return order;
+        }
+
+        private void PopulateVirtualCoordinates(DeliveryOrder order)
+        {
+            if (order == null) return;
+            if (order.RecipientLatitude.HasValue && order.RecipientLongitude.HasValue)
+            {
+                order.RecipientCoordinates = new CoordinateModel
+                {
+                    Lat = order.RecipientLatitude.Value,
+                    Lng = order.RecipientLongitude.Value
+                };
+            }
+            if (order.LiveLatitude.HasValue && order.LiveLongitude.HasValue)
+            {
+                order.LiveCoordinates = new LiveCoordinateModel
+                {
+                    Lat = order.LiveLatitude.Value,
+                    Lng = order.LiveLongitude.Value,
+                    LastUpdated = order.LastLiveUpdate ?? order.LastUpdated
+                };
+            }
         }
 
         private void ValidateOrderDetails(DeliveryOrder order)
@@ -74,6 +105,9 @@ namespace SPXDeliveryAPI.Services
             }
             else
             {
+                if (order.Weight.Contains('-'))
+                    throw new ArgumentException("Weight cannot be negative.");
+
                 var weightStr = new string(order.Weight.Where(c => char.IsDigit(c) || c == '.').ToArray());
                 if (double.TryParse(weightStr, out var w))
                 {
@@ -90,6 +124,9 @@ namespace SPXDeliveryAPI.Services
 
             if (!string.IsNullOrEmpty(order.DeclaredValue))
             {
+                if (order.DeclaredValue.Contains('-'))
+                    throw new ArgumentException("Declared Value cannot be negative.");
+
                 var valStr = new string(order.DeclaredValue.Where(c => char.IsDigit(c) || c == '.').ToArray());
                 if (double.TryParse(valStr, out var v))
                 {
@@ -188,6 +225,12 @@ namespace SPXDeliveryAPI.Services
         public async Task<DeliveryOrder> CreateOrderAsync(DeliveryOrder order)
         {
             ValidateOrderDetails(order);
+
+            if (order.RecipientCoordinates != null)
+            {
+                order.RecipientLatitude = order.RecipientCoordinates.Lat;
+                order.RecipientLongitude = order.RecipientCoordinates.Lng;
+            }
 
             if (order.TaskType == "Pickup")
             {
@@ -376,11 +419,36 @@ namespace SPXDeliveryAPI.Services
                 if (updatedOrder.SpecialInstructions != null) order.SpecialInstructions = updatedOrder.SpecialInstructions;
                 if (!string.IsNullOrEmpty(updatedOrder.ExpectedDelivery)) order.ExpectedDelivery = updatedOrder.ExpectedDelivery;
 
-                if (updatedOrder.LiveLatitude.HasValue) order.LiveLatitude = updatedOrder.LiveLatitude;
-                if (updatedOrder.LiveLongitude.HasValue) order.LiveLongitude = updatedOrder.LiveLongitude;
-                if (!string.IsNullOrEmpty(updatedOrder.LastLiveUpdate)) order.LastLiveUpdate = updatedOrder.LastLiveUpdate;
-                if (updatedOrder.RecipientLatitude.HasValue) order.RecipientLatitude = updatedOrder.RecipientLatitude;
-                if (updatedOrder.RecipientLongitude.HasValue) order.RecipientLongitude = updatedOrder.RecipientLongitude;
+                // Map incoming virtual coordinates to DB columns
+                if (updatedOrder.RecipientCoordinates != null)
+                {
+                    order.RecipientLatitude = updatedOrder.RecipientCoordinates.Lat;
+                    order.RecipientLongitude = updatedOrder.RecipientCoordinates.Lng;
+                }
+                else
+                {
+                    if (updatedOrder.RecipientLatitude.HasValue) order.RecipientLatitude = updatedOrder.RecipientLatitude;
+                    if (updatedOrder.RecipientLongitude.HasValue) order.RecipientLongitude = updatedOrder.RecipientLongitude;
+                }
+
+                if (updatedOrder.GpsCoordinates != null)
+                {
+                    order.LiveLatitude = updatedOrder.GpsCoordinates.Lat;
+                    order.LiveLongitude = updatedOrder.GpsCoordinates.Lng;
+                    order.LastLiveUpdate = DateTime.UtcNow.ToString("O");
+                }
+                else if (updatedOrder.LiveCoordinates != null)
+                {
+                    order.LiveLatitude = updatedOrder.LiveCoordinates.Lat;
+                    order.LiveLongitude = updatedOrder.LiveCoordinates.Lng;
+                    order.LastLiveUpdate = updatedOrder.LiveCoordinates.LastUpdated;
+                }
+                else
+                {
+                    if (updatedOrder.LiveLatitude.HasValue) order.LiveLatitude = updatedOrder.LiveLatitude;
+                    if (updatedOrder.LiveLongitude.HasValue) order.LiveLongitude = updatedOrder.LiveLongitude;
+                    if (!string.IsNullOrEmpty(updatedOrder.LastLiveUpdate)) order.LastLiveUpdate = updatedOrder.LastLiveUpdate;
+                }
 
                 // POD / POT Updates
                 if (!string.IsNullOrEmpty(updatedOrder.PotImage))
@@ -440,7 +508,11 @@ namespace SPXDeliveryAPI.Services
                 order.Status = newStatus;
 
                 // Set completion timestamp and auto-archive if status is terminal
-                bool isTerminal = newStatus == "Completed" || newStatus == "Picked Up" || newStatus == "Failed" || newStatus == "Cancelled";
+                bool isTerminal = newStatus == "Completed" || 
+                                  (newStatus == "Picked Up" && order.TaskType == "Pickup") || 
+                                  newStatus == "Failed" || 
+                                  newStatus == "Cancelled" ||
+                                  newStatus == "Returned";
                 if (isTerminal)
                 {
                     order.IsArchived = true;
@@ -448,7 +520,7 @@ namespace SPXDeliveryAPI.Services
                     order.DateCompleted = DateTime.UtcNow.ToString("O");
                     order.ArchivedReason = newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Picked Up" 
                         ? "Completed Transaction" 
-                        : (newStatus == "Failed" ? $"Failed Delivery: {order.FailureReason}" : "Cancelled Order");
+                        : (newStatus == "Returned" ? "Returned to Sender" : (newStatus == "Failed" ? $"Failed Delivery: {order.FailureReason}" : "Cancelled Order"));
                 }
                 else
                 {
@@ -553,7 +625,11 @@ namespace SPXDeliveryAPI.Services
             if (oldStatus == newStatus) return;
 
             // Terminal status checks
-            bool isTerminal = oldStatus == "Completed" || oldStatus == "Picked Up" || oldStatus == "Failed" || oldStatus == "Cancelled";
+            bool isTerminal = oldStatus == "Completed" || 
+                              (oldStatus == "Picked Up" && order.TaskType == "Pickup") || 
+                              oldStatus == "Failed" || 
+                              oldStatus == "Cancelled" ||
+                              oldStatus == "Returned";
             
             // Allow rescheduling failed or cancelled orders back to Pending/Assigned if limit not exceeded
             if (isTerminal && (newStatus == "Pending" || newStatus == "Assigned"))
@@ -561,6 +637,22 @@ namespace SPXDeliveryAPI.Services
                 if (order.RedeliveryAttemptCount >= 3)
                 {
                     throw new InvalidOperationException($"Cannot reschedule redelivery. Maximum attempt limit (3 attempts) has been reached for Waybill {order.WaybillNo}. Package must be returned to sender.");
+                }
+                return;
+            }
+
+            // Allow return to sender workflow for failed orders
+            if (oldStatus == "Failed" && (newStatus == "Returning" || newStatus == "Cancelled"))
+            {
+                return;
+            }
+
+            if (oldStatus == "Returning")
+            {
+                bool isValidTransition = (newStatus == "Returned" || newStatus == "Cancelled");
+                if (!isValidTransition)
+                {
+                    throw new InvalidOperationException($"Invalid Return to Sender status jump: '{oldStatus}' to '{newStatus}'. Sequence must follow: Returning -> Returned");
                 }
                 return;
             }
@@ -575,9 +667,9 @@ namespace SPXDeliveryAPI.Services
                 // Pickup sequence: Pending -> Processing -> Preparing -> Ready for Pickup -> Picked Up
                 bool isValid = false;
                 if (oldStatus == "Pending" && (newStatus == "Processing" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Processing" && (newStatus == "Preparing" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Preparing" && (newStatus == "Ready for Pickup" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Ready for Pickup" && (newStatus == "Picked Up" || newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled")) isValid = true;
+                else if (oldStatus == "Processing" && (newStatus == "Preparing" || newStatus == "Cancelled" || newStatus == "Pending")) isValid = true;
+                else if (oldStatus == "Preparing" && (newStatus == "Ready for Pickup" || newStatus == "Cancelled" || newStatus == "Processing")) isValid = true;
+                else if (oldStatus == "Ready for Pickup" && (newStatus == "Picked Up" || newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled" || newStatus == "Preparing")) isValid = true;
 
                 if (!isValid)
                 {
@@ -600,11 +692,11 @@ namespace SPXDeliveryAPI.Services
                 // Delivery sequence: Pending -> Processing -> Assigned -> Picked Up -> In Transit -> Out for Delivery -> Delivered
                 bool isValid = false;
                 if (oldStatus == "Pending" && (newStatus == "Processing" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Processing" && (newStatus == "Assigned" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Assigned" && (newStatus == "Picked Up" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Picked Up" && (newStatus == "In Transit" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "In Transit" && (newStatus == "Out for Delivery" || newStatus == "Failed" || newStatus == "Cancelled")) isValid = true;
-                else if (oldStatus == "Out for Delivery" && (newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled")) isValid = true;
+                else if (oldStatus == "Processing" && (newStatus == "Assigned" || newStatus == "Cancelled" || newStatus == "Pending")) isValid = true;
+                else if (oldStatus == "Assigned" && (newStatus == "Picked Up" || newStatus == "Cancelled" || newStatus == "Processing" || newStatus == "Pending")) isValid = true;
+                else if (oldStatus == "Picked Up" && (newStatus == "In Transit" || newStatus == "Cancelled" || newStatus == "Assigned" || newStatus == "Processing")) isValid = true;
+                else if (oldStatus == "In Transit" && (newStatus == "Out for Delivery" || newStatus == "Failed" || newStatus == "Cancelled" || newStatus == "Picked Up" || newStatus == "Assigned")) isValid = true;
+                else if (oldStatus == "Out for Delivery" && (newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled" || newStatus == "In Transit" || newStatus == "Picked Up")) isValid = true;
                 else if (oldStatus == "Delivered" && (newStatus == "Completed" || newStatus == "Failed" || newStatus == "Cancelled" || newStatus == "Pending" || newStatus == "Assigned")) isValid = true;
 
                 if (!isValid)
@@ -634,7 +726,14 @@ namespace SPXDeliveryAPI.Services
                 type = "success";
                 badge = "Ready";
             }
-            else if (newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Picked Up")
+            else if (newStatus == "Completed")
+            {
+                title = "Delivery Confirmed by Client";
+                description = $"Client has confirmed receipt of package {order.WaybillNo} via tracking portal. Transaction is now complete.";
+                type = "success";
+                badge = "Confirmed";
+            }
+            else if (newStatus == "Delivered" || newStatus == "Picked Up")
             {
                 title = newStatus == "Picked Up" ? "Package Picked Up" : "Package Delivered";
                 description = newStatus == "Picked Up" 
@@ -642,6 +741,20 @@ namespace SPXDeliveryAPI.Services
                     : $"Courier has completed delivery for order {order.WaybillNo}. Proof of Delivery uploaded.";
                 type = "success";
                 badge = "Success";
+            }
+            else if (newStatus == "Returning")
+            {
+                title = "Return to Sender in Transit";
+                description = $"Order {order.WaybillNo} has failed delivery attempts and is being returned to origin sender.";
+                type = "alert";
+                badge = "Returning";
+            }
+            else if (newStatus == "Returned")
+            {
+                title = "Returned to Sender";
+                description = $"Order {order.WaybillNo} has been successfully returned to origin sender warehouse.";
+                type = "success";
+                badge = "Returned";
             }
             else if (newStatus == "Failed")
             {

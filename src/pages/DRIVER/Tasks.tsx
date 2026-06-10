@@ -155,9 +155,9 @@ export default function Tasks() {
   const totalPages = Math.ceil(filteredTableOrders.length / pageSize) || 1;
 
   // Board columns filters (kept separate from table filters for stability)
-  const pending   = visibleOrders.filter(o => o.status === 'Pending' && o.taskType !== 'Pickup');
-  const inTransit = visibleOrders.filter(o => (o.status === 'In Transit' || o.status === 'Out for Delivery') && o.taskType !== 'Pickup');
-  const failed    = visibleOrders.filter(o => (o.status === 'Failed' || o.status === 'Returned') && o.taskType !== 'Pickup');
+  const pending   = visibleOrders.filter(o => (o.status === 'Pending' || o.status === 'Processing' || o.status === 'Assigned') && o.taskType !== 'Pickup');
+  const inTransit = visibleOrders.filter(o => (o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Picked Up') && o.taskType !== 'Pickup');
+  const failed    = visibleOrders.filter(o => (o.status === 'Failed' || o.status === 'Returning' || o.status === 'Returned') && o.taskType !== 'Pickup');
   const completed = visibleOrders.filter(o => (o.status === 'Delivered' || o.status === 'Completed') && o.taskType !== 'Pickup');
   const pickups   = visibleOrders.filter(o => o.taskType === 'Pickup');
 

@@ -68,12 +68,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const dName = order.driver?.name || '';
         const dInitials = order.driver?.initials || (dName ? dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '');
         const dColor = order.driver?.color || '#6B7280';
+        
+        const recipientCoordinates = order.recipientLatitude && order.recipientLongitude ? {
+          lat: order.recipientLatitude,
+          lng: order.recipientLongitude
+        } : undefined;
+        
+        const liveCoordinates = order.liveLatitude && order.liveLongitude ? {
+          lat: order.liveLatitude,
+          lng: order.liveLongitude,
+          lastUpdated: order.lastLiveUpdate || order.lastUpdated
+        } : undefined;
+
         return {
           ...order,
           id: String(order.id),
           driverName: dName,
           driverInitials: dInitials,
-          driverColor: dColor
+          driverColor: dColor,
+          recipientCoordinates,
+          liveCoordinates
         };
       });
       setDeliveryOrders(mappedOrders);
@@ -146,23 +160,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateDeliveryOrder = async (id: string, updated: Partial<DeliveryOrder>) => {
     try {
       const userProfile = localStorage.getItem('dts_user_profile');
-      const userName = userProfile ? JSON.parse(userProfile).name : 'System';
+      const profile = userProfile ? JSON.parse(userProfile) : null;
+      const userName = profile ? profile.name : 'System';
+      const userRole = profile ? profile.role : '';
 
-      let newCoords = updated.recipientCoordinates;
-      if (updated.recipientAddress) {
-        const coords = await geocodeAddress(updated.recipientAddress, updated.area || '');
-        if (coords) {
-          newCoords = coords;
+      if (userRole === 'DRIVER') {
+        const patchPayload: any = {};
+        if (updated.status) patchPayload.status = updated.status;
+        if (updated.failureRemarks || updated.redeliveryRemarks) {
+          patchPayload.notes = updated.failureRemarks || updated.redeliveryRemarks;
         }
+        if (updated.recipientName) patchPayload.recipientName = updated.recipientName;
+        if (updated.podImage) patchPayload.podImage = updated.podImage;
+
+        // Map live coordinates or gpsCoordinates
+        if (updated.liveCoordinates) {
+          patchPayload.latitude = updated.liveCoordinates.lat;
+          patchPayload.longitude = updated.liveCoordinates.lng;
+        } else if (updated.gpsCoordinates) {
+          patchPayload.latitude = updated.gpsCoordinates.lat;
+          patchPayload.longitude = updated.gpsCoordinates.lng;
+        }
+
+        await apiClient.patch(`/api/deliveryorder/${id}/status`, patchPayload);
+      } else {
+        let newCoords = updated.recipientCoordinates;
+        if (updated.recipientAddress) {
+          const coords = await geocodeAddress(updated.recipientAddress, updated.area || '');
+          if (coords) {
+            newCoords = coords;
+          }
+        }
+
+        const payload = {
+          ...updated,
+          recipientCoordinates: newCoords,
+          updatedBy: userName
+        };
+
+        await apiClient.put(`/api/deliveryorder/${id}`, payload);
       }
-
-      const payload = {
-        ...updated,
-        recipientCoordinates: newCoords,
-        updatedBy: userName
-      };
-
-      await apiClient.put(`/api/deliveryorder/${id}`, payload);
       await refreshOrders();
     } catch (error: any) {
       console.error(`API error updating delivery order ${id}:`, error);

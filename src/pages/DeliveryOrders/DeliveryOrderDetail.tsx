@@ -343,26 +343,30 @@ export default function DeliveryOrderDetail() {
                       {order.redeliveryRemarks || 'No remarks provided.'}
                     </strong>
                   </div>
-                  <div className="info-full" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                    <button 
-                      className="btn btn-primary btn-sm"
-                      onClick={() => {
-                        if (order.redeliveryRequestedDate) {
-                          try {
-                            const parsedDate = new Date(order.redeliveryRequestedDate);
-                            if (!isNaN(parsedDate.getTime())) {
-                              setRedeliveryDate(parsedDate.toISOString().split('T')[0]);
+                  <div className="info-full" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}>
+                    {(order.redeliveryAttemptCount || 0) >= 3 ? (
+                      <span className="locked-tag animate-fade-in" style={{ background: 'var(--status-failed-bg)', color: 'var(--status-failed)', borderColor: 'var(--status-failed)', fontWeight: 600 }}>⚠️ Max attempts reached (Cannot Approve)</span>
+                    ) : (
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          if (order.redeliveryRequestedDate) {
+                            try {
+                              const parsedDate = new Date(order.redeliveryRequestedDate);
+                              if (!isNaN(parsedDate.getTime())) {
+                                setRedeliveryDate(parsedDate.toISOString().split('T')[0]);
+                              }
+                            } catch (e) {
+                              console.error(e);
                             }
-                          } catch (e) {
-                            console.error(e);
                           }
-                        }
-                        setRemarks(order.redeliveryRemarks || '');
-                        setIsModalOpen(true);
-                      }}
-                    >
-                      ✓ Approve & Assign Driver
-                    </button>
+                          setRemarks(order.redeliveryRemarks || '');
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        ✓ Approve & Assign Driver
+                      </button>
+                    )}
                     <button 
                       className="btn btn-danger btn-sm"
                       onClick={handleRejectReschedule}

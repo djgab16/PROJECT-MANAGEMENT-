@@ -25,6 +25,7 @@ export interface PublicTrackingResponse {
   redeliveryRequestedDate?: string;
   redeliveryRemarks?: string;
   taskType?: 'Delivery' | 'Pickup';
+  redeliveryAttemptCount?: number;
 }
 
 /**

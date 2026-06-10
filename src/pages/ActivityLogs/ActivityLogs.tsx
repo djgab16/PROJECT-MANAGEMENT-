@@ -9,7 +9,7 @@ import './ActivityLogs.css';
 
 const actionColors: Record<ActionType, string> = {
   'Create': '#01B574', 'Update': '#FFB547', 'Assign': '#4318FF',
-  'POT Upload': '#FF7B42', 'Login': '#00A99D', 'Archive': '#A3AED0', 'Delete': '#E31A1A',
+  'POT Upload': '#FF7B42', 'POD Upload': '#10B981', 'Login': '#00A99D', 'Archive': '#A3AED0', 'Delete': '#E31A1A',
 };
 
 export default function ActivityLogs() {
@@ -37,7 +37,7 @@ export default function ActivityLogs() {
           <StatCard icon={<FileText size={18} />} iconColor="var(--primary)" iconBg="var(--status-transit-bg)" label={isAdmin ? "TOTAL LOGS TODAY" : "YOUR LOGS TODAY"} value={displayedLogs.length} />
           <StatCard icon={<Plus size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="RECORDS CREATED" value={displayedLogs.filter(l => l.action === 'Create').length} />
           <StatCard icon={<Pencil size={18} />} iconColor="var(--status-pending)" iconBg="var(--status-pending-bg)" label="UPDATES MADE" value={displayedLogs.filter(l => l.action === 'Update').length} />
-          <StatCard icon={<CheckCircle2 size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="POT UPLOADS" value={displayedLogs.filter(l => l.action === 'POT Upload').length} />
+          <StatCard icon={<CheckCircle2 size={18} />} iconColor="var(--status-active)" iconBg="var(--status-active-bg)" label="POT/POD UPLOADS" value={displayedLogs.filter(l => l.action === 'POT Upload' || l.action === 'POD Upload').length} />
           {isAdmin && <StatCard icon={<Users size={18} />} iconColor="var(--primary)" iconBg="var(--status-transit-bg)" label="ACTIVE USERS" value="8" />}
           {isAdmin && <StatCard icon={<X size={18} />} iconColor="var(--status-failed)" iconBg="var(--status-failed-bg)" label="DELETIONS" value={displayedLogs.filter(l => l.action === 'Delete').length} />}
         </div>
