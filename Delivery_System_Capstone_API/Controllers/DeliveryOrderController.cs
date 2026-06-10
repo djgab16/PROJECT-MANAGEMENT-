@@ -312,10 +312,22 @@ namespace SPXDeliveryAPI.Controllers
         }
 
         [HttpPatch("{id}/schedule-redelivery")]
+        [Authorize(Policy = "OpTeamAndAbove")]
         public async Task<IActionResult> ScheduleRedelivery(int id, [FromBody] RedeliveryModel model)
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
 
             try
             {
@@ -345,6 +357,17 @@ namespace SPXDeliveryAPI.Controllers
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
 
             try
             {
@@ -385,9 +408,21 @@ namespace SPXDeliveryAPI.Controllers
 
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userRole == "DRIVER" && (order.Driver == null || order.Driver.EmployeeId != employeeId))
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
             {
-                return Forbid();
+                if (order.Driver == null || order.Driver.EmployeeId != employeeId)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
             }
 
             try
@@ -639,11 +674,29 @@ namespace SPXDeliveryAPI.Controllers
         }
 
         [HttpGet("{id}/waybill-pdf")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetWaybillPdf(int id)
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound("Order not found.");
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "DRIVER")
+            {
+                if (order.Driver == null || order.Driver.EmployeeId != employeeId)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
 
             QuestPDF.Settings.License = LicenseType.Community;
 
@@ -717,24 +770,36 @@ namespace SPXDeliveryAPI.Controllers
                 return BadRequest(new { message = "No order IDs provided." });
             }
 
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name ?? "Operations Admin";
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var userName = User.Identity?.Name ?? "Operations Admin";
                 foreach (var id in model.OrderIds)
                 {
                     var order = await _service.GetOrderByIdAsync(id);
                     if (order != null)
                     {
+                        if (userRole == "OP. TEAM")
+                        {
+                            if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                            {
+                                return Forbid();
+                            }
+                        }
                         order.DriverId = model.DriverId;
                         order.UpdatedBy = userName;
                         await _service.UpdateOrderAsync(id, order);
                     }
                 }
 
+                await transaction.CommitAsync();
                 return Ok(new { message = "Successfully assigned driver to orders." });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return BadRequest(new { message = ex.Message });
             }
         }

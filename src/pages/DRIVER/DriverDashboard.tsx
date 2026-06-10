@@ -3,7 +3,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { Package, MapPin, Navigation } from 'lucide-react';
+import { Package, MapPin, Navigation, User } from 'lucide-react';
 import './DriverDashboard.css';
 
 export default function DriverDashboard() {
@@ -41,12 +41,8 @@ export default function DriverDashboard() {
               You have {deliveryOrders.filter(o => o.driverName === user?.name && (o.status === 'Pending' || o.status === 'Assigned' || o.status === 'Picked Up' || o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Returning')).length} active deliveries today.
             </p>
           </div>
-          <div className="driver-avatar-wrapper">
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120"
-              alt="Driver Avatar"
-              className="driver-avatar-img"
-            />
+          <div className="driver-avatar-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.15)' }}>
+            <User size={34} color="white" />
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ using SPXDeliveryAPI.Data;
 using SPXDeliveryAPI.Models;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SPXDeliveryAPI.Controllers
@@ -35,6 +36,25 @@ namespace SPXDeliveryAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ActivityLog log)
         {
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            log.UserName = userName ?? "Unknown User";
+            log.UserRole = userRole ?? "DRIVER";
+
+            // Find current employee initials and color
+            var initials = "TD";
+            var color = "#00A99D";
+            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Name == log.UserName);
+            if (employee != null)
+            {
+                initials = employee.Initials;
+                color = employee.Color;
+            }
+
+            log.UserInitials = initials;
+            log.UserColor = color;
+
             if (string.IsNullOrEmpty(log.Timestamp))
             {
                 log.Timestamp = DateTime.UtcNow.ToString("O");

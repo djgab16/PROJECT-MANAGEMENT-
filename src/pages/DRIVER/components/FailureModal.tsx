@@ -18,8 +18,10 @@ const FAILURE_REASONS = [
 export default function FailureModal({ onClose, onSubmit }: FailureModalProps) {
   const [reason, setReason] = useState(FAILURE_REASONS[0]);
   const [remarks, setRemarks] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = () => {
+    setIsSubmitting(true);
     onSubmit({ reason, remarks });
   };
 
@@ -28,7 +30,7 @@ export default function FailureModal({ onClose, onSubmit }: FailureModalProps) {
       <div className="modal-content">
         <div className="modal-header">
           <h3 style={{ color: 'var(--status-failed)' }}>Report Failed Delivery</h3>
-          <button className="icon-btn" onClick={onClose}><X size={20} /></button>
+          <button className="icon-btn" onClick={onClose} disabled={isSubmitting}><X size={20} /></button>
         </div>
         
         <div className="modal-body">
@@ -38,6 +40,7 @@ export default function FailureModal({ onClose, onSubmit }: FailureModalProps) {
               className="form-input" 
               value={reason} 
               onChange={(e) => setReason(e.target.value)}
+              disabled={isSubmitting}
             >
               {FAILURE_REASONS.map(r => (
                 <option key={r} value={r}>{r}</option>
@@ -53,14 +56,15 @@ export default function FailureModal({ onClose, onSubmit }: FailureModalProps) {
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Provide any additional details here..."
+              disabled={isSubmitting}
             />
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-danger" onClick={handleSubmit}>
-            Confirm Failure
+          <button className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button className="btn btn-danger" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Confirming...' : 'Confirm Failure'}
           </button>
         </div>
       </div>

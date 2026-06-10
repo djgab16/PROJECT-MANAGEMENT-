@@ -13,7 +13,7 @@ namespace SPXDeliveryAPI.Controllers
     [Route("api/[controller]")]
     [Route("api/reports")]
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "OpTeamAndAbove")]
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;

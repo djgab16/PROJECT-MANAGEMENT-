@@ -346,6 +346,20 @@ namespace SPXDeliveryAPI.Services
                 ? order.Status 
                 : (!string.IsNullOrEmpty(updatedOrder.Status) ? updatedOrder.Status : oldStatus);
 
+            // Pre-validation same-reference overrides for POD/POT uploads to prevent validation bypasses
+            if (isSameReference)
+            {
+                if (!string.IsNullOrEmpty(order.PodImage) && order.PodStatus == "Not Submitted")
+                {
+                    order.PodStatus = "Submitted";
+                    newStatus = "Delivered";
+                }
+                if (!string.IsNullOrEmpty(order.PotImage) && order.PotStatus == "Not Submitted")
+                {
+                    order.PotStatus = "Submitted";
+                }
+            }
+
             // 1. Lock check - archived orders cannot be modified unless restoring/rescheduling to Pending/Assigned
             if (wasArchived)
             {
@@ -487,16 +501,7 @@ namespace SPXDeliveryAPI.Services
             }
             else
             {
-                // If it is the same reference, ensure POT/POD status and automatic transition to Completed are handled.
-                if (!string.IsNullOrEmpty(order.PotImage) && order.PotStatus == "Not Submitted")
-                {
-                    order.PotStatus = "Submitted";
-                }
-                if (!string.IsNullOrEmpty(order.PodImage) && order.PodStatus == "Not Submitted")
-                {
-                    order.PodStatus = "Submitted";
-                    newStatus = "Delivered";
-                }
+                // Pre-validation same-reference overrides were already run at the start of UpdateOrderAsync
             }
 
             // 5. Enforce validation check on fully modified order details
@@ -506,6 +511,11 @@ namespace SPXDeliveryAPI.Services
             if (oldStatus != newStatus)
             {
                 order.Status = newStatus;
+
+                if (newStatus == "Failed")
+                {
+                    order.RedeliveryAttemptCount++;
+                }
 
                 // Set completion timestamp and auto-archive if status is terminal
                 bool isTerminal = newStatus == "Completed" || 

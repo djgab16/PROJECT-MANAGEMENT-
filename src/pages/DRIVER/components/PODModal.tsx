@@ -12,6 +12,7 @@ interface PODModalProps {
 export default function POTModal({ onClose, onSubmit, defaultRecipient, orderStatus }: PODModalProps) {
   const [podImage, setPodImage] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState(defaultRecipient);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,6 +42,7 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient, orderSta
       alert("Please capture a photo and enter the recipient's name.");
       return;
     }
+    setIsSubmitting(true);
     onSubmit({ podImage, recipientName });
   };
 
@@ -49,7 +51,7 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient, orderSta
       <div className="modal-content">
         <div className="modal-header">
           <h3>Proof of Delivery</h3>
-          <button className="icon-btn" onClick={onClose}><X size={20} /></button>
+          <button className="icon-btn" onClick={onClose} disabled={isSubmitting}><X size={20} /></button>
         </div>
         
         <div className="modal-body">
@@ -57,7 +59,7 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient, orderSta
             {podImage ? (
               <div className="pot-preview">
                 <img src={podImage} alt="POD" />
-                <button className="btn btn-sm btn-outline" onClick={() => setPodImage(null)}>Retake Photo</button>
+                <button className="btn btn-sm btn-outline" onClick={() => setPodImage(null)} disabled={isSubmitting}>Retake Photo</button>
               </div>
             ) : (
               <label className="pot-capture-btn">
@@ -69,6 +71,7 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient, orderSta
                   capture="environment" 
                   onChange={handleImageCapture} 
                   style={{ display: 'none' }} 
+                  disabled={isSubmitting}
                 />
               </label>
             )}
@@ -81,14 +84,15 @@ export default function POTModal({ onClose, onSubmit, defaultRecipient, orderSta
               value={recipientName}
               onChange={(e) => setRecipientName(e.target.value)}
               placeholder="Enter name of person who received"
+              disabled={isSubmitting}
             />
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={!podImage || !recipientName || orderStatus !== 'Out for Delivery'}>
-            Submit POD
+          <button className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={isSubmitting || !podImage || !recipientName || orderStatus !== 'Out for Delivery'}>
+            {isSubmitting ? 'Submitting...' : 'Submit POD'}
           </button>
         </div>
       </div>
