@@ -277,9 +277,15 @@ export default function DeliveryOrderDetail() {
               </button>
             ) : (
               <>
-                <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={14} /> Edit Order</Link>
+                {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
+                  <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={14} /> Edit Order</Link>
+                )}
                 {['Failed', 'Cancelled'].includes(order.status) ? (
-                  <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
+                  (order.redeliveryAttemptCount || 0) >= 3 ? (
+                    <span className="locked-tag" style={{ background: 'var(--status-failed-bg)', color: 'var(--status-failed)', borderColor: 'var(--status-failed)', display: 'inline-flex', alignItems: 'center', height: '36px', padding: '0 12px', fontSize: '0.8rem', borderRadius: '6px', fontWeight: 600 }}>⚠️ Max Redelivery Attempts Reached</span>
+                  ) : (
+                    <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
+                  )
                 ) : (
                   <button className="btn btn-primary btn-sm" id="update-status-btn" disabled={isSubmitting} onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
                 )}
@@ -542,11 +548,19 @@ export default function DeliveryOrderDetail() {
                 ) : (
                   <>
                     {['Failed', 'Cancelled'].includes(order.status) ? (
-                      <button className="btn btn-primary" id="schedule-redelivery-quick-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={16} /> SCHEDULE RE-DELIVERY</button>
+                      (order.redeliveryAttemptCount || 0) >= 3 ? (
+                        <div style={{ padding: '10px 14px', background: 'var(--status-failed-bg)', borderRadius: '8px', color: 'var(--status-failed)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>⚠️</span> Max attempts reached (Returned to sender)
+                        </div>
+                      ) : (
+                        <button className="btn btn-primary" id="schedule-redelivery-quick-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={16} /> SCHEDULE RE-DELIVERY</button>
+                      )
                     ) : (
                       <button className="btn btn-primary" disabled={isSubmitting} onClick={handleUpdateStatus}><RefreshCw size={16} /> UPDATE STATUS</button>
                     )}
-                    <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={16} /> EDIT ORDER</Link>
+                    {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
+                      <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={16} /> EDIT ORDER</Link>
+                    )}
                   </>
                 )}
                 <button 
@@ -571,7 +585,9 @@ export default function DeliveryOrderDetail() {
                 >
                   <Download size={16} /> EXPORT AS PDF
                 </button>
-                <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
+                {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
+                  <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
+                )}
               </div>
             </div>
 

@@ -80,11 +80,12 @@ export async function mockSubmitRescheduleRequest(
 /**
  * Submit client confirmation of delivery to the backend.
  */
-export async function submitConfirmDelivery(waybill: string): Promise<void> {
+export async function submitConfirmDelivery(waybill: string, recipientPhoneLast4: string): Promise<void> {
   const cleanWaybill = waybill.trim().toUpperCase();
   try {
     await apiClient.post('/delivery-orders/track/confirm', {
       waybillNo: cleanWaybill,
+      recipientPhoneLast4,
     });
   } catch (error: any) {
     throw {

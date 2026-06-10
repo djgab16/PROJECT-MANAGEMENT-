@@ -148,18 +148,23 @@ export default function PublicTracking() {
                     <button 
                       className="btn btn-primary"
                       onClick={async () => {
-                        if (window.confirm("Are you sure you want to confirm receipt of this delivery?")) {
-                          try {
-                            setLoading(true);
-                            await submitConfirmDelivery(data.waybillNo);
-                            const updated = await mockFetchTracking(data.waybillNo);
-                            setData(updated);
-                            alert("Thank you! Your delivery confirmation has been recorded.");
-                          } catch (err: any) {
-                            alert(err.message || "Failed to confirm delivery.");
-                          } finally {
-                            setLoading(false);
-                          }
+                        const digits = window.prompt("For security verification, please enter the last 4 digits of the recipient's phone number:");
+                        if (digits === null) return; // User cancelled
+                        if (!digits.trim()) {
+                          alert("Verification digits are required to confirm delivery.");
+                          return;
+                        }
+                        
+                        try {
+                          setLoading(true);
+                          await submitConfirmDelivery(data.waybillNo, digits.trim());
+                          const updated = await mockFetchTracking(data.waybillNo);
+                          setData(updated);
+                          alert("Thank you! Your delivery confirmation has been recorded.");
+                        } catch (err: any) {
+                          alert(err.message || "Failed to confirm delivery.");
+                        } finally {
+                          setLoading(false);
                         }
                       }}
                     >

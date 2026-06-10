@@ -19,10 +19,10 @@ export default function DriverDashboard() {
     return () => clearTimeout(timer);
   }, [activeTab]); // Retrigger animation slightly on tab change for that premium feel
 
-  // Fetch deliveries assigned to this driver or unassigned
+  // Fetch deliveries assigned to this driver
   const assignedRoutes = deliveryOrders.filter(
     (order) =>
-      (order.driverName === user?.name || !order.driverName) &&
+      order.driverName === user?.name &&
       (activeTab === 'Delivered'
         ? (order.status === 'Delivered' || order.status === 'Completed')
         : activeTab === 'In Transit'
@@ -38,7 +38,7 @@ export default function DriverDashboard() {
             <h2>Hello, {user?.name?.split(' ')[0] || 'Driver'}!</h2>
             <p className="driver-role">Speedex Courier</p>
             <p className="driver-active-count">
-              You have {deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && (o.status === 'Pending' || o.status === 'In Transit')).length} active deliveries today.
+              You have {deliveryOrders.filter(o => o.driverName === user?.name && (o.status === 'Pending' || o.status === 'In Transit' || o.status === 'Out for Delivery')).length} active deliveries today.
             </p>
           </div>
           <div className="driver-avatar-wrapper">

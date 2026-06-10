@@ -71,12 +71,13 @@ export default function EditDeliveryOrder() {
 
   const isNew = id === 'new';
   const isDriver = user?.role === 'DRIVER';
-  const isReadOnly = isDriver;
-  const inputStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
   const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const todayInputVal = formatDateToInput(todayStr);
 
   const [formData, setFormData] = useState<Partial<DeliveryOrder>>({});
+  const isTransitOrOutForDelivery = formData.status === 'In Transit' || formData.status === 'Out for Delivery';
+  const isReadOnly = isDriver || isTransitOrOutForDelivery;
+  const inputStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
   const [customPackageName, setCustomPackageName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,7 +131,7 @@ export default function EditDeliveryOrder() {
       }
       if (!formData.waybillNo) {
         setFormData({
-          waybillNo: `SPX-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+          waybillNo: `SPX-2026-${Math.floor(100000 + Math.random() * 900000)}`,
           orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           status: 'Pending',
@@ -223,7 +224,9 @@ export default function EditDeliveryOrder() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (isNew && formData.orderDate) {
+    if (!formData.orderDate) {
+      newErrors.orderDate = 'Order Date is required';
+    } else if (isNew) {
       const orderD = new Date(formData.orderDate);
       if (!isNaN(orderD.getTime())) {
         orderD.setHours(0, 0, 0, 0);
@@ -323,11 +326,15 @@ export default function EditDeliveryOrder() {
     setErrors({});
     setIsSubmitting(true);
 
+    const cleanedWeight = formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : '0.0';
+    const weightWithUnit = `${cleanedWeight} kg`;
+
     try {
       if (isNew) {
         const newOrder = {
           ...formData,
           packageType: finalPackageType,
+          weight: weightWithUnit,
           id: Math.random().toString(36).substr(2, 9),
         } as DeliveryOrder;
 
@@ -348,6 +355,7 @@ export default function EditDeliveryOrder() {
         const updatedOrder = {
           ...formData,
           packageType: finalPackageType,
+          weight: weightWithUnit,
           updatedBy: user?.name || 'Unknown',
           lastUpdated: new Date().toLocaleString()
         };
@@ -410,12 +418,17 @@ export default function EditDeliveryOrder() {
         actions={<span className="edit-mode-badge">● {isNew ? 'Create Mode' : 'Edit Mode'}</span>}
       />
       <div className="page-content">
-        {!isDriver && (
+        {isTransitOrOutForDelivery ? (
+          <div className="edit-warning" style={{ background: '#FFFBEB', borderColor: '#F59E0B', color: '#B45309' }}>
+            <AlertTriangle size={18} style={{ color: '#F59E0B' }} />
+            <p><strong>Notice:</strong> This order is currently <strong>{formData.status}</strong>. The details are locked and cannot be edited or deleted to prevent tampering while the courier is in transit.</p>
+          </div>
+        ) : !isDriver ? (
           <div className="edit-warning">
             <AlertTriangle size={18} />
             <p><strong>Notice:</strong> Please ensure all required information (*) is filled correctly. Waybill numbers are system-generated but can be modified before first save.</p>
           </div>
-        )}
+        ) : null}
 
         <div className="edit-grid">
           <div className="edit-left">
@@ -432,13 +445,13 @@ export default function EditDeliveryOrder() {
                     className="form-input"
                     value={formData.waybillNo}
                     onChange={handleChange}
-                    readOnly={!isNew}
-                    style={!isNew ? inputStyle : getInputStyle('waybillNo')}
+                    readOnly={true}
+                    style={{ background: 'var(--bg-main)', cursor: 'not-allowed' }}
                   />
                   {errors.waybillNo && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.waybillNo}</span>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">ORDER DATE</label>
+                  <label className="form-label">ORDER DATE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <div className="form-input-icon">
                     <Calendar size={16} className="icon-left" />
                     <input
@@ -479,8 +492,10 @@ export default function EditDeliveryOrder() {
                             setErrors(prev => ({ ...prev, orderDate: 'Order Date cannot be in the past' }));
                             return;
                           }
+                          setErrors(prev => ({ ...prev, orderDate: '', expectedDelivery: '' }));
+                        } else {
+                          setErrors(prev => ({ ...prev, orderDate: 'Order Date is required' }));
                         }
-                        setErrors(prev => ({ ...prev, orderDate: '', expectedDelivery: '' }));
                       }}
                       readOnly={isReadOnly}
                       style={getInputStyle('orderDate', { paddingLeft: '42px' })}
@@ -750,7 +765,28 @@ export default function EditDeliveryOrder() {
                 )}
                 <div className="form-group">
                   <label className="form-label">WEIGHT <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="weight" className="form-input" value={formData.weight || ''} onChange={handleChange} placeholder="e.g. 1.5 kg" readOnly={isReadOnly} style={getInputStyle('weight')} />
+                  <div className="form-input-icon" style={{ position: 'relative' }}>
+                    <input 
+                      type="text"
+                      name="weight" 
+                      className="form-input" 
+                      value={formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const cleanVal = val.replace(/[^0-9.]/g, '');
+                        const parts = cleanVal.split('.');
+                        const finalVal = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleanVal;
+                        setFormData(prev => ({ ...prev, weight: finalVal }));
+                        if (errors.weight) {
+                          setErrors(prev => ({ ...prev, weight: '' }));
+                        }
+                      }} 
+                      placeholder="e.g. 1.5" 
+                      readOnly={isReadOnly} 
+                      style={getInputStyle('weight', { paddingRight: '40px' })} 
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '0.85rem', pointerEvents: 'none', fontWeight: 600 }}>kg</span>
+                  </div>
                   {errors.weight && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.weight}</span>}
                 </div>
                 <div className="form-group">
@@ -860,13 +896,15 @@ export default function EditDeliveryOrder() {
               </div>
             )}
 
-            <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting ? 'SAVING...' : (
-                <><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</>
-              )}
-            </button>
-            <button className="btn btn-outline" disabled={isSubmitting} onClick={() => navigate(-1)}><Undo2 size={16} /> {isDriver ? 'Back' : 'Discard'}</button>
-            {!isNew && !isDriver && <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
+            {!isTransitOrOutForDelivery && (
+              <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={isSubmitting}>
+                {isSubmitting ? 'SAVING...' : (
+                  <><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</>
+                )}
+              </button>
+            )}
+            <button className="btn btn-outline" disabled={isSubmitting} onClick={() => navigate(-1)}><Undo2 size={16} /> {(isDriver || isTransitOrOutForDelivery) ? 'Back' : 'Discard'}</button>
+            {!isNew && !isDriver && !isTransitOrOutForDelivery && <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
           </div>
         </div>
       </div>

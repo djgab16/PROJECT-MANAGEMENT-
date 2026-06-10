@@ -210,16 +210,24 @@ export default function DeliveryOrders() {
                     <Link to={`/delivery-orders/${order.id}`} className="action-icon-btn" title="View">
                       <Eye size={14} />
                     </Link>
-                    <Link to={`/delivery-orders/${order.id}/edit`} className="action-icon-btn" title="Edit">
-                      <Pencil size={14} />
-                    </Link>
-                    <button
-                      className="action-icon-btn danger"
-                      title="Delete"
-                      onClick={() => handleDelete(order.id)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {order.status === 'In Transit' || order.status === 'Out for Delivery' ? (
+                      <span className="action-icon-btn disabled" title="Order is in transit/out for delivery (Locked)" style={{ opacity: 0.6, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span>🔒</span>
+                      </span>
+                    ) : (
+                      <>
+                        <Link to={`/delivery-orders/${order.id}/edit`} className="action-icon-btn" title="Edit">
+                          <Pencil size={14} />
+                        </Link>
+                        <button
+                          className="action-icon-btn danger"
+                          title="Delete"
+                          onClick={() => handleDelete(order.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

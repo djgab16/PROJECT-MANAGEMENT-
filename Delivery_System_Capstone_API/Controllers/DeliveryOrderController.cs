@@ -17,7 +17,6 @@ using System.Threading.Tasks;
 
 namespace SPXDeliveryAPI.Controllers
 {
-    [Route("api/[controller]")]
     [Route("api/delivery-orders")]
     [Route("api/deliveryorder")]
     [ApiController]
@@ -180,7 +179,7 @@ namespace SPXDeliveryAPI.Controllers
             try
             {
                 order.DriverId = model.DriverId;
-                order.UpdatedBy = User.Identity?.Name ?? "System Admin";
+                order.UpdatedBy = User.Identity?.Name ?? "Operations Admin";
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
@@ -208,7 +207,7 @@ namespace SPXDeliveryAPI.Controllers
                 order.RedeliveryDriverId = model.DriverId;
                 order.RedeliveryStatus = "Approved";
                 order.Status = "Pending"; // Resets status to Pending for delivery attempt
-                order.UpdatedBy = User.Identity?.Name ?? "System Admin";
+                order.UpdatedBy = User.Identity?.Name ?? "Operations Admin";
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
@@ -236,7 +235,7 @@ namespace SPXDeliveryAPI.Controllers
                 order.CompletedAt = null;
                 order.ArchivedReason = null;
                 order.Status = "Pending"; // Reset status to Pending to retry/reschedule E2E
-                order.UpdatedBy = User.Identity?.Name ?? "System Admin";
+                order.UpdatedBy = User.Identity?.Name ?? "Operations Admin";
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
@@ -590,7 +589,7 @@ namespace SPXDeliveryAPI.Controllers
 
             try
             {
-                var userName = User.Identity?.Name ?? "System Admin";
+                var userName = User.Identity?.Name ?? "Operations Admin";
                 foreach (var id in model.OrderIds)
                 {
                     var order = await _service.GetOrderByIdAsync(id);
@@ -621,6 +620,16 @@ namespace SPXDeliveryAPI.Controllers
                 .FirstOrDefaultAsync(o => o.WaybillNo.ToLower() == model.WaybillNo.Trim().ToLower());
 
             if (order == null) return NotFound(new { message = "Waybill not found" });
+
+            // Verify last 4 digits of recipient contact number for security validation
+            var cleanPhone = new string((order.RecipientContact ?? "").Where(char.IsDigit).ToArray());
+            var expectedLast4 = cleanPhone.Length >= 4 ? cleanPhone.Substring(cleanPhone.Length - 4) : cleanPhone;
+            var inputLast4 = new string((model.RecipientPhoneLast4 ?? "").Where(char.IsDigit).ToArray());
+            
+            if (string.IsNullOrEmpty(expectedLast4) || expectedLast4 != inputLast4)
+            {
+                return BadRequest(new { message = "Verification failed. The last 4 digits of the recipient's phone number are incorrect." });
+            }
 
             if (order.Status != "Delivered")
             {
@@ -691,6 +700,7 @@ namespace SPXDeliveryAPI.Controllers
     public class TrackConfirmModel
     {
         public string WaybillNo { get; set; } = string.Empty;
+        public string RecipientPhoneLast4 { get; set; } = string.Empty;
     }
 
     public class StatusPatchModel

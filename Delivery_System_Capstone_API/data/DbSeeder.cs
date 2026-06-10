@@ -21,12 +21,12 @@ namespace SPXDeliveryAPI.Data
                     new Employee
                     {
                         EmployeeId = "EMP-001",
-                        Name = "System Admin",
+                        Name = "Operations Admin",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
                         Role = "ADMIN",
                         SystemAccess = "All Systems",
                         Status = "Active",
-                        Initials = "AD",
+                        Initials = "OA",
                         Color = "#FFB547"
                     },
                     new Employee

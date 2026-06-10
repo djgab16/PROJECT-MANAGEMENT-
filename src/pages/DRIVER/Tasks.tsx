@@ -105,7 +105,7 @@ export default function Tasks() {
 
   const visibleOrders = useMemo(() => {
     return isDriver 
-      ? deliveryOrders.filter(o => (o.driverName === user?.name || !o.driverName) && o.taskType !== 'Pickup')
+      ? deliveryOrders.filter(o => o.driverName === user?.name && o.taskType !== 'Pickup')
       : isOpTeam
       ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
       : deliveryOrders;

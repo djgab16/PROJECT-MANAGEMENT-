@@ -254,13 +254,13 @@ namespace SPXDeliveryAPI.Services
                 FromStatus = "None",
                 ToStatus = "Pending",
                 Notes = "Order created in system",
-                ChangedBy = order.EncodedBy ?? "System Admin",
+                ChangedBy = order.EncodedBy ?? "Operations Admin",
                 ChangedAt = DateTime.UtcNow.ToString("O")
             };
             await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
             // Insert activity log
-            var initials = "AD";
+            var initials = "OA";
             var color = "#FFB547";
             var creator = await _context.Employees.FirstOrDefaultAsync(e => e.Name == order.EncodedBy);
             if (creator != null)
@@ -272,7 +272,7 @@ namespace SPXDeliveryAPI.Services
             var activityLog = new ActivityLog
             {
                 Timestamp = DateTime.UtcNow.ToString("O"),
-                UserName = order.EncodedBy ?? "System Admin",
+                UserName = order.EncodedBy ?? "Operations Admin",
                 UserRole = creator?.Role ?? "ADMIN",
                 UserInitials = initials,
                 UserColor = color,
@@ -345,7 +345,7 @@ namespace SPXDeliveryAPI.Services
             // 3. Validate status transitions
             if (oldStatus != newStatus)
             {
-                ValidateStatusTransition(order.TaskType, oldStatus, newStatus);
+                ValidateStatusTransition(order, oldStatus, newStatus, updatedOrder);
             }
 
             // 4. Update mutable fields (partial update logic - only update if non-null and non-default)
@@ -405,7 +405,14 @@ namespace SPXDeliveryAPI.Services
                 // Redelivery
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryScheduledDate)) order.RedeliveryScheduledDate = updatedOrder.RedeliveryScheduledDate;
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryRemarks)) order.RedeliveryRemarks = updatedOrder.RedeliveryRemarks;
-                if (updatedOrder.RedeliveryAttemptCount > 0) order.RedeliveryAttemptCount = updatedOrder.RedeliveryAttemptCount;
+                if (updatedOrder.RedeliveryAttemptCount > 0)
+                {
+                    if (updatedOrder.RedeliveryAttemptCount > 3)
+                    {
+                        throw new InvalidOperationException("Maximum redelivery limit of 3 attempts exceeded. Package must be returned to sender.");
+                    }
+                    order.RedeliveryAttemptCount = updatedOrder.RedeliveryAttemptCount;
+                }
                 if (updatedOrder.RedeliveryDriverId.HasValue && updatedOrder.RedeliveryDriverId.Value > 0) order.RedeliveryDriverId = updatedOrder.RedeliveryDriverId;
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryStatus)) order.RedeliveryStatus = updatedOrder.RedeliveryStatus;
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryRequestedDate)) order.RedeliveryRequestedDate = updatedOrder.RedeliveryRequestedDate;
@@ -458,7 +465,7 @@ namespace SPXDeliveryAPI.Services
                     FromStatus = oldStatus,
                     ToStatus = newStatus,
                     Notes = updatedOrder.FailureRemarks ?? updatedOrder.RedeliveryRemarks ?? "Status updated",
-                    ChangedBy = updatedOrder.UpdatedBy ?? "System Admin",
+                    ChangedBy = updatedOrder.UpdatedBy ?? "Operations Admin",
                     ChangedAt = DateTime.UtcNow.ToString("O")
                 };
                 await _context.DeliveryHistoryLogs.AddAsync(historyLog);
@@ -477,7 +484,7 @@ namespace SPXDeliveryAPI.Services
                 var activityLog = new ActivityLog
                 {
                     Timestamp = DateTime.UtcNow.ToString("O"),
-                    UserName = updatedOrder.UpdatedBy ?? "System Admin",
+                    UserName = updatedOrder.UpdatedBy ?? "Operations Admin",
                     UserRole = editor?.Role ?? "DRIVER",
                     UserInitials = initials,
                     UserColor = color,
@@ -492,7 +499,7 @@ namespace SPXDeliveryAPI.Services
             }
 
             order.LastUpdated = DateTime.UtcNow.ToString("O");
-            order.UpdatedBy = updatedOrder.UpdatedBy ?? "System Admin";
+            order.UpdatedBy = updatedOrder.UpdatedBy ?? "Operations Admin";
 
             await _context.SaveChangesAsync();
             return order;
@@ -511,7 +518,7 @@ namespace SPXDeliveryAPI.Services
             order.CompletedAt = DateTime.UtcNow.ToString("O");
             order.ArchivedReason = "Cancelled Order";
             order.LastUpdated = DateTime.UtcNow.ToString("O");
-            order.UpdatedBy = "System Admin";
+            order.UpdatedBy = "Operations Admin";
 
             var historyLog = new DeliveryHistoryLog
             {
@@ -519,7 +526,7 @@ namespace SPXDeliveryAPI.Services
                 FromStatus = oldStatus,
                 ToStatus = "Cancelled",
                 Notes = "Order cancelled by Admin/Ops",
-                ChangedBy = "System Admin",
+                ChangedBy = "Operations Admin",
                 ChangedAt = DateTime.UtcNow.ToString("O")
             };
             await _context.DeliveryHistoryLogs.AddAsync(historyLog);
@@ -527,9 +534,9 @@ namespace SPXDeliveryAPI.Services
             var activityLog = new ActivityLog
             {
                 Timestamp = DateTime.UtcNow.ToString("O"),
-                UserName = "System Admin",
+                UserName = "Operations Admin",
                 UserRole = "ADMIN",
-                UserInitials = "AD",
+                UserInitials = "OA",
                 UserColor = "#FFB547",
                 Action = "Update",
                 Description = $"Cancelled delivery order {order.WaybillNo}",
@@ -541,16 +548,20 @@ namespace SPXDeliveryAPI.Services
             return true;
         }
 
-        private void ValidateStatusTransition(string taskType, string oldStatus, string newStatus)
+        private void ValidateStatusTransition(DeliveryOrder order, string oldStatus, string newStatus, DeliveryOrder updatedOrder)
         {
             if (oldStatus == newStatus) return;
 
             // Terminal status checks
             bool isTerminal = oldStatus == "Completed" || oldStatus == "Picked Up" || oldStatus == "Failed" || oldStatus == "Cancelled";
             
-            // Allow rescheduling failed or cancelled orders back to Pending/Assigned
+            // Allow rescheduling failed or cancelled orders back to Pending/Assigned if limit not exceeded
             if (isTerminal && (newStatus == "Pending" || newStatus == "Assigned"))
             {
+                if (order.RedeliveryAttemptCount >= 3)
+                {
+                    throw new InvalidOperationException($"Cannot reschedule redelivery. Maximum attempt limit (3 attempts) has been reached for Waybill {order.WaybillNo}. Package must be returned to sender.");
+                }
                 return;
             }
 
@@ -559,7 +570,7 @@ namespace SPXDeliveryAPI.Services
                 throw new InvalidOperationException($"Cannot transition from terminal state '{oldStatus}' to '{newStatus}'.");
             }
 
-            if (taskType == "Pickup")
+            if (order.TaskType == "Pickup")
             {
                 // Pickup sequence: Pending -> Processing -> Preparing -> Ready for Pickup -> Picked Up
                 bool isValid = false;
@@ -575,6 +586,17 @@ namespace SPXDeliveryAPI.Services
             }
             else
             {
+                // Enforce Proof of Delivery (POD) check when transitioning to Delivered
+                if (newStatus == "Delivered")
+                {
+                    bool hasExistingPod = !string.IsNullOrEmpty(order.PodImage);
+                    bool hasNewPod = !string.IsNullOrEmpty(updatedOrder.PodImage);
+                    if (!hasExistingPod && !hasNewPod)
+                    {
+                        throw new InvalidOperationException("Proof of Delivery (POD image) is required to mark the order as Delivered.");
+                    }
+                }
+
                 // Delivery sequence: Pending -> Processing -> Assigned -> Picked Up -> In Transit -> Out for Delivery -> Delivered
                 bool isValid = false;
                 if (oldStatus == "Pending" && (newStatus == "Processing" || newStatus == "Cancelled")) isValid = true;
