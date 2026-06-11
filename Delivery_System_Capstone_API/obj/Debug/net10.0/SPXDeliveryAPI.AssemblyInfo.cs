@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ab980ca1bf4792a76a68130045d15d024b7591cd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c088fc60bf08a5639b23597c2cff0dd1bfb12086")]
 [assembly: System.Reflection.AssemblyProductAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
