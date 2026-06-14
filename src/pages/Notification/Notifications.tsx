@@ -4,12 +4,15 @@ import { CheckCheck, Trash2, Eye, Check, Bell, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import Modal from '../../components/ui/Modal';
 import EmptyState from '../../components/ui/EmptyState';
 import './Notifications.css';
 
 export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, deliveryOrders, markNotificationRead, markAllNotificationsRead, deleteNotification, clearAllNotifications, refreshOrders } = useData();
+  const { user } = useAuth();
 
   useEffect(() => {
     refreshOrders();
@@ -64,21 +67,30 @@ export default function Notifications() {
     return acc;
   }, {} as Record<string, typeof notifications>);
 
+  const isDriver = user?.role === 'DRIVER';
+
   return (
     <>
-      <Header
-        title="Notifications Center"
-        actions={
-          <div className="flex gap-sm">
-            <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all as read</button>
-            <button className="btn btn-outline btn-sm" onClick={clearAllNotifications}><Trash2 size={14} /> Clear all</button>
-          </div>
-        }
-      />
+      {isDriver ? (
+        <div className="driver-notifications-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Notifications</h2>
+          <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all read</button>
+        </div>
+      ) : (
+        <Header
+          title="Notifications Center"
+          actions={
+            <div className="flex gap-sm">
+              <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all as read</button>
+              <button className="btn btn-outline btn-sm" onClick={clearAllNotifications}><Trash2 size={14} /> Clear all</button>
+            </div>
+          }
+        />
+      )}
       <div className="page-content">
         <div className="notif-layout">
           {/* List */}
-          <div className="notif-list-panel">
+          <div className="notif-list-panel" style={isDriver ? { width: '100%' } : undefined}>
             <div className="notif-tabs">
               {tabs.map(tab => (
                 <button
@@ -112,13 +124,15 @@ export default function Notifications() {
                         className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''}`}
                         onClick={() => setSelectedId(n.id)}
                       >
-                        <input 
-                          type="checkbox" 
-                          className="notif-checkbox" 
-                          checked={checkedIds.includes(n.id)}
-                          onChange={(e) => handleToggleCheck(e, n.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                        {!isDriver && (
+                          <input 
+                            type="checkbox" 
+                            className="notif-checkbox" 
+                            checked={checkedIds.includes(n.id)}
+                            onChange={(e) => handleToggleCheck(e, n.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
                         <div className="notif-item-content">
                           <div className="notif-item-header">
                             <strong>{n.title}</strong>
@@ -137,7 +151,7 @@ export default function Notifications() {
           </div>
 
           {/* Detail Panel */}
-          {selected && (
+          {!isDriver && selected && (
             <div className="notif-detail-panel card">
               <div className="notif-detail-header">
                 <h4>Notification Detail</h4>
@@ -197,13 +211,90 @@ export default function Notifications() {
           )}
         </div>
       </div>
-      
+
+      {/* Detail Modal for Drivers (Mobile Optimized) */}
+      {isDriver && selected && (
+        <Modal
+          isOpen={!!selectedId}
+          onClose={() => setSelectedId('')}
+          title="Notification Detail"
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="notif-detail-alert">
+              <div className="notif-alert-icon">
+                <Bell size={18} />
+              </div>
+              <div>
+                <strong className="notif-alert-type" style={{ color: selected.type === 'alert' ? 'var(--status-failed)' : selected.type === 'success' ? 'var(--status-active)' : 'var(--text-primary)' }}>
+                  ▲ {selected.title.toUpperCase()}
+                </strong>
+                <span className="text-muted text-sm">Today, {selected.timestamp} · {selected.source}</span>
+              </div>
+            </div>
+
+            <div className="notif-detail-body card" style={{ background: 'var(--bg-main)', boxShadow: 'none', padding: '16px' }}>
+              <strong style={{ fontSize: '0.9rem', display: 'block', marginBottom: '8px' }}>{selected.title}</strong>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selected.description}</p>
+            </div>
+
+            <div className="summary-fields">
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Waybill No.</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{selected.waybillNo || '—'}</span>
+              </div>
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Alert Type</span>
+                <span style={{ fontWeight: 600 }}>{selected.type}</span>
+              </div>
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Source</span>
+                <span style={{ fontWeight: 600 }}>{selected.source}</span>
+              </div>
+            </div>
+
+            <div className="detail-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+              <button 
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => {
+                  if (selected.waybillNo) {
+                    const matched = deliveryOrders.find(o => o.waybillNo?.trim().toUpperCase() === selected.waybillNo?.trim().toUpperCase());
+                    if (matched) {
+                      setSelectedId('');
+                      navigate(`/driver/delivery/${matched.id}`);
+                    } else {
+                      alert(`Order with Waybill ${selected.waybillNo} was not found.`);
+                    }
+                  } else {
+                    alert('This notification is not linked to any Waybill.');
+                  }
+                }}
+              >
+                <Eye size={16} style={{ marginRight: '6px' }} /> View Order Details
+              </button>
+              <button 
+                className="btn btn-outline"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => { markNotificationRead(selected.id); setSelectedId(''); }}
+              >
+                <Check size={16} style={{ marginRight: '6px' }} /> Mark as Read
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Floating Selection Bar */}
-      <div className={`floating-selection-bar ${checkedIds.length > 0 ? 'visible' : ''}`}>
-        <span className="floating-selection-count">{checkedIds.length} selected</span>
-        <button className="btn btn-sm" onClick={handleMarkCheckedAsRead}><Check size={14} /> Mark as read</button>
-        <button className="btn btn-sm btn-danger" onClick={handleDeleteChecked}><Trash2 size={14} /> Delete</button>
-      </div>
+      {!isDriver && checkedIds.length > 0 && (
+        <div className={`floating-selection-bar ${checkedIds.length > 0 ? 'visible' : ''}`}>
+          <span className="floating-selection-count">{checkedIds.length} selected</span>
+          <button className="btn btn-sm" onClick={handleMarkCheckedAsRead}><Check size={14} /> Mark as read</button>
+          <button className="btn btn-sm btn-danger" onClick={handleDeleteChecked}><Trash2 size={14} /> Delete</button>
+        </div>
+      )}
     </>
   );
 }
+
+

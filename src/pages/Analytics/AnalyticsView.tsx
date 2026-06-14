@@ -19,7 +19,8 @@ export default function AnalyticsView() {
         
         const dayIdx = date.getDay();
         const isWeekend = dayIdx === 0 || dayIdx === 6;
-        const isPeak = date.getHours() >= 16 || date.getHours() <= 8;
+        const hasTime = dateStr.includes(':') || dateStr.toLowerCase().includes('am') || dateStr.toLowerCase().includes('pm');
+        const isPeak = hasTime && (date.getHours() >= 16 || date.getHours() <= 8);
         
         if (isWeekend) data[dayIdx].weekend += 1;
         else data[dayIdx].weekday += 1;

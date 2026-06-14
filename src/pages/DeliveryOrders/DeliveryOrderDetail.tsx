@@ -43,7 +43,13 @@ export default function DeliveryOrderDetail() {
   const currentStep = order ? getStepIndex(order.status) : -1;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState(employees.find(e => e.name === order?.driverName)?.id || 'EMP-003');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState(() => {
+    const matched = employees.find(e => e.name === order?.driverName);
+    if (matched) return matched.id;
+    const testDriver = employees.find(e => e.employeeId === 'EMP-003');
+    return testDriver?.id || '3';
+  });
   const [redeliveryDate, setRedeliveryDate] = useState('');
   const [remarks, setRemarks] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -231,16 +237,28 @@ export default function DeliveryOrderDetail() {
 
   const handleDelete = async () => {
     if (isSubmitting) return;
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      try {
-        setIsSubmitting(true);
-        await deleteDeliveryOrder(order.id);
-        navigate('/delivery-orders');
-      } catch (err: any) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
-      }
+    try {
+      setIsSubmitting(true);
+      await deleteDeliveryOrder(order.id);
+      await addActivityLog({
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleString(),
+        userName: user?.name || 'System',
+        userRole: user?.role || 'Staff',
+        userInitials: user?.name
+          ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+          : 'SY',
+        userColor: '#E31A1A',
+        action: 'Delete',
+        description: `Cancelled delivery order ${order.waybillNo}`,
+        reference: order.waybillNo,
+      });
+      navigate('/delivery-orders');
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -252,6 +270,7 @@ export default function DeliveryOrderDetail() {
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         actions={
           <div className="flex gap-sm">
+            <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline btn-sm"><Clock size={14} /> View History Log</Link>
             {order.isArchived ? (
               <button 
                 className="btn btn-primary btn-sm"
@@ -483,15 +502,15 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <div className="info-card-header">
                 <FileText size={18} />
-                <h4>Proof of Transaction (Receipt)</h4>
+                <h4>Proof of Billing / Sender Receipt (POT)</h4>
               </div>
               <div className="pot-placeholder" style={order.potImage ? { padding: '10px' } : undefined}>
                 {order.potImage ? (
-                  <img src={order.potImage} alt="Proof of Transaction" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
+                  <img src={order.potImage} alt="Proof of Billing / Sender Receipt" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
                 ) : (
                   <>
                     <Image size={40} color="var(--text-secondary)" />
-                    <p>{order.potStatus === 'Submitted' ? 'Proof of Transaction Attached' : 'No receipt submitted yet'}</p>
+                    <p>{order.potStatus === 'Submitted' ? 'Sender Receipt Attached' : 'No payment/sender receipt attached'}</p>
                   </>
                 )}
               </div>
@@ -501,26 +520,28 @@ export default function DeliveryOrderDetail() {
             </div>
 
             {/* Proof of Delivery */}
-            <div className="card">
-              <div className="info-card-header">
-                <FileText size={18} />
-                <h4>Proof of Delivery</h4>
+            {!isPickup && (
+              <div className="card">
+                <div className="info-card-header">
+                  <FileText size={18} />
+                  <h4>Proof of Delivery</h4>
+                </div>
+                <div className="pot-placeholder" style={order.podImage ? { padding: '10px' } : undefined}>
+                  {order.podImage ? (
+                    <img src={order.podImage} alt="Proof of Delivery" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
+                  ) : (
+                    <>
+                      <Image size={40} color="var(--text-secondary)" />
+                      <p>{order.podStatus === 'Submitted' ? 'Proof of Delivery Attached' : 'No POD submitted yet'}</p>
+                    </>
+                  )}
+                </div>
+                <div className="pot-fields">
+                  <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><span>Recipient Name</span><span>{order.recipientName}</span></div>
+                  <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.podStatus || 'Not Submitted'}</span></div>
+                </div>
               </div>
-              <div className="pot-placeholder" style={order.podImage ? { padding: '10px' } : undefined}>
-                {order.podImage ? (
-                  <img src={order.podImage} alt="Proof of Delivery" style={{ width: '100%', borderRadius: '8px', maxHeight: '200px', objectFit: 'contain' }} />
-                ) : (
-                  <>
-                    <Image size={40} color="var(--text-secondary)" />
-                    <p>{order.podStatus === 'Submitted' ? 'Proof of Delivery Attached' : 'No POD submitted yet'}</p>
-                  </>
-                )}
-              </div>
-              <div className="pot-fields">
-                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><span>Recipient Name</span><span>{order.recipientName}</span></div>
-                <div className="pot-field" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Status</span><span>{order.podStatus || 'Not Submitted'}</span></div>
-              </div>
-            </div>
+            )}
 
             {/* Quick Actions */}
             <div className="card">
@@ -567,6 +588,7 @@ export default function DeliveryOrderDetail() {
                     )}
                   </>
                 )}
+                <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline"><Clock size={16} /> VIEW HISTORY LOG</Link>
                 <button 
                   className="btn btn-outline"
                   disabled={isSubmitting}
@@ -590,7 +612,7 @@ export default function DeliveryOrderDetail() {
                   <Download size={16} /> EXPORT AS PDF
                 </button>
                 {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
-                  <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> DELETE ORDER</button>
+                  <button className="btn btn-danger" disabled={isSubmitting} onClick={() => setShowDeleteConfirm(true)}><Trash2 size={16} /> DELETE ORDER</button>
                 )}
               </div>
             </div>
@@ -606,7 +628,9 @@ export default function DeliveryOrderDetail() {
                   <div className="summary-field"><span>Date Completed</span><span className="summary-val" style={{ color: 'var(--status-active)' }}>{order.dateCompleted}</span></div>
                 )}
                 <div className="summary-field"><span>POT Status</span><span className="summary-val" style={{ color: order.potStatus === 'Not Submitted' ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.potStatus}</span></div>
-                <div className="summary-field"><span>POD Status</span><span className="summary-val" style={{ color: (!order.podStatus || order.podStatus === 'Not Submitted') ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.podStatus || 'Not Submitted'}</span></div>
+                {!isPickup && (
+                  <div className="summary-field"><span>POD Status</span><span className="summary-val" style={{ color: (!order.podStatus || order.podStatus === 'Not Submitted') ? 'var(--status-failed)' : 'var(--status-active)' }}>{order.podStatus || 'Not Submitted'}</span></div>
+                )}
               </div>
             </div>
 
@@ -622,13 +646,60 @@ export default function DeliveryOrderDetail() {
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => !isSubmitting && setShowDeleteConfirm(false)}
+        title="Cancel Delivery Order"
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              background: 'var(--status-failed-bg)',
+              border: '1px solid #ffdcd9',
+              borderRadius: '8px',
+              padding: '14px',
+            }}
+          >
+            <AlertCircle size={20} style={{ color: 'var(--status-failed)', flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--status-failed)', marginBottom: '4px' }}>
+                Cancel order {order.waybillNo}?
+              </p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                This will cancel the order and archive it. It will remain visible in the orders list for 3 days before moving to Archive only. This cannot be undone without a restore.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-outline btn-sm"
+              disabled={isSubmitting}
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              Keep Order
+            </button>
+            <button
+              className="btn btn-danger btn-sm"
+              disabled={isSubmitting}
+              onClick={handleDelete}
+            >
+              {isSubmitting ? 'Cancelling...' : 'Yes, Cancel Order'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setErrorMsg('');
-        }}
-        title="Schedule Re-delivery Attempt"
+        }}        title="Schedule Re-delivery Attempt"
         size="md"
         footer={
           <div className="flex gap-sm justify-end" style={{ width: '100%' }}>

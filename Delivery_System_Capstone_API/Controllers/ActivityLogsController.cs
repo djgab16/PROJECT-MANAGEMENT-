@@ -10,9 +10,7 @@ using System.Threading.Tasks;
 
 namespace SPXDeliveryAPI.Controllers
 {
-    [Route("api/[controller]")]
     [Route("api/activity-logs")]
-    [Route("api/logs")]
     [ApiController]
     [Authorize]
     public class ActivityLogsController : ControllerBase

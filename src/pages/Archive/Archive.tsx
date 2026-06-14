@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, Download, Eye, Archive as ArchiveIcon, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Download, Eye, Archive as ArchiveIcon, Lock, Plus } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -43,22 +43,39 @@ const getRegionForArea = (area: string) => {
 export default function Archive() {
   const { deliveryOrders } = useData();
   const navigate = useNavigate();
-  const archivedOrdersAll = deliveryOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered');
+  const archivedOrdersAll = deliveryOrders.filter(
+    o => o.status === 'Completed' || o.status === 'Delivered' || o.status === 'Cancelled'
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [driverFilter, setDriverFilter] = useState('All Drivers');
   const [areaFilter, setAreaFilter] = useState('All Areas');
   const [POTFilter, setPOTFilter] = useState('POT: All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredOrders = archivedOrdersAll.filter(o => {
     if (searchQuery && !(o.waybillNo || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
     if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;
-    
+    if (statusFilter !== 'All' && o.status !== statusFilter) return false;
     if (POTFilter === 'POT: Submitted' && o.potStatus !== 'Submitted') return false;
     if (POTFilter === 'No POT' && o.potStatus !== 'No POT') return false;
     return true;
   });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const activePage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedOrders = filteredOrders.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
+  const pageRange = [];
+  const startPage = Math.max(1, activePage - 2);
+  const endPage = Math.min(totalPages, activePage + 2);
+  for (let i = startPage; i <= endPage; i++) {
+    pageRange.push(i);
+  }
 
   const uniqueDrivers = Array.from(new Set(archivedOrdersAll.map(o => o.driverName).filter(Boolean)));
   const uniqueAreas = Array.from(new Set(archivedOrdersAll.map(o => o.area).filter(Boolean)));
@@ -80,7 +97,16 @@ export default function Archive() {
     <>
       <Header
         title="Data Archive"
-        actions={<button className="btn btn-outline btn-sm" id="export-archive" onClick={handleExport}><Download size={14} /> Export Archive</button>}
+        actions={
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <Link to="/delivery-orders/new/edit" className="btn btn-primary btn-sm">
+              <Plus size={14} /> New Order
+            </Link>
+            <button className="btn btn-outline btn-sm" id="export-archive" onClick={handleExport}>
+              <Download size={14} /> Export Archive
+            </button>
+          </div>
+        }
       />
       <div className="page-content">
         {/* Archive Banner */}
@@ -92,9 +118,9 @@ export default function Archive() {
           </div>
           <div className="archive-stats">
             <div className="archive-stat"><strong>{archivedOrdersAll.length}</strong><span>TOTAL ARCHIVED</span></div>
+            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.status === 'Completed' || o.status === 'Delivered').length}</strong><span>COMPLETED</span></div>
+            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.status === 'Cancelled').length}</strong><span>CANCELLED</span></div>
             <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.potStatus === 'Submitted').length}</strong><span>WITH POT</span></div>
-            <div className="archive-stat"><strong>{archivedOrdersAll.filter(o => o.potStatus === 'No POT').length}</strong><span>NO POT</span></div>
-            <div className="archive-stat"><strong>{archivedOrdersAll.length > 0 ? ((archivedOrdersAll.filter(o => o.potStatus === 'Submitted').length / archivedOrdersAll.length) * 100).toFixed(1) : 0}%</strong><span>SUCCESS RATE</span></div>
           </div>
           <div className="archive-readonly">
             <Lock size={14} /> <strong>Read-only.</strong> Archived records cannot be edited.
@@ -128,6 +154,12 @@ export default function Archive() {
             <option>POT: Submitted</option>
             <option>No POT</option>
           </select>
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="All">All Statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
           <button className="btn btn-outline btn-sm" onClick={handleExport}><Download size={14} /> Export</button>
         </div>
 
@@ -156,7 +188,7 @@ export default function Archive() {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.length === 0 ? (
+              {paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: 0 }}>
                     <div style={{ padding: '24px' }}>
@@ -169,8 +201,8 @@ export default function Archive() {
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map(order => (
-                  <tr key={order.id}>
+                paginatedOrders.map(order => (
+                  <tr key={order.id} style={{ opacity: order.status === 'Cancelled' ? 0.75 : 1 }}>
                     <td>
                       <span className="waybill-link" onClick={() => navigate(`/delivery-orders/${order.id}`)} style={{ cursor: 'pointer', color: 'var(--primary)' }}>{order.waybillNo}</span>
                       <div className="cell-sub">{order.orderDate ? order.orderDate.split(',')[0] : 'No date'}</div>
@@ -195,7 +227,11 @@ export default function Archive() {
                         </span>
                       </div>
                     </td>
-                    <td className="text-sm" style={{ color: 'var(--text-primary)' }}>{order.dateCompleted || '—'}</td>
+                    <td className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                      {order.status === 'Cancelled'
+                        ? <span style={{ color: 'var(--status-failed)', fontWeight: 600, fontSize: '0.8rem' }}>Cancelled</span>
+                        : order.dateCompleted || '—'}
+                    </td>
                     <td><StatusBadge status={order.potStatus} size="sm" /></td>
                     <td className="cell-actions">
                       <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
@@ -208,16 +244,20 @@ export default function Archive() {
           </table>
           </div>
           <div className="table-pagination">
-            <span className="pagination-info">Showing {filteredOrders.length} archived records</span>
-            {filteredOrders.length > 10 && (
+            <span className="pagination-info">
+              Showing {filteredOrders.length > 0 ? (activePage - 1) * itemsPerPage + 1 : 0} to {Math.min(activePage * itemsPerPage, filteredOrders.length)} of {filteredOrders.length} records
+            </span>
+            {totalPages > 1 && (
               <div className="pagination-controls">
-                <button className="pagination-btn" disabled>‹</button>
-                <button className="pagination-btn active">1</button>
-                <button className="pagination-btn">2</button>
-                <button className="pagination-btn">3</button>
-                <span className="pagination-ellipsis">...</span>
-                <button className="pagination-btn">129</button>
-                <button className="pagination-btn">›</button>
+                <button className="pagination-btn" disabled={activePage === 1} onClick={() => setCurrentPage(activePage - 1)}>‹</button>
+                {startPage > 1 && <button className="pagination-btn" onClick={() => setCurrentPage(1)}>1</button>}
+                {startPage > 2 && <span className="pagination-ellipsis">...</span>}
+                {pageRange.map(p => (
+                  <button key={p} className={`pagination-btn ${p === activePage ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</button>
+                ))}
+                {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
+                {endPage < totalPages && <button className="pagination-btn" onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>}
+                <button className="pagination-btn" disabled={activePage === totalPages} onClick={() => setCurrentPage(activePage + 1)}>›</button>
               </div>
             )}
           </div>

@@ -12,11 +12,35 @@ export default function Reports() {
   const [reportType, setReportType] = useState('daily');
 
   const filteredOrders = useMemo(() => {
+    let today = new Date();
+    if (deliveryOrders.length > 0) {
+      const dates = deliveryOrders
+        .map(o => new Date(o.dateCompleted || o.lastUpdated || o.orderDate))
+        .filter(d => !isNaN(d.getTime()));
+      if (dates.length > 0) {
+        today = new Date(Math.max(...dates.map(d => d.getTime())));
+      }
+    }
+
     return deliveryOrders.filter(o => {
        if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
+       
+       const dateStr = o.dateCompleted || o.lastUpdated || o.orderDate;
+       if (!dateStr) return false;
+       const oDate = new Date(dateStr);
+       if (isNaN(oDate.getTime())) return false;
+
+       if (reportType === 'daily') {
+         return oDate.getDate() === today.getDate() && 
+                oDate.getMonth() === today.getMonth() && 
+                oDate.getFullYear() === today.getFullYear();
+       } else if (reportType === 'monthly') {
+         return oDate.getMonth() === today.getMonth() && 
+                oDate.getFullYear() === today.getFullYear();
+       }
        return true;
     });
-  }, [deliveryOrders, driverFilter]);
+  }, [deliveryOrders, driverFilter, reportType]);
 
   const { driverPerformance, pieData, dynamicDailyDeliveries, stats } = useMemo(() => {
     let totalDeliveries = filteredOrders.length;
@@ -43,7 +67,8 @@ export default function Reports() {
           if (!isNaN(date.getTime())) {
             const dayIdx = date.getDay();
             const isWeekend = dayIdx === 0 || dayIdx === 6;
-            const isPeak = date.getHours() >= 16 || date.getHours() <= 8;
+            const hasTime = dateStr.includes(':') || dateStr.toLowerCase().includes('am') || dateStr.toLowerCase().includes('pm');
+            const isPeak = hasTime && (date.getHours() >= 16 || date.getHours() <= 8);
             if (isWeekend) dData[dayIdx].weekend++;
             else dData[dayIdx].weekday++;
             if (isPeak) dData[dayIdx].peak++;

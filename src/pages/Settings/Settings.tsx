@@ -8,9 +8,13 @@ export default function Settings() {
   const [isSaved, setIsSaved] = useState(false);
   const { addActivityLog } = useData();
   const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState({ emailNotifs: true, smsNotifs: false, timezone: 'Asia/Manila' });
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('app-settings');
+    return saved ? JSON.parse(saved) : { emailNotifs: true, smsNotifs: false, timezone: 'Asia/Manila' };
+  });
 
   const handleSave = () => {
+    localStorage.setItem('app-settings', JSON.stringify(settings));
     setIsSaved(true);
     addActivityLog({
       id: Date.now().toString(), timestamp: new Date().toLocaleString(),

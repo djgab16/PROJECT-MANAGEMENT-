@@ -26,8 +26,24 @@ export default function FailedPickups() {
   const uniqueDrivers = Array.from(new Set(failedOrdersAll.map(o => o.driverName).filter(Boolean)));
   const uniqueAreas = Array.from(new Set(failedOrdersAll.map(o => o.area).filter(Boolean)));
   
-  const overdueCount = failedOrdersAll.filter((_, i) => i < 2).length;
+  const getOverdueDays = (order: DeliveryOrder) => {
+    const today = new Date();
+    const dateStr = order.orderDate || order.dateEncoded;
+    if (!dateStr) return 0;
+    const parsedDate = new Date(dateStr);
+    if (isNaN(parsedDate.getTime())) return 0;
+    
+    const d1 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const d2 = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+    const diffTime = d1.getTime() - d2.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const overdueCount = failedOrdersAll.filter(o => getOverdueDays(o) > 2).length;
   const unassignedCount = failedOrdersAll.filter(o => !o.driverName).length;
+  const totalOverdueDays = failedOrdersAll.reduce((sum, o) => sum + getOverdueDays(o), 0);
+  const avgDaysOverdue = failedOrdersAll.length > 0 ? (totalOverdueDays / failedOrdersAll.length).toFixed(1) : '0.0';
 
   return (
     <>
@@ -37,7 +53,7 @@ export default function FailedPickups() {
           <StatCard icon={<AlertTriangle size={18} />} iconColor="var(--status-failed)" iconBg="var(--status-failed-bg)" label="TOTAL FAILED PICKUPS" value={failedOrdersAll.length} subtitle="Needs immediate action" subtitleColor="var(--status-failed)" />
           <StatCard icon={<Clock size={18} />} iconColor="var(--status-pending)" iconBg="var(--status-pending-bg)" label="OVERDUE > 2 DAYS" value={overdueCount} subtitle="Critical" subtitleColor="var(--status-failed)" />
           <StatCard icon={<UserPlus size={18} />} iconColor="var(--primary)" iconBg="var(--status-transit-bg)" label="UNASSIGNED" value={unassignedCount} subtitle="Needs driver assignment" />
-          <StatCard icon={<AlertTriangle size={18} />} iconColor="var(--status-pending)" iconBg="var(--status-pending-bg)" label="AVG. DAYS OVERDUE" value="2.3" subtitle="Target: < 1 day" />
+          <StatCard icon={<AlertTriangle size={18} />} iconColor="var(--status-pending)" iconBg="var(--status-pending-bg)" label="AVG. DAYS OVERDUE" value={avgDaysOverdue} subtitle="Target: < 1 day" />
         </div>
 
         <div className="orders-filter-bar">
@@ -98,7 +114,7 @@ export default function FailedPickups() {
                         </div>
                       ) : <span style={{ color: 'var(--status-failed)', fontWeight: 600 }}>Unassigned</span>}
                     </td>
-                    <td><span className="overdue-badge">{i === 0 ? '3 days' : '2 days'}</span></td>
+                    <td><span className="overdue-badge">{getOverdueDays(order)} days</span></td>
                     <td><StatusBadge status="Pending" size="sm" /></td>
                     <td className="cell-actions">
                       <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>

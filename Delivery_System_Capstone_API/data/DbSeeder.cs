@@ -10,8 +10,10 @@ namespace SPXDeliveryAPI.Data
             using var serviceScope = app.ApplicationServices.CreateScope();
             var context = serviceScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            // Ensure database is created or migrated
-            await context.Database.EnsureCreatedAsync();
+            // Apply EF Core migrations. The existing database already has __EFMigrationsHistory
+            // recording InitialCreate, so this is a no-op on it (data preserved); a fresh database
+            // is built correctly from the migrations instead of EnsureCreated (which bypasses them).
+            await context.Database.MigrateAsync();
 
             // 1. Seed Employees
             if (!await context.Employees.AnyAsync())

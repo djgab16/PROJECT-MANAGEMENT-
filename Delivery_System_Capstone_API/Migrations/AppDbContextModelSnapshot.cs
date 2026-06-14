@@ -178,6 +178,9 @@ namespace SPXDeliveryAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("DamagePhoto")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("DateCompleted")
                         .HasColumnType("nvarchar(max)");
 
@@ -189,6 +192,9 @@ namespace SPXDeliveryAPI.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DelayReason")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("DriverId")
                         .HasColumnType("int");
@@ -208,7 +214,16 @@ namespace SPXDeliveryAPI.Migrations
                     b.Property<string>("FailureRemarks")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("IncidentDetails")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelayed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsIncidentReported")
                         .HasColumnType("bit");
 
                     b.Property<int>("ItemCount")
@@ -329,6 +344,15 @@ namespace SPXDeliveryAPI.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VerificationPin")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("VerifiedIdNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("VerifiedIdType")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WaybillNo")
                         .IsRequired()

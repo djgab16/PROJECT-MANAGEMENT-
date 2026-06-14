@@ -8,9 +8,9 @@ interface DataContextType {
   deliveryOrders: DeliveryOrder[];
   notifications: Notification[];
   activityLogs: ActivityLog[];
-  addEmployee: (employee: Employee) => void;
-  updateEmployee: (id: string, employee: Partial<Employee>) => void;
-  deleteEmployee: (id: string) => void;
+  addEmployee: (employee: Employee) => Promise<void>;
+  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
   addDeliveryOrder: (order: Omit<DeliveryOrder, 'id'>) => Promise<void>;
   updateDeliveryOrder: (id: string, order: Partial<DeliveryOrder>) => Promise<void>;
   bulkAssignDriver: (orderIds: string[], driverId: number) => Promise<void>;
@@ -112,16 +112,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshOrders();
   }, [isAuthenticated]);
 
-  const addEmployee = (employee: Employee) => {
-    setEmployees(prev => [...prev, employee]);
+  const addEmployee = async (employee: Employee) => {
+    try {
+      await apiClient.post('/api/employees', employee);
+      await refreshOrders();
+    } catch (error: any) {
+      console.error("API error adding employee:", error);
+      alert(error.response?.data?.message || "Failed to add employee.");
+      throw error;
+    }
   };
 
-  const updateEmployee = (id: string, updated: Partial<Employee>) => {
-    setEmployees(prev => prev.map(emp => emp.id === id ? { ...emp, ...updated } : emp));
+  const updateEmployee = async (id: string, updated: Partial<Employee>) => {
+    try {
+      await apiClient.put(`/api/employees/${id}`, updated);
+      await refreshOrders();
+    } catch (error: any) {
+      console.error("API error updating employee:", error);
+      alert(error.response?.data?.message || "Failed to update employee.");
+      throw error;
+    }
   };
 
-  const deleteEmployee = (id: string) => {
-    setEmployees(prev => prev.filter(emp => emp.id !== id));
+  const deleteEmployee = async (id: string) => {
+    try {
+      await apiClient.delete(`/api/employees/${id}`);
+      await refreshOrders();
+    } catch (error: any) {
+      console.error("API error deleting employee:", error);
+      alert(error.response?.data?.message || "Failed to delete employee.");
+      throw error;
+    }
   };
 
   const addDeliveryOrder = async (order: Omit<DeliveryOrder, 'id'>) => {
@@ -152,7 +173,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await refreshOrders();
     } catch (error: any) {
       console.error("API error creating delivery order:", error);
-      alert(error.response?.data?.message || "Failed to create order. Please check workflow logic.");
+      // Handle both { message: "..." } and ModelState validation error shapes
+      let errorMessage = "Failed to create order. Please check all required fields.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        // ModelState errors: { fieldName: ["error1"] }
+        const firstErrors = Object.values(error.response.data)
+          .flat()
+          .filter((v): v is string => typeof v === 'string');
+        if (firstErrors.length > 0) errorMessage = firstErrors[0];
+      }
+      alert(errorMessage);
       throw error;
     }
   };

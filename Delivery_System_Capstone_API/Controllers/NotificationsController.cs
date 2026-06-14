@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 namespace SPXDeliveryAPI.Controllers
 {
     [Route("api/[controller]")]
-    [Route("api/notifications")]
     [ApiController]
     [Authorize]
     public class NotificationsController : ControllerBase

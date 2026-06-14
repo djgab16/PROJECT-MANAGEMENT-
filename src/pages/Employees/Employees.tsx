@@ -27,7 +27,7 @@ export default function Employees() {
   };
 
   const handleSave = () => {
-    if (!formData.name || !formData.id) return alert("Please fill in Name and ID.");
+    if (!formData.name || !formData.employeeId) return alert("Please fill in Name and Employee ID.");
     
     if (editingId) {
       updateEmployee(editingId, formData);
@@ -82,7 +82,7 @@ export default function Employees() {
               </div>
               <div className="form-group">
                 <label className="form-label">EMPLOYEE ID</label>
-                <input className="form-input" value={formData.id || ''} onChange={(e) => setFormData({...formData, id: e.target.value})} placeholder="e.g. EMP-999" disabled={!!editingId} />
+                <input className="form-input" value={formData.employeeId || ''} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} placeholder="e.g. EMP-999" disabled={!!editingId} />
               </div>
               <div className="form-group">
                 <label className="form-label">ROLE</label>
@@ -142,7 +142,7 @@ export default function Employees() {
                 .map(emp => (
                 <tr key={emp.id}>
                   <td className="cell-name">{emp.name}</td>
-                  <td className="cell-id">{emp.id}</td>
+                  <td className="cell-id">{emp.employeeId || emp.id}</td>
                   <td><RoleBadge role={emp.role} /></td>
                   <td className="cell-muted">{emp.systemAccess}</td>
                   <td><StatusBadge status={emp.status} size="sm" /></td>

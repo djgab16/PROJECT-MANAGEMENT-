@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { Plus, ClipboardList, MapPin, Package, Truck, CheckCircle2, XCircle, ShoppingBag, Eye, Kanban, Table, Search, ShieldCheck } from 'lucide-react';
+import { Plus, ClipboardList, MapPin, Package, Truck, CheckCircle2, XCircle, ShoppingBag, Eye, Kanban, Table, Search, ShieldCheck, Calendar } from 'lucide-react';
 import type { DeliveryOrder } from '../../types';
 import './Tasks.css';
 
@@ -43,6 +43,13 @@ const Column = ({ title, orders, onNavigate, colorClass, icon: Icon }: ColumnPro
               <MapPin size={13} />
               <span>{(o.recipientAddress || 'No address').substring(0, 45)}{(o.recipientAddress || '').length > 45 ? '…' : ''}</span>
             </div>
+
+            {o.expectedDelivery && (
+              <div className="task-card-address" style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>
+                <Calendar size={12} />
+                <span style={{ fontSize: '0.75rem' }}>Due: {o.expectedDelivery}</span>
+              </div>
+            )}
 
             <div className="task-card-footer">
               <div className="task-card-driver">
@@ -159,7 +166,7 @@ export default function Tasks() {
   const inTransit = visibleOrders.filter(o => (o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Picked Up') && o.taskType !== 'Pickup');
   const failed    = visibleOrders.filter(o => (o.status === 'Failed' || o.status === 'Returning' || o.status === 'Returned') && o.taskType !== 'Pickup');
   const completed = visibleOrders.filter(o => (o.status === 'Delivered' || o.status === 'Completed') && o.taskType !== 'Pickup');
-  const pickups   = visibleOrders.filter(o => o.taskType === 'Pickup');
+  const pickups   = visibleOrders.filter(o => o.taskType === 'Pickup' && o.status !== 'Completed' && o.status !== 'Picked Up' && o.status !== 'Cancelled');
 
   // Checkbox Selection Handlers
   const handleToggleSelectAll = () => {

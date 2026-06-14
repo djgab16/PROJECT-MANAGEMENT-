@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 namespace SPXDeliveryAPI.Controllers
 {
     [Route("api/[controller]")]
-    [Route("api/reports")]
     [ApiController]
     [Authorize(Policy = "OpTeamAndAbove")]
     public class ReportsController : ControllerBase
@@ -54,7 +53,8 @@ namespace SPXDeliveryAPI.Controllers
                         if ((int)date.DayOfWeek == i)
                         {
                             bool isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
-                            bool isPeak = date.Hour >= 16 || date.Hour <= 8;
+                            bool hasTime = !string.IsNullOrEmpty(dateStr) && (dateStr.Contains(":") || dateStr.Contains("am", StringComparison.OrdinalIgnoreCase) || dateStr.Contains("pm", StringComparison.OrdinalIgnoreCase));
+                            bool isPeak = hasTime && (date.Hour >= 16 || date.Hour <= 8);
 
                             if (isWeekend) countWeekend++;
                             else countWeekday++;

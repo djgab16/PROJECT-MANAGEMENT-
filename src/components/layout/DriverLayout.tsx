@@ -29,7 +29,7 @@ export default function DriverLayout() {
         </div>
 
         <div className="driver-header-right">
-          <button className="icon-btn-plain" onClick={() => navigate('/notifications')} aria-label="Notifications">
+          <button className="icon-btn-plain" onClick={() => navigate('/driver/notifications')} aria-label="Notifications">
             <Bell size={24} />
           </button>
         </div>

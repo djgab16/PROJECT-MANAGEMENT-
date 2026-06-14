@@ -16,7 +16,10 @@ const permissionsData = [
 ];
 
 export default function RoleAccess() {
-  const [permissions, setPermissions] = useState(permissionsData);
+  const [permissions, setPermissions] = useState(() => {
+    const saved = localStorage.getItem('app-permissions');
+    return saved ? JSON.parse(saved) : permissionsData;
+  });
   const [isSaved, setIsSaved] = useState(false);
   const { addActivityLog } = useData();
   const { user } = useAuth();
@@ -29,6 +32,7 @@ export default function RoleAccess() {
   };
 
   const handleSave = () => {
+    localStorage.setItem('app-permissions', JSON.stringify(permissions));
     setIsSaved(true);
     addActivityLog({
       id: Date.now().toString(),

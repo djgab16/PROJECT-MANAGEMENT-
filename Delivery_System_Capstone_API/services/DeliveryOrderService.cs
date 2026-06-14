@@ -249,6 +249,9 @@ namespace SPXDeliveryAPI.Services
             order.IsArchived = false;
             order.DateEncoded = DateTime.UtcNow.ToString("O");
             order.LastUpdated = DateTime.UtcNow.ToString("O");
+            // Auto-populate Route from Area if not provided
+            if (string.IsNullOrWhiteSpace(order.Route))
+                order.Route = order.Area;
 
             var year = DateTime.UtcNow.Year;
             var maxRetries = 10;

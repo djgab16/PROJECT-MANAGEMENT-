@@ -5,7 +5,6 @@ import DriverLayout from './components/layout/DriverLayout';
 import Login from './pages/Login/Login';
 import AccountLocked from './pages/AccountLocked/AccountLocked';
 import Dashboard from './pages/Dashboard/Dashboard';
-import DeliveryOrders from './pages/DeliveryOrders/DeliveryOrders';
 import DeliveryOrderDetail from './pages/DeliveryOrders/DeliveryOrderDetail';
 import EditDeliveryOrder from './pages/EditDelivery/EditDeliveryOrder';
 import TrackDelivery from './pages/TrackDelivery/TrackDelivery';
@@ -24,6 +23,8 @@ import QRScannerView from './pages/DRIVER/QRScannerView';
 import DriverDeliveryDetail from './pages/DRIVER/DriverDeliveryDetail';
 import DriverSettings from './pages/DRIVER/DriverSettings';
 import PublicTracking from './pages/PublicTracking/PublicTracking';
+import Employees from './pages/Employees/Employees';
+import RoleAccess from './pages/RoleAccess/RoleAccess';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -50,7 +51,8 @@ export default function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/delivery-orders" element={<DeliveryOrders />} />
+            {/* /delivery-orders list redirects to /archive — detail and edit routes remain intact */}
+            <Route path="/delivery-orders" element={<Navigate to="/archive" replace />} />
             <Route path="/delivery-orders/:id" element={<DeliveryOrderDetail />} />
             <Route path="/delivery-orders/:id/history" element={<DeliveryHistoryLog />} />
             <Route path="/delivery-orders/:id/edit" element={<EditDeliveryOrder />} />
@@ -60,7 +62,7 @@ export default function App() {
             <Route path="/failed-pickups" element={<FailedPickups />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tasks" element={<Tasks />} />
-            <Route path="/POT-records" element={<DeliveryOrders />} />
+            <Route path="/POT-records" element={<Navigate to="/archive" replace />} />
             <Route path="/activity-logs" element={<ActivityLogs />} />
             
             {/* Admin Only Routes */}
@@ -69,6 +71,8 @@ export default function App() {
               <Route path="/delivery-summary" element={<DeliverySummary />} />
               <Route path="/analytics" element={<AnalyticsView />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/role-access" element={<RoleAccess />} />
             </Route>
           </Route>
         </Route>
@@ -81,6 +85,7 @@ export default function App() {
             <Route path="/driver/scan" element={<QRScannerView />} />
             <Route path="/driver/delivery/:id" element={<DriverDeliveryDetail />} />
             <Route path="/driver/settings" element={<DriverSettings />} />
+            <Route path="/driver/notifications" element={<Notifications />} />
           </Route>
         </Route>
 

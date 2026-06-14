@@ -28,10 +28,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token might be expired, trigger logout
-      localStorage.removeItem('dts_token');
-      localStorage.removeItem('dts_user');
-      window.location.href = '/login';
+      const token = localStorage.getItem('dts_token');
+      // Only redirect to login if there was actually a token stored (i.e. this is an
+      // expired-session case, not the initial auth-check on a fresh load without a token).
+      // Also skip the redirect for the profile-check route itself so AuthContext can handle
+      // the failure gracefully without a hard reload loop.
+      const isProfileCheck = error.config?.url?.includes('/api/auth/profile');
+      if (token && !isProfileCheck) {
+        localStorage.removeItem('dts_token');
+        localStorage.removeItem('dts_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

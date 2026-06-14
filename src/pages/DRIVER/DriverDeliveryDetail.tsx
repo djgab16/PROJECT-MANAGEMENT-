@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import StatusBadge from '../../components/ui/StatusBadge';
 import PODModal from './components/PODModal';
@@ -60,6 +60,7 @@ export default function DriverDeliveryDetail() {
   };
 
   const handleStartTransit = () => {
+    if (!window.confirm(`Are you sure you want to start transit for order ${order.waybillNo}?`)) return;
     withLocation(async (coords) => {
       try {
         await updateDeliveryOrder(order.id, {
@@ -85,6 +86,7 @@ export default function DriverDeliveryDetail() {
   };
 
   const handleOutForDelivery = () => {
+    if (!window.confirm(`Are you sure you want to mark order ${order.waybillNo} as Out for Delivery?`)) return;
     withLocation(async (coords) => {
       try {
         await updateDeliveryOrder(order.id, {
@@ -222,7 +224,7 @@ export default function DriverDeliveryDetail() {
           </div>
           {order.specialInstructions && (
             <div className="info-item align-top alert-item">
-              <Clock className="info-icon alert-icon" style={{ marginTop: '4px' }} />
+              <FileText className="info-icon alert-icon" style={{ marginTop: '4px' }} />
               <div className="info-text">
                 <span className="label alert-label">Special Instructions</span>
                 <span className="value alert-value">{order.specialInstructions}</span>

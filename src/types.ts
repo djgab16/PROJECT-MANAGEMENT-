@@ -8,6 +8,7 @@ export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'POD Up
 
 export interface Employee {
   id: string;
+  employeeId: string;
   name: string;
   role: UserRole;
   systemAccess: string;

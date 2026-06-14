@@ -8,14 +8,24 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ─── Configuration: keep the JWT signing key out of source control ──────────────
+// User secrets are auto-loaded only in Development; add them explicitly so the key
+// resolves in every environment. Environment variables are re-added last so they
+// take highest precedence (set Jwt__Key in production deployments).
+builder.Configuration.AddUserSecrets(System.Reflection.Assembly.GetExecutingAssembly(), optional: true);
+builder.Configuration.AddEnvironmentVariables();
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
 // ─── JWT Authentication ────────────────────────────────────────────────────────
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException(
+        "Jwt:Key is not configured. Set it via user-secrets (dev: dotnet user-secrets set \"Jwt:Key\" ...) " +
+        "or the Jwt__Key environment variable (production).");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -103,6 +113,16 @@ builder.Services.AddControllers();
 
 // ─── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
+// ─── Production hardening: JWT secret check ─────────────────────────────────────
+// Non-fatal warning only (does not change the key or invalidate sessions). In production,
+// override with a strong secret via the 'Jwt__Key' environment variable.
+if (jwtKey.Length < 32 || jwtKey.Contains("CHANGE_THIS"))
+{
+    app.Logger.LogWarning(
+        "Jwt:Key appears to be a placeholder or shorter than 32 characters. " +
+        "Set a strong secret via the 'Jwt__Key' environment variable before deploying to production.");
+}
 
 // ─── Seed Database ─────────────────────────────────────────────────────────────
 await DbSeeder.SeedAsync(app);

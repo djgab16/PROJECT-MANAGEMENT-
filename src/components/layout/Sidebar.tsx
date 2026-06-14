@@ -1,7 +1,8 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, FileText, BarChart3,
-  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon, Sun, Moon
+  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon, Sun, Moon,
+  Users, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -30,6 +31,8 @@ const integrationLinks: NavLinkConfig[] = [
 ];
 
 const systemLinks: NavLinkConfig[] = [
+  { to: '/employees', icon: Users, label: 'Employee Directory', allowedRoles: ['ADMIN'] },
+  { to: '/role-access', icon: ShieldAlert, label: 'Role Access Matrix', allowedRoles: ['ADMIN'] },
   { to: '/settings', icon: Settings, label: 'Settings', allowedRoles: ['ADMIN'] },
   { to: '/activity-logs', icon: Activity, label: 'Activity Logs' },
 ];

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Calendar, Save, Undo2, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Modal from '../../components/ui/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import type { DeliveryOrder } from '../../types';
@@ -81,6 +82,7 @@ export default function EditDeliveryOrder() {
   const [customPackageName, setCustomPackageName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
@@ -204,10 +206,10 @@ export default function EditDeliveryOrder() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    // Run validation first; if errors, bail out before showing confirmation
     const newErrors: Record<string, string> = {};
-    
-    // Waybill automated validation
+
     if (!formData.waybillNo) {
       newErrors.waybillNo = 'Waybill number is required';
     } else {
@@ -230,9 +232,7 @@ export default function EditDeliveryOrder() {
       const orderD = new Date(formData.orderDate);
       if (!isNaN(orderD.getTime())) {
         orderD.setHours(0, 0, 0, 0);
-        if (orderD < today) {
-          newErrors.orderDate = 'Order Date cannot be in the past';
-        }
+        if (orderD < today) newErrors.orderDate = 'Order Date cannot be in the past';
       }
     }
 
@@ -242,16 +242,13 @@ export default function EditDeliveryOrder() {
       const expectedD = new Date(formData.expectedDelivery);
       if (!isNaN(expectedD.getTime())) {
         expectedD.setHours(0, 0, 0, 0);
-        
         if (isNew && expectedD < today) {
           newErrors.expectedDelivery = 'Expected Delivery date cannot be in the past';
         } else if (formData.orderDate) {
           const orderD = new Date(formData.orderDate);
           if (!isNaN(orderD.getTime())) {
             orderD.setHours(0, 0, 0, 0);
-            if (expectedD < orderD) {
-              newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
-            }
+            if (expectedD < orderD) newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
           }
         }
       }
@@ -261,42 +258,28 @@ export default function EditDeliveryOrder() {
       newErrors.failureReason = 'Failure Reason is required when status is Failed';
     }
 
-    let finalPackageType = formData.packageType;
-    if (isCustomPackageSelected) {
-      if (!customPackageName.trim()) {
-        newErrors.customPackageName = 'Custom Package Type is required';
-      } else {
-        finalPackageType = customPackageName;
-      }
+    if (isCustomPackageSelected && !customPackageName.trim()) {
+      newErrors.customPackageName = 'Custom Package Type is required';
     }
 
-    // Weight validation
     if (!formData.weight) {
       newErrors.weight = 'Weight is required';
     } else {
       const weightNum = parseFloat(formData.weight.toString().replace(/kg/i, '').trim());
-      if (isNaN(weightNum) || weightNum <= 0) {
-        newErrors.weight = 'Weight must be a positive number greater than 0';
-      }
+      if (isNaN(weightNum) || weightNum <= 0) newErrors.weight = 'Weight must be a positive number greater than 0';
     }
 
-    // Item Count validation
     if (formData.itemCount === undefined || formData.itemCount === null || String(formData.itemCount).trim() === '') {
       newErrors.itemCount = 'Item Count is required';
     } else {
       const count = Number(formData.itemCount);
-      if (!Number.isInteger(count) || count <= 0) {
-        newErrors.itemCount = 'Item Count must be a positive whole number';
-      }
+      if (!Number.isInteger(count) || count <= 0) newErrors.itemCount = 'Item Count must be a positive whole number';
     }
 
-    // Contact number validations
     if (formData.contactNumber) {
       const cleanPhone = formData.contactNumber.replace(/[^0-9]/g, '');
       const validPhoneChar = /^[0-9+\s()-]+$/.test(formData.contactNumber);
-      if (!validPhoneChar || cleanPhone.length < 7) {
-        newErrors.contactNumber = 'Please enter a valid contact number (at least 7 digits)';
-      }
+      if (!validPhoneChar || cleanPhone.length < 7) newErrors.contactNumber = 'Please enter a valid contact number (at least 7 digits)';
     }
 
     if (!formData.recipientContact) {
@@ -304,9 +287,7 @@ export default function EditDeliveryOrder() {
     } else {
       const cleanPhone = formData.recipientContact.replace(/[^0-9]/g, '');
       const validPhoneChar = /^[0-9+\s()-]+$/.test(formData.recipientContact);
-      if (!validPhoneChar || cleanPhone.length < 7) {
-        newErrors.recipientContact = 'Please enter a valid contact number (at least 7 digits)';
-      }
+      if (!validPhoneChar || cleanPhone.length < 7) newErrors.recipientContact = 'Please enter a valid contact number (at least 7 digits)';
     }
 
     if (!formData.area) newErrors.area = 'Area / Route is required';
@@ -317,26 +298,32 @@ export default function EditDeliveryOrder() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      // Find the first error element and scroll to it (rough approximation)
       const firstErrorElement = document.querySelector('.form-input[style*="var(--status-failed)"]');
       if (firstErrorElement) firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     setErrors({});
+    setShowSaveConfirm(true);
+  };
+
+  const handleSave = async () => {
+    setShowSaveConfirm(false);
     setIsSubmitting(true);
 
+    const finalPackageType = isCustomPackageSelected ? customPackageName : formData.packageType;
     const cleanedWeight = formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : '0.0';
     const weightWithUnit = `${cleanedWeight} kg`;
 
     try {
       if (isNew) {
-        const newOrder = {
+        // Strip the frontend-generated id — the API auto-assigns its own integer Id
+        const { id: _frontendId, ...orderWithoutId } = {
           ...formData,
           packageType: finalPackageType,
           weight: weightWithUnit,
-          id: Math.random().toString(36).substr(2, 9),
-        } as DeliveryOrder;
+        };
+        const newOrder = orderWithoutId as Omit<DeliveryOrder, 'id'>;
 
         await addDeliveryOrder(newOrder);
         await addActivityLog({
@@ -347,10 +334,10 @@ export default function EditDeliveryOrder() {
           userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
           userColor: '#00A99D',
           action: 'Create',
-          description: `Created new delivery order ${newOrder.waybillNo}`,
+          description: `Created new delivery order`,
           reference: newOrder.waybillNo
         });
-        navigate('/delivery-orders');
+        navigate('/tasks');
       } else {
         const updatedOrder = {
           ...formData,
@@ -624,6 +611,7 @@ export default function EditDeliveryOrder() {
                   <select name="status" className="form-input" value={formData.status} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
                     <option value="Pending">Pending</option>
                     <option value="In Transit">In Transit</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
                     <option value="Delivered">Delivered</option>
                     <option value="Completed">Completed</option>
                     <option value="Failed">Failed</option>
@@ -795,6 +783,32 @@ export default function EditDeliveryOrder() {
                   {errors.itemCount && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.itemCount}</span>}
                 </div>
               </div>
+              <div className="form-row two-col" style={{ marginTop: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">DECLARED VALUE</label>
+                  <input
+                    name="declaredValue"
+                    className="form-input"
+                    value={formData.declaredValue || ''}
+                    onChange={handleChange}
+                    readOnly={isReadOnly}
+                    placeholder="e.g. ₱ 500.00"
+                    style={getInputStyle('declaredValue')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">SPECIAL INSTRUCTIONS</label>
+                  <textarea
+                    name="specialInstructions"
+                    className="form-input form-textarea"
+                    value={formData.specialInstructions || ''}
+                    onChange={handleChange}
+                    readOnly={isReadOnly}
+                    placeholder="e.g. Fragile, handle with care"
+                    style={{ ...getInputStyle('specialInstructions'), minHeight: '72px' }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="card">
@@ -897,7 +911,7 @@ export default function EditDeliveryOrder() {
             )}
 
             {!isTransitOrOutForDelivery && (
-              <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={isSubmitting}>
+              <button className="btn btn-primary btn-lg" onClick={handleSaveClick} disabled={isSubmitting}>
                 {isSubmitting ? 'SAVING...' : (
                   <><Save size={16} /> {isNew ? 'CREATE ORDER' : 'SAVE CHANGES'}</>
                 )}
@@ -908,6 +922,30 @@ export default function EditDeliveryOrder() {
           </div>
         </div>
       </div>
+
+      {/* Save Confirmation Modal */}
+      {showSaveConfirm && (
+        <Modal isOpen={showSaveConfirm} onClose={() => setShowSaveConfirm(false)} title={isNew ? 'Confirm Create Order' : 'Confirm Save Changes'}>
+          <div style={{ padding: '8px 0 16px' }}>
+            <p style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>
+              {isNew
+                ? `You are about to create a new delivery order for <strong>${formData.clientName}</strong>.`
+                : `You are about to save changes to waybill <strong>${formData.waybillNo}</strong>.`}
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Please confirm that all information is correct before proceeding.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" onClick={() => setShowSaveConfirm(false)}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={isSubmitting}>
+              <Save size={14} /> {isNew ? 'Yes, Create Order' : 'Yes, Save Changes'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
