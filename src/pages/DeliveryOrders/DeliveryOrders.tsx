@@ -11,7 +11,7 @@ import type { DeliveryOrder } from '../../types';
 import './DeliveryOrders.css';
 
 export default function DeliveryOrders() {
-  const { deliveryOrders, deleteDeliveryOrder, addActivityLog } = useData();
+  const { deliveryOrders, deleteDeliveryOrder } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [areaFilter, setAreaFilter] = useState('All Areas');
@@ -27,20 +27,11 @@ export default function DeliveryOrders() {
   const uniqueAreas = Array.from(new Set(deliveryOrders.map(o => o.area).filter(Boolean)));
 
   const baseOrders = isOpTeam
-    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
+    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
     : deliveryOrders;
 
-  // Show active orders + cancelled orders that are within 3 days of cancellation
-  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
-  const visibleOrders = baseOrders.filter(order => {
-    if (order.status === 'Cancelled') {
-      // Show cancelled orders that were cancelled within the last 3 days
-      const cancelledAt = order.completedAt ? new Date(order.completedAt).getTime() : 0;
-      return cancelledAt >= threeDaysAgo;
-    }
-    // Hide other archived orders (Completed/Delivered handled by Archive page)
-    return !order.isArchived;
-  });
+  // Only show active (non-archived) orders — cancelled orders go straight to Archive
+  const visibleOrders = baseOrders.filter(order => !order.isArchived);
 
   const filteredOrders = visibleOrders.filter(order => {
     const matchesSearch =
@@ -59,19 +50,6 @@ export default function DeliveryOrders() {
     setIsDeleting(true);
     try {
       await deleteDeliveryOrder(deleteTarget.id);
-      await addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name
-          ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-          : 'SY',
-        userColor: '#E31A1A',
-        action: 'Delete',
-        description: `Cancelled delivery order ${deleteTarget.waybillNo}`,
-        reference: deleteTarget.waybillNo,
-      });
     } catch (err) {
       console.error('Delete failed:', err);
     } finally {
@@ -147,12 +125,13 @@ export default function DeliveryOrders() {
           >
             <option>All Status</option>
             <option>Pending</option>
+            <option>Processing</option>
+            <option>Assigned</option>
+            <option>Picked Up</option>
             <option>In Transit</option>
             <option>Out for Delivery</option>
             <option>Delivered</option>
-            <option>Completed</option>
             <option>Failed</option>
-            <option>Cancelled</option>
           </select>
           <select
             className="filter-select"
@@ -396,7 +375,7 @@ export default function DeliveryOrders() {
                 Cancel order {deleteTarget?.waybillNo}?
               </p>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                This will cancel the order and move it to the Archive. It will remain visible here for 3 days, then automatically move to Archive only.
+                This will cancel the order and immediately move it to the Archive. You can restore it from the Archive if needed.
               </p>
             </div>
           </div>

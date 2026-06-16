@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import './TrackingSearch.css';
 
 interface TrackingSearchProps {
@@ -29,7 +29,6 @@ export default function TrackingSearch({ onSearch, loading }: TrackingSearchProp
       
       <form className={`search-form-container ${error ? 'has-error' : ''}`} onSubmit={handleSubmit}>
         <div className="search-input-wrapper">
-          <Search className="search-icon" size={20} />
           <input
             type="text"
             className="search-input"

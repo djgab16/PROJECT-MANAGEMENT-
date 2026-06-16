@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import logo from '../../assets/logo.png';
 import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { addActivityLog } = useData();
 
   const [showPassword, setShowPassword] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
@@ -22,6 +24,13 @@ export default function Login() {
 
     try {
       const user = await login(employeeId, password);
+      
+      // Log successful login
+      await addActivityLog({
+        action: 'Login',
+        description: `User logged in: ${user.name} (${user.employeeId})`
+      });
+
       if (user.role === 'DRIVER') {
         navigate('/driver/dashboard');
       } else {

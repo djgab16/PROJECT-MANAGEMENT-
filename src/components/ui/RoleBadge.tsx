@@ -5,17 +5,17 @@ interface RoleBadgeProps {
   role: UserRole;
 }
 
-const roleConfig: Record<UserRole, { className: string }> = {
-  'ADMIN': { className: 'role-admin' },
-  'OP. TEAM': { className: 'role-ops' },
-  'DRIVER': { className: 'role-driver' },
+const roleConfig: Record<UserRole, { className: string; label: string }> = {
+  'ADMIN': { className: 'role-admin', label: 'ADMIN' },
+  'OP. TEAM': { className: 'role-ops', label: 'ENCODER' },
+  'DRIVER': { className: 'role-driver', label: 'DRIVER' },
 };
 
 export default function RoleBadge({ role }: RoleBadgeProps) {
-  const config = roleConfig[role] || { className: 'role-default' };
+  const config = roleConfig[role] || { className: 'role-default', label: role };
   return (
     <span className={`role-badge ${config.className}`}>
-      {role}
+      {config.label}
     </span>
   );
 }

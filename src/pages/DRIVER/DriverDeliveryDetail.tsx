@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext';
 import StatusBadge from '../../components/ui/StatusBadge';
 import PODModal from './components/PODModal';
 import FailureModal from './components/FailureModal';
+import Modal from '../../components/ui/Modal';
 import { useDriverGPS } from '../../hooks/useDriverGPS';
 import { realtimeSync } from '../../utils/realtimeSync';
 import './DriverDeliveryDetail.css';
@@ -12,11 +13,13 @@ import './DriverDeliveryDetail.css';
 export default function DriverDeliveryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { deliveryOrders, updateDeliveryOrder, addActivityLog, activityLogs } = useData();
+  const { deliveryOrders, updateDeliveryOrder, activityLogs } = useData();
 
   const order = deliveryOrders.find(o => o.id === id);
   const [showPODModal, setShowPODModal] = useState(false);
   const [showFailureModal, setShowFailureModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Continuous GPS watch tracking
@@ -59,56 +62,67 @@ export default function DriverDeliveryDetail() {
     );
   };
 
-  const handleStartTransit = () => {
-    if (!window.confirm(`Are you sure you want to start transit for order ${order.waybillNo}?`)) return;
-    withLocation(async (coords) => {
-      try {
-        await updateDeliveryOrder(order.id, {
-          status: 'In Transit',
-          gpsCoordinates: coords || undefined
+  const handleConfirmPickup = () => {
+    setConfirmAction({
+      title: 'Confirm Pickup',
+      message: `Are you sure you want to confirm pickup for order ${order.waybillNo}?`,
+      onConfirm: () => {
+        withLocation(async (coords) => {
+          try {
+            await updateDeliveryOrder(order.id, {
+              status: 'Picked Up',
+              gpsCoordinates: coords || undefined
+            });
+          } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || err.message || "Failed to confirm pickup.");
+          }
         });
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: order.driverName || 'Driver',
-          userRole: 'DRIVER',
-          userInitials: order.driverInitials || 'DR',
-          userColor: order.driverColor || '#000',
-          action: 'Update',
-          description: `Started transit for ${order.waybillNo}${coords ? ' (GPS Tagged)' : ''}`,
-          reference: order.waybillNo
-        });
-      } catch (err: any) {
-        console.error(err);
-        alert(err.response?.data?.message || err.message || "Failed to start transit.");
       }
     });
+    setShowConfirmModal(true);
+  };
+
+  const handleStartTransit = () => {
+    setConfirmAction({
+      title: 'Start Transit',
+      message: `Are you sure you want to start transit for order ${order.waybillNo}?`,
+      onConfirm: () => {
+        withLocation(async (coords) => {
+          try {
+            await updateDeliveryOrder(order.id, {
+              status: 'In Transit',
+              gpsCoordinates: coords || undefined
+            });
+          } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || err.message || "Failed to start transit.");
+          }
+        });
+      }
+    });
+    setShowConfirmModal(true);
   };
 
   const handleOutForDelivery = () => {
-    if (!window.confirm(`Are you sure you want to mark order ${order.waybillNo} as Out for Delivery?`)) return;
-    withLocation(async (coords) => {
-      try {
-        await updateDeliveryOrder(order.id, {
-          status: 'Out for Delivery',
-          gpsCoordinates: coords || undefined
+    setConfirmAction({
+      title: 'Out for Delivery',
+      message: `Are you sure you want to mark order ${order.waybillNo} as Out for Delivery?`,
+      onConfirm: () => {
+        withLocation(async (coords) => {
+          try {
+            await updateDeliveryOrder(order.id, {
+              status: 'Out for Delivery',
+              gpsCoordinates: coords || undefined
+            });
+          } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || err.message || "Failed to mark Out for Delivery.");
+          }
         });
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: order.driverName || 'Driver',
-          userRole: 'DRIVER',
-          userInitials: order.driverInitials || 'DR',
-          userColor: order.driverColor || '#000',
-          action: 'Update',
-          description: `Marked ${order.waybillNo} as Out for Delivery${coords ? ' (GPS Tagged)' : ''}`,
-          reference: order.waybillNo
-        });
-      } catch (err: any) {
-        console.error(err);
-        alert(err.response?.data?.message || err.message || "Failed to mark Out for Delivery.");
       }
     });
+    setShowConfirmModal(true);
   };
 
   const handlePODSubmit = (data: { podImage: string; recipientName: string }) => {
@@ -121,17 +135,6 @@ export default function DriverDeliveryDetail() {
           recipientName: data.recipientName,
           dateCompleted: new Date().toLocaleString(),
           gpsCoordinates: coords || undefined
-        });
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: order.driverName || 'Driver',
-          userRole: 'DRIVER',
-          userInitials: order.driverInitials || 'DR',
-          userColor: order.driverColor || '#000',
-          action: 'POD Upload',
-          description: `Marked ${order.waybillNo} as Delivered${coords ? ' (GPS Tagged)' : ''}`,
-          reference: order.waybillNo
         });
         setShowPODModal(false);
         navigate('/driver/dashboard');
@@ -150,17 +153,6 @@ export default function DriverDeliveryDetail() {
           failureReason: data.reason,
           failureRemarks: data.remarks,
           gpsCoordinates: coords || undefined
-        });
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: order.driverName || 'Driver',
-          userRole: 'DRIVER',
-          userInitials: order.driverInitials || 'DR',
-          userColor: order.driverColor || '#000',
-          action: 'Update',
-          description: `Marked ${order.waybillNo} as Failed (${data.reason})${coords ? ' (GPS Tagged)' : ''}`,
-          reference: order.waybillNo
         });
         setShowFailureModal(false);
         navigate('/driver/dashboard');
@@ -352,7 +344,18 @@ export default function DriverDeliveryDetail() {
 
       {/* Action Buttons */}
       <div className="action-buttons-container">
-        {order.status === 'Pending' && (
+        {(order.status === 'Pending' || order.status === 'Assigned') && (
+          <button 
+            className="btn btn-primary btn-block btn-massive"
+            onClick={handleConfirmPickup}
+            disabled={isUpdating}
+          >
+            <CheckCircle size={20} />
+            {isUpdating ? 'Updating...' : 'CONFIRM PICKUP'}
+          </button>
+        )}
+
+        {order.status === 'Picked Up' && (
           <button 
             className="btn btn-primary btn-block btn-massive"
             onClick={handleStartTransit}
@@ -422,6 +425,35 @@ export default function DriverDeliveryDetail() {
           onSubmit={handleFailureSubmit}
         />
       )}
+
+      {/* Driver Action Confirmation Modal */}
+      <Modal
+        isOpen={showConfirmModal}
+        onClose={() => !isUpdating && setShowConfirmModal(false)}
+        title={confirmAction?.title || 'Confirm Action'}
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            {confirmAction?.message}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline btn-sm" disabled={isUpdating} onClick={() => setShowConfirmModal(false)}>Cancel</button>
+            <button 
+              className="btn btn-primary btn-sm" 
+              disabled={isUpdating} 
+              onClick={() => {
+                if (confirmAction) {
+                  confirmAction.onConfirm();
+                  setShowConfirmModal(false);
+                }
+              }}
+            >
+              {isUpdating ? 'Updating...' : 'Yes, Proceed'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

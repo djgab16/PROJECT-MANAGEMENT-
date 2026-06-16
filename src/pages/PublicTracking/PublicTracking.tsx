@@ -211,8 +211,8 @@ export default function PublicTracking() {
                       </div>
                       <div className="redelivery-text-content">
                         <h3 className="redelivery-title approved">Re-delivery Scheduled</h3>
-                        <p className="redelivery-description">
-                          Great news! Your re-delivery request has been approved and is scheduled for <strong className="highlight-date">{data.redeliveryRequestedDate || data.recipientAddress}</strong>.
+                        <p className="redelivery-message">
+                          Great news! Your re-delivery request has been approved and is scheduled for <strong className="highlight-date">{data.redeliveryScheduledDate || data.redeliveryRequestedDate}</strong>.
                         </p>
                         <span className="redelivery-badge approved">
                           Approved
@@ -377,7 +377,7 @@ export default function PublicTracking() {
                   className="filter-select"
                   style={{ width: '100%' }}
                   value={requestedDate}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })()}
                   onChange={e => {
                     setRequestedDate(e.target.value);
                     setSubmitError('');

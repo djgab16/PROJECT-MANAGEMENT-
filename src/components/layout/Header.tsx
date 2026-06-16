@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Package, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
+import { ROLE_DISPLAY } from '../../types';
 import './Header.css';
 
 interface HeaderProps {
@@ -122,7 +123,7 @@ export default function Header({ title, subtitle, date, actions }: HeaderProps) 
                           <User size={14} />
                           <div className="search-item-info">
                             <span className="search-item-main">{e.name}</span>
-                            <span className="search-item-sub">{e.role}</span>
+                            <span className="search-item-sub">{ROLE_DISPLAY[e.role as keyof typeof ROLE_DISPLAY] ?? e.role}</span>
                           </div>
                         </div>
                       ))}

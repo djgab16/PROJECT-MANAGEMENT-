@@ -4,7 +4,14 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { Plus, ClipboardList, MapPin, Package, Truck, CheckCircle2, XCircle, ShoppingBag, Eye, Kanban, Table, Search, ShieldCheck, Calendar } from 'lucide-react';
+import { 
+  Plus, ClipboardList, MapPin, Package, Truck, CheckCircle2, 
+  XCircle, ShoppingBag, Eye, Kanban, Table, ShieldCheck, Calendar 
+} from 'lucide-react';
+import EnterpriseFilters, { initialFilterState } from '../../components/ui/EnterpriseFilters';
+import type { EnterpriseFilterState } from '../../components/ui/EnterpriseFilters';
+import Modal from '../../components/ui/Modal';
+import { fuzzyMatch, getDateRangeBounds, isDateInBounds } from '../../utils/filterUtils';
 import type { DeliveryOrder } from '../../types';
 import './Tasks.css';
 
@@ -75,18 +82,18 @@ const Column = ({ title, orders, onNavigate, colorClass, icon: Icon }: ColumnPro
 );
 
 export default function Tasks() {
-  const { employees, deliveryOrders, refreshOrders, bulkAssignDriver, addActivityLog } = useData();
+  const { employees, deliveryOrders, refreshOrders, bulkAssignDriver } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   // Layout View Mode State
   const [viewMode, setViewMode] = useState<'board' | 'table'>('board');
 
-  // Filter options state for Table View
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [driverFilter, setDriverFilter] = useState('All');
-  const [taskTypeFilter, setTaskTypeFilter] = useState('All');
+  // Enterprise Advanced Filters State for Table View
+  const [filters, setFilters] = useState<EnterpriseFilterState>({
+    ...initialFilterState,
+    dateType: 'Last 30 Days' // Default Tasks page to Last 30 Days
+  });
 
   // Pagination state for Table View
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,6 +103,8 @@ export default function Tasks() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkDriverId, setBulkDriverId] = useState('');
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [targetDriver, setTargetDriver] = useState<Employee | null>(null);
 
   useEffect(() => {
     refreshOrders();
@@ -105,7 +114,7 @@ export default function Tasks() {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedOrderIds([]);
-  }, [searchQuery, statusFilter, driverFilter, taskTypeFilter, pageSize]);
+  }, [filters, pageSize]);
 
   const isDriver = user?.role === 'DRIVER';
   const isOpTeam = user?.role === 'OP. TEAM';
@@ -114,7 +123,7 @@ export default function Tasks() {
     return isDriver 
       ? deliveryOrders.filter(o => o.driverName === user?.name && o.taskType !== 'Pickup')
       : isOpTeam
-      ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
+      ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
       : deliveryOrders;
   }, [deliveryOrders, isDriver, isOpTeam, user?.name]);
 
@@ -122,36 +131,116 @@ export default function Tasks() {
     return employees ? employees.filter(e => e.role === 'DRIVER') : [];
   }, [employees]);
 
+  // Client counts cache for Frequent cohort matching
+  const clientCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    visibleOrders.forEach(o => {
+      if (o.clientName) counts[o.clientName] = (counts[o.clientName] || 0) + 1;
+    });
+    return counts;
+  }, [visibleOrders]);
+
+  // Helper mapping region for cities
+  const getRegionForArea = (area: string): string => {
+    if (!area) return 'Unknown Region';
+    const REGIONS_INTERNAL = [
+      {
+        name: "National Capital Region",
+        cities: ["Manila", "Quezon City", "Makati", "Pasig", "Taguig", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa", "Marikina", "Mandaluyong", "San Juan", "Caloocan", "Malabon", "Navotas", "Valenzuela"]
+      },
+      {
+        name: "Central Luzon",
+        cities: ["Angeles", "San Fernando", "Olongapo", "Tarlac City", "Cabanatuan"]
+      },
+      {
+        name: "CALABARZON",
+        cities: ["Antipolo", "Dasmariñas", "Bacoor", "Tagaytay", "Batangas City", "Lucena"]
+      }
+    ];
+    for (const region of REGIONS_INTERNAL) {
+      if (region.cities.includes(area)) return region.name;
+    }
+    return 'Custom Area';
+  };
+
   // Filters logic for Table View
   const filteredTableOrders = useMemo(() => {
-    return visibleOrders.filter(o => {
-      // Search text query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchesWaybill = (o.waybillNo || '').toLowerCase().includes(query);
-        const matchesRecipient = (o.recipientName || '').toLowerCase().includes(query);
-        const matchesClient = (o.clientName || '').toLowerCase().includes(query);
-        if (!matchesWaybill && !matchesRecipient && !matchesClient) return false;
+    return visibleOrders.filter(order => {
+      // Exclude Cancelled orders from active Tasks view
+      if (order.status === 'Cancelled') return false;
+
+      // Smart Fuzzy Search
+      if (filters.searchQuery) {
+        const q = filters.searchQuery;
+        const matches = 
+          fuzzyMatch(order.waybillNo, q) ||
+          fuzzyMatch(order.clientName, q) ||
+          fuzzyMatch(order.recipientName, q) ||
+          fuzzyMatch(order.driverName, q) ||
+          fuzzyMatch(order.id, q);
+        if (!matches) return false;
       }
-      // Status dropdown filter
-      if (statusFilter !== 'All') {
-        if (o.status !== statusFilter) return false;
+
+      // Date Range Match
+      const bounds = getDateRangeBounds(filters.dateType, filters.customStartDate, filters.customEndDate);
+      const oDateStr = order.dateCompleted || order.lastUpdated || order.orderDate;
+      if (!isDateInBounds(oDateStr, bounds)) return false;
+
+      // Order Task Type
+      if (filters.orderType !== 'All') {
+        if (order.taskType !== filters.orderType) return false;
       }
-      // Driver dropdown filter
-      if (driverFilter !== 'All') {
-        if (driverFilter === 'Unassigned') {
-          if (o.driverName) return false;
+
+      // Status
+      if (filters.status !== 'All') {
+        if (filters.status === 'Archived') {
+          if (!order.isArchived) return false;
         } else {
-          if (o.driverName !== driverFilter) return false;
+          if (order.status !== filters.status) return false;
         }
       }
-      // Task type dropdown filter
-      if (taskTypeFilter !== 'All') {
-        if (o.taskType !== taskTypeFilter) return false;
+
+      // Driver
+      if (filters.driver !== 'All') {
+        if (filters.driver === 'Unassigned') {
+          if (order.driverName) return false;
+        } else if (order.driverName !== filters.driver) {
+          return false;
+        }
       }
+
+      // Route
+      if (filters.route !== 'All') {
+        if (order.route !== filters.route) return false;
+      }
+
+      // Region
+      if (filters.region !== 'All') {
+        const reg = getRegionForArea(order.area);
+        if (reg !== filters.region) return false;
+      }
+
+      // Dispatcher
+      if (filters.dispatcher !== 'All') {
+        const disp = order.encodedBy || order.updatedBy;
+        if (disp !== filters.dispatcher) return false;
+      }
+
+      // Client Type
+      if (filters.clientType !== 'All') {
+        const count = clientCounts[order.clientName || ''] || 0;
+        if (filters.clientType === 'Frequent' && count < 3) return false;
+        if (filters.clientType === 'Repeat' && count < 2) return false;
+      }
+
+      // Package Type
+      if (filters.packageType !== 'All') {
+        if (order.packageType !== filters.packageType) return false;
+      }
+
       return true;
     });
-  }, [visibleOrders, searchQuery, statusFilter, driverFilter, taskTypeFilter]);
+  }, [visibleOrders, filters, clientCounts]);
 
   // Paginated subset of filtered orders
   const paginatedOrders = useMemo(() => {
@@ -192,7 +281,7 @@ export default function Tasks() {
   };
 
   // Bulk Assignment Handler
-  const handleBulkAssign = async () => {
+  const handleBulkAssign = () => {
     if (!bulkDriverId) {
       alert("Please select a courier to assign.");
       return;
@@ -202,33 +291,28 @@ export default function Tasks() {
       return;
     }
 
-    const selectedDriver = employees.find(e => e.id === bulkDriverId || String(e.id) === bulkDriverId);
-    if (!selectedDriver) return;
+    const matchedDriver = employees.find(e => e.id === bulkDriverId || String(e.id) === bulkDriverId);
+    if (!matchedDriver) return;
 
-    if (window.confirm(`Are you sure you want to assign ${selectedOrderIds.length} orders to driver ${selectedDriver.name}?`)) {
-      setIsBulkAssigning(true);
-      try {
-        await bulkAssignDriver(selectedOrderIds, Number(bulkDriverId));
-        
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: user?.name || 'System',
-          userRole: user?.role || 'Staff',
-          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'SY',
-          userColor: '#00A99D',
-          action: 'Assign',
-          description: `Bulk assigned ${selectedOrderIds.length} orders to driver ${selectedDriver.name}`,
-        });
+    setTargetDriver(matchedDriver);
+    setShowBulkConfirm(true);
+  };
 
-        setSelectedOrderIds([]);
-        setBulkDriverId('');
-        alert("Bulk assignment completed successfully!");
-      } catch (err: any) {
-        console.error("Bulk assign failed", err);
-      } finally {
-        setIsBulkAssigning(false);
-      }
+  const confirmBulkAssign = async () => {
+    if (!targetDriver) return;
+    setIsBulkAssigning(true);
+    setShowBulkConfirm(false);
+
+    try {
+      await bulkAssignDriver(selectedOrderIds, Number(targetDriver.id));
+      
+      setSelectedOrderIds([]);
+      setBulkDriverId('');
+      setTargetDriver(null);
+    } catch (err: any) {
+      console.error("Bulk assign failed", err);
+    } finally {
+      setIsBulkAssigning(false);
     }
   };
 
@@ -270,47 +354,13 @@ export default function Tasks() {
 
         {viewMode === 'table' ? (
           <div className="table-view-container animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Filter Bar */}
-            <div className="orders-filter-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-card)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-              <div className="filter-search" style={{ flex: 1, minWidth: '200px' }}>
-                <Search size={16} className="filter-search-icon" />
-                <input 
-                  type="text" 
-                  placeholder="Search waybill, client, recipient..." 
-                  className="filter-search-input" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                <option value="All">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Out for Delivery">Out for Delivery</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Completed">Completed</option>
-                <option value="Failed">Failed</option>
-                <option value="Returned">Returned</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-
-              <select className="filter-select" value={taskTypeFilter} onChange={e => setTaskTypeFilter(e.target.value)}>
-                <option value="All">All Types</option>
-                <option value="Delivery">Delivery</option>
-                <option value="Pickup">Pickup</option>
-              </select>
-
-              {!isDriver && (
-                <select className="filter-select" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
-                  <option value="All">All Drivers</option>
-                  <option value="Unassigned">Unassigned</option>
-                  {drivers.map(drv => (
-                    <option key={drv.id} value={drv.name}>{drv.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
+            
+            {/* Enterprise Advanced Filter Component */}
+            <EnterpriseFilters 
+              filters={filters} 
+              onChange={setFilters} 
+              onReset={() => setFilters({ ...initialFilterState, dateType: 'Last 30 Days' })} 
+            />
 
             {/* Bulk Actions Panel */}
             {!isDriver && selectedOrderIds.length > 0 && (
@@ -499,6 +549,28 @@ export default function Tasks() {
           </div>
         )}
       </div>
+
+      {/* Bulk Assignment Confirmation Modal */}
+      <Modal
+        isOpen={showBulkConfirm}
+        onClose={() => !isBulkAssigning && setShowBulkConfirm(false)}
+        title="Confirm Bulk Assignment"
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'var(--status-transit-bg)', border: '1px solid var(--primary)', borderRadius: '8px', padding: '14px' }}>
+            <ShieldCheck size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--primary)', marginBottom: '4px' }}>Assign {selectedOrderIds.length} orders?</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>You are about to assign these orders to <strong>{targetDriver?.name}</strong>. This will notify the driver immediately.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline btn-sm" disabled={isBulkAssigning} onClick={() => setShowBulkConfirm(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" disabled={isBulkAssigning} onClick={confirmBulkAssign}>{isBulkAssigning ? 'Assigning...' : 'Yes, Assign Driver'}</button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Users, ClipboardList, CheckCircle2, Package, RefreshCw } from 'lucide-react';
+import { Users, ClipboardList, CheckCircle2, Package, Bell } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import StatCard from '../../components/ui/StatCard';
 
@@ -7,6 +7,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ROLE_DISPLAY } from '../../types';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -20,7 +21,7 @@ export default function Dashboard() {
 
   const isOpTeam = user?.role === 'OP. TEAM';
   const visibleOrders = isOpTeam 
-    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name)
+    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
     : deliveryOrders;
 
   const activeTasks = visibleOrders.filter(o => !o.isArchived).length;
@@ -69,7 +70,7 @@ export default function Dashboard() {
     <>
       <Header
         title="Board Overview"
-        subtitle={`${user?.role} Dashboard`}
+        subtitle={`${user?.role ? (ROLE_DISPLAY[user.role as keyof typeof ROLE_DISPLAY] ?? user.role) : ''} Dashboard`}
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       />
       <div className="dashboard-content">
@@ -102,38 +103,82 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="dashboard-grid">
 
-          {/* Scheduled Re-deliveries */}
+          {/* Re-delivery Requests from Clients */}
           <div className="card dashboard-activity">
             <div className="card-header">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <RefreshCw size={18} className="text-teal" />
-                Scheduled Re-deliveries
+                <Bell size={18} className="text-teal" />
+                Re-delivery Requests
+                {deliveryOrders.filter(o => o.redeliveryStatus === 'Pending Approval').length > 0 && (
+                  <span style={{
+                    background: '#EF4444',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    borderRadius: '50%',
+                    minWidth: '18px',
+                    height: '18px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px',
+                    animation: 'pulse 2s infinite',
+                  }}>
+                    {deliveryOrders.filter(o => o.redeliveryStatus === 'Pending Approval').length}
+                  </span>
+                )}
               </h3>
-              <button className="text-link" onClick={() => navigate('/tasks')}>Manage Tasks</button>
+              <button className="text-link" onClick={() => navigate('/delivery-orders')}>View Orders</button>
             </div>
             <div className="activity-feed-list">
-              {visibleOrders
-                .filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0)
+              {deliveryOrders
+                .filter(o => o.redeliveryStatus === 'Pending Approval')
                 .slice(0, 5).map((order) => (
-                <div key={order.id} className="activity-feed-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/delivery-orders/${order.id}`)}>
-                  <div className="activity-feed-dot" style={{ background: 'var(--status-failed)' }} />
-                  <div className="activity-feed-content" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                      <span className="activity-feed-text">
-                        <strong>{order.waybillNo}</strong> — Re-delivery attempt <strong>#{order.redeliveryAttemptCount}</strong>
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--status-failed)', background: 'var(--status-failed-bg)', padding: '2px 8px', borderRadius: '4px' }}>
-                        {order.status}
-                      </span>
+                <div key={order.id} className="activity-feed-item" style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', padding: '16px' }} onClick={() => navigate(`/delivery-orders/${order.id}`)}>
+                  <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                    <div className="activity-feed-dot" style={{ background: '#F59E0B', marginTop: '4px' }} />
+                    <div className="activity-feed-content" style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span className="activity-feed-text">
+                          <strong>{order.waybillNo}</strong> — {order.recipientName}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#92400E', background: '#FEF3C7', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                          Needs Approval
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        Requested: <strong>{order.redeliveryRequestedDate || 'Not specified'}</strong>
+                        {order.redeliveryRemarks && <span> · "{order.redeliveryRemarks}"</span>}
+                      </p>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Driver: <strong>{order.driverName}</strong> | Scheduled: <strong>{order.expectedDelivery}</strong>
-                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: '24px' }}>
+                    <button 
+                      className="btn btn-primary btn-sm" 
+                      style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/delivery-orders/${order.id}`);
+                      }}
+                    >
+                      Review & Approve
+                    </button>
+                    <button 
+                      className="btn btn-outline btn-sm" 
+                      style={{ padding: '4px 12px', fontSize: '0.75rem', color: '#EF4444', borderColor: '#FCA5A5' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // We'll navigate to detail for the prompt-based rejection logic
+                        navigate(`/delivery-orders/${order.id}`);
+                      }}
+                    >
+                      Reject
+                    </button>
                   </div>
                 </div>
               ))}
-              {visibleOrders.filter(o => (o.status === 'Pending' || o.status === 'In Transit') && o.redeliveryAttemptCount && o.redeliveryAttemptCount > 0).length === 0 && (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '16px 0', textAlign: 'center' }}>No active scheduled re-deliveries found.</p>
+              {deliveryOrders.filter(o => o.redeliveryStatus === 'Pending Approval').length === 0 && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '16px 0', textAlign: 'center' }}>No pending re-delivery requests from clients.</p>
               )}
             </div>
           </div>

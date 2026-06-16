@@ -18,18 +18,22 @@ export default function Notifications() {
     refreshOrders();
   }, [refreshOrders]);
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedId, setSelectedId] = useState(notifications.length > 0 ? notifications[0].id : '');
+  const [selectedId, setSelectedId] = useState('');
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   
   const selected = selectedId ? notifications.find(n => n.id === selectedId) : null;
   const filtered = activeTab === 'all' ? notifications : activeTab === 'read' ? notifications.filter(n => n.read) : notifications.filter(n => n.type === activeTab && !n.read);
 
-  const handleToggleCheck = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
-    e.stopPropagation();
-    if (e.target.checked) {
-      setCheckedIds(prev => [...prev, id]);
+  const handleToggleCheck = (e?: React.ChangeEvent<HTMLInputElement> | React.MouseEvent, id?: string) => {
+    if (e) e.stopPropagation();
+    const targetId = id || '';
+    if (!targetId) return;
+
+    if (checkedIds.includes(targetId)) {
+      setCheckedIds(prev => prev.filter(checkedId => checkedId !== targetId));
     } else {
-      setCheckedIds(prev => prev.filter(checkedId => checkedId !== id));
+      setCheckedIds(prev => [...prev, targetId]);
     }
   };
 
@@ -37,6 +41,7 @@ export default function Notifications() {
     if (checkedIds.length > 0) {
       checkedIds.forEach(id => markNotificationRead(id));
       setCheckedIds([]);
+      setIsSelectionMode(false);
     } else if (selectedId) {
       markNotificationRead(selectedId);
     }
@@ -46,6 +51,7 @@ export default function Notifications() {
     if (checkedIds.length > 0) {
       checkedIds.forEach(id => deleteNotification(id));
       setCheckedIds([]);
+      setIsSelectionMode(false);
       if (checkedIds.includes(selectedId)) setSelectedId('');
     } else if (selectedId) {
       deleteNotification(selectedId);
@@ -72,9 +78,44 @@ export default function Notifications() {
   return (
     <>
       {isDriver ? (
-        <div className="driver-notifications-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Notifications</h2>
-          <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all read</button>
+        <div className="driver-notifications-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isSelectionMode && checkedIds.length > 0 ? (
+              <span style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '1rem' }}>{checkedIds.length} Selected</span>
+            ) : (
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Notifications</h2>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {isSelectionMode ? (
+              <>
+                {checkedIds.length > 0 && (
+                  <>
+                    <button className="btn btn-primary btn-sm" onClick={handleMarkCheckedAsRead} style={{ padding: '6px 10px' }}>
+                      <Check size={14} /> <span style={{ marginLeft: '4px' }}>Read</span>
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={handleDeleteChecked} style={{ padding: '6px 10px' }}>
+                      <Trash2 size={14} /> <span style={{ marginLeft: '4px' }}>Delete</span>
+                    </button>
+                  </>
+                )}
+                <button 
+                  className="btn btn-outline btn-sm" 
+                  onClick={() => {
+                    setIsSelectionMode(false);
+                    setCheckedIds([]);
+                  }}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-outline btn-sm" onClick={() => setIsSelectionMode(true)}>Select</button>
+                <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all read</button>
+              </>
+            )}
+          </div>
         </div>
       ) : (
         <Header
@@ -121,10 +162,16 @@ export default function Notifications() {
                     {items.map(n => (
                       <div
                         key={n.id}
-                        className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''}`}
-                        onClick={() => setSelectedId(n.id)}
+                        className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''} ${isSelectionMode && checkedIds.includes(n.id) ? 'checked' : ''}`}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            handleToggleCheck(undefined, n.id);
+                          } else {
+                            setSelectedId(n.id);
+                          }
+                        }}
                       >
-                        {!isDriver && (
+                        {(!isDriver || isSelectionMode) && (
                           <input 
                             type="checkbox" 
                             className="notif-checkbox" 
@@ -285,16 +332,18 @@ export default function Notifications() {
         </Modal>
       )}
 
-      {/* Floating Selection Bar */}
+      {/* Floating Selection Bar (Admin/OP Only) */}
       {!isDriver && checkedIds.length > 0 && (
         <div className={`floating-selection-bar ${checkedIds.length > 0 ? 'visible' : ''}`}>
           <span className="floating-selection-count">{checkedIds.length} selected</span>
-          <button className="btn btn-sm" onClick={handleMarkCheckedAsRead}><Check size={14} /> Mark as read</button>
-          <button className="btn btn-sm btn-danger" onClick={handleDeleteChecked}><Trash2 size={14} /> Delete</button>
+          <button className="btn btn-sm" onClick={handleMarkCheckedAsRead}>
+            <Check size={14} /> Mark read
+          </button>
+          <button className="btn btn-sm btn-danger" onClick={handleDeleteChecked}>
+            <Trash2 size={14} /> Delete
+          </button>
         </div>
       )}
     </>
   );
 }
-
-

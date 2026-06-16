@@ -54,44 +54,9 @@
   text-decoration: underline;
 }
 
-/* Data Table */
+/* Data Table - Inherits styles from global index.css */
 .data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table thead tr {
-  background: #1B254B; /* Deep navy — looks right in light; overridden in dark via index.css */
-}
-
-.data-table th {
-  padding: 14px 16px;
-  text-align: left;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #E2E8F0;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: none;
-}
-
-.data-table td {
-  padding: 16px;
-  border-bottom: 1px dashed var(--border);
-  font-size: 0.88rem;
-  color: var(--text-primary);
-}
-
-.data-table tbody tr {
-  transition: background 0.15s ease;
-}
-
-.data-table tbody tr:hover {
-  background: rgba(0, 169, 157, 0.08); /* Distinct light-up effect */
-}
-
-.data-table tbody tr:last-child td {
-  border-bottom: none;
+  margin-top: 8px;
 }
 
 .cell-name {

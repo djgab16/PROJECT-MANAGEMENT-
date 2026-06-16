@@ -67,7 +67,7 @@ const REGIONS = [
 export default function EditDeliveryOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { employees, deliveryOrders, addDeliveryOrder, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
+  const { deliveryOrders, addDeliveryOrder, updateDeliveryOrder, deleteDeliveryOrder, addActivityLog } = useData();
   const { user } = useAuth();
 
   const isNew = id === 'new';
@@ -76,13 +76,18 @@ export default function EditDeliveryOrder() {
   const todayInputVal = formatDateToInput(todayStr);
 
   const [formData, setFormData] = useState<Partial<DeliveryOrder>>({});
-  const isTransitOrOutForDelivery = formData.status === 'In Transit' || formData.status === 'Out for Delivery';
-  const isReadOnly = isDriver || isTransitOrOutForDelivery;
+  // Lock editing once the driver has taken action on the order
+  const isDriverActive = [
+    'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'
+  ].includes(formData.status || '');
+  const isTransitOrOutForDelivery = ['In Transit', 'Out for Delivery'].includes(formData.status || '');
+  const isReadOnly = isDriver || isDriverActive;
   const inputStyle = isReadOnly ? { background: 'var(--bg-main)' } : {};
   const [customPackageName, setCustomPackageName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
@@ -140,8 +145,8 @@ export default function EditDeliveryOrder() {
           taskType: 'Delivery',
           potStatus: 'Not Submitted',
           itemCount: 1,
-          weight: '0.0 kg',
-          declaredValue: '₱ 0.00',
+          weight: '0.0',
+          declaredValue: '0.00',
           encodedBy: user?.name || 'Unknown',
           dateEncoded: new Date().toLocaleString(),
           lastUpdated: new Date().toLocaleString(),
@@ -226,13 +231,19 @@ export default function EditDeliveryOrder() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const currentYear = new Date().getFullYear();
+
     if (!formData.orderDate) {
       newErrors.orderDate = 'Order Date is required';
-    } else if (isNew) {
+    } else {
       const orderD = new Date(formData.orderDate);
       if (!isNaN(orderD.getTime())) {
-        orderD.setHours(0, 0, 0, 0);
-        if (orderD < today) newErrors.orderDate = 'Order Date cannot be in the past';
+        if (orderD.getFullYear() > currentYear) {
+          newErrors.orderDate = `Order Date year cannot be in the future (current year is ${currentYear})`;
+        } else if (isNew) {
+          orderD.setHours(0, 0, 0, 0);
+          if (orderD < today) newErrors.orderDate = 'Order Date cannot be in the past';
+        }
       }
     }
 
@@ -241,14 +252,22 @@ export default function EditDeliveryOrder() {
     } else {
       const expectedD = new Date(formData.expectedDelivery);
       if (!isNaN(expectedD.getTime())) {
-        expectedD.setHours(0, 0, 0, 0);
-        if (isNew && expectedD < today) {
-          newErrors.expectedDelivery = 'Expected Delivery date cannot be in the past';
-        } else if (formData.orderDate) {
-          const orderD = new Date(formData.orderDate);
-          if (!isNaN(orderD.getTime())) {
-            orderD.setHours(0, 0, 0, 0);
-            if (expectedD < orderD) newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
+        if (expectedD.getFullYear() > currentYear) {
+          newErrors.expectedDelivery = `Expected Delivery year cannot be in the future (current year is ${currentYear})`;
+        } else {
+          expectedD.setHours(0, 0, 0, 0);
+          if (isNew && expectedD < today) {
+            newErrors.expectedDelivery = 'Expected Delivery date cannot be in the past';
+          } else if (formData.orderDate) {
+            const orderD = new Date(formData.orderDate);
+            if (!isNaN(orderD.getTime())) {
+              orderD.setHours(0, 0, 0, 0);
+              if (expectedD < orderD) {
+                newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
+              } else if (expectedD.getFullYear() !== orderD.getFullYear()) {
+                newErrors.expectedDelivery = `Expected Delivery year must match the Order Date year (${orderD.getFullYear()})`;
+              }
+            }
           }
         }
       }
@@ -256,6 +275,10 @@ export default function EditDeliveryOrder() {
 
     if (formData.status === 'Failed' && !formData.failureReason) {
       newErrors.failureReason = 'Failure Reason is required when status is Failed';
+    }
+
+    if (!formData.packageType) {
+      newErrors.packageType = 'Package Type is required';
     }
 
     if (isCustomPackageSelected && !customPackageName.trim()) {
@@ -268,6 +291,7 @@ export default function EditDeliveryOrder() {
       const weightNum = parseFloat(formData.weight.toString().replace(/kg/i, '').trim());
       if (isNaN(weightNum) || weightNum <= 0) newErrors.weight = 'Weight must be a positive number greater than 0';
     }
+
 
     if (formData.itemCount === undefined || formData.itemCount === null || String(formData.itemCount).trim() === '') {
       newErrors.itemCount = 'Item Count is required';
@@ -314,6 +338,7 @@ export default function EditDeliveryOrder() {
     const finalPackageType = isCustomPackageSelected ? customPackageName : formData.packageType;
     const cleanedWeight = formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : '0.0';
     const weightWithUnit = `${cleanedWeight} kg`;
+    const finalRoute = formData.taskType === 'Pickup' ? 'Manila' : (formData.area || '');
 
     try {
       if (isNew) {
@@ -322,6 +347,7 @@ export default function EditDeliveryOrder() {
           ...formData,
           packageType: finalPackageType,
           weight: weightWithUnit,
+          route: finalRoute,
         };
         const newOrder = orderWithoutId as Omit<DeliveryOrder, 'id'>;
 
@@ -343,6 +369,7 @@ export default function EditDeliveryOrder() {
           ...formData,
           packageType: finalPackageType,
           weight: weightWithUnit,
+          route: finalRoute,
           updatedBy: user?.name || 'Unknown',
           lastUpdated: new Date().toLocaleString()
         };
@@ -368,29 +395,32 @@ export default function EditDeliveryOrder() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (isSubmitting) return;
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      try {
-        setIsSubmitting(true);
-        await deleteDeliveryOrder(id!);
-        await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: user?.name || 'System',
-          userRole: user?.role || 'Staff',
-          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-          userColor: '#E31A1A',
-          action: 'Delete',
-          description: `Deleted delivery order ${formData.waybillNo}`,
-          reference: formData.waybillNo
-        });
-        navigate('/delivery-orders');
-      } catch (err) {
-        console.error("Delete failed:", err);
-      } finally {
-        setIsSubmitting(false);
-      }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    try {
+      setIsSubmitting(true);
+      await deleteDeliveryOrder(id!);
+      await addActivityLog({
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleString(),
+        userName: user?.name || 'System',
+        userRole: user?.role || 'Staff',
+        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
+        userColor: '#E31A1A',
+        action: 'Update',
+        description: `Cancelled delivery order ${formData.waybillNo}`,
+        reference: formData.waybillNo
+      });
+      navigate('/delivery-orders');
+    } catch (err) {
+      console.error("Cancel failed:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -475,6 +505,11 @@ export default function EditDeliveryOrder() {
                         today.setHours(0, 0, 0, 0);
                         if (newOrderDateStr) {
                           const orderD = new Date(newOrderDateStr);
+                          const currentYear = new Date().getFullYear();
+                          if (!isNaN(orderD.getTime()) && orderD.getFullYear() > currentYear) {
+                            setErrors(prev => ({ ...prev, orderDate: `Order Date year cannot be in the future (current year is ${currentYear})` }));
+                            return;
+                          }
                           if (isNew && !isNaN(orderD.getTime()) && orderD < today) {
                             setErrors(prev => ({ ...prev, orderDate: 'Order Date cannot be in the past' }));
                             return;
@@ -514,6 +549,15 @@ export default function EditDeliveryOrder() {
                         today.setHours(0, 0, 0, 0);
                         const expectedD = new Date(formatted);
                         
+                        const currentYear = new Date().getFullYear();
+                        if (!isNaN(expectedD.getTime()) && expectedD.getFullYear() > currentYear) {
+                          setErrors(prev => ({ 
+                            ...prev, 
+                            expectedDelivery: `Expected Delivery year cannot be in the future (current year is ${currentYear})` 
+                          }));
+                          return;
+                        }
+                        
                         if (isNew && !isNaN(expectedD.getTime()) && expectedD < today) {
                           setErrors(prev => ({ 
                             ...prev, 
@@ -534,6 +578,13 @@ export default function EditDeliveryOrder() {
                               }));
                               return;
                             }
+                            if (expectedD.getFullYear() !== orderD.getFullYear()) {
+                              setErrors(prev => ({ 
+                                ...prev, 
+                                expectedDelivery: `Expected Delivery year must match the Order Date year (${orderD.getFullYear()})` 
+                              }));
+                              return;
+                            }
                           }
                         }
                         setErrors(prev => ({ ...prev, expectedDelivery: '' }));
@@ -545,7 +596,7 @@ export default function EditDeliveryOrder() {
                   {errors.expectedDelivery && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.expectedDelivery}</span>}
                 </div>
               </div>
-              <div className="form-row four-col" style={{ marginTop: '16px' }}>
+              <div className="form-row three-col">
                 <div className="form-group" ref={areaRef} style={{ position: 'relative' }}>
                   <label className="form-label">AREA / ROUTE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <input 
@@ -606,17 +657,7 @@ export default function EditDeliveryOrder() {
                     <option value="Pickup">Pickup</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">STATUS</label>
-                  <select name="status" className="form-input" value={formData.status} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
-                    <option value="Pending">Pending</option>
-                    <option value="In Transit">In Transit</option>
-                    <option value="Out for Delivery">Out for Delivery</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Failed">Failed</option>
-                  </select>
-                </div>
+
                 <div className="form-group">
                   <label className="form-label">DELIVERY PRIORITY</label>
                   <select name="priority" className="form-input" value={formData.priority || 'Medium'} onChange={handleChange} disabled={isReadOnly} style={inputStyle}>
@@ -626,40 +667,6 @@ export default function EditDeliveryOrder() {
                   </select>
                 </div>
               </div>
-
-              {!isPickup && (
-                <div className="form-row two-col" style={{ marginTop: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label">ASSIGNED COURIER / DRIVER</label>
-                    <select
-                      name="driverId"
-                      className="form-input"
-                      value={formData.driverId || ''}
-                      onChange={(e) => {
-                        const drvId = e.target.value;
-                        const selectedDriver = employees.find(emp => emp.id === drvId);
-                        setFormData(prev => ({
-                          ...prev,
-                          driverId: drvId ? Number(drvId) : undefined,
-                          driverName: selectedDriver?.name || '',
-                          driverInitials: selectedDriver?.name ? selectedDriver.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '',
-                          driverColor: selectedDriver?.color || '#6B7280'
-                        }));
-                      }}
-                      disabled={isReadOnly}
-                      style={inputStyle}
-                    >
-                      <option value="">Unassigned</option>
-                      {employees.filter(e => e.role === 'DRIVER').map(drv => (
-                        <option key={drv.id} value={drv.id}>{drv.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    {/* Hanger for layout balance */}
-                  </div>
-                </div>
-              )}
 
               {formData.status === 'Failed' && (
                 <div className="form-row two-col" style={{ marginTop: '16px', background: 'var(--status-failed-bg)', padding: '16px', borderRadius: '8px', border: '1px solid #ffdcd9' }}>
@@ -694,17 +701,17 @@ export default function EditDeliveryOrder() {
                   </div>
                 </div>
               )}
-              <div className="form-row three-col" style={{ marginTop: '16px' }}>
+              <div className={`form-row ${isCustomPackageSelected ? 'four-col' : 'three-col'}`}>
                 <div className="form-group">
-                  <label className="form-label">PACKAGE TYPE / BOX</label>
-                  <select 
-                    name="packageType" 
-                    className="form-input" 
+                  <label className="form-label">PACKAGE TYPE / BOX <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <select
+                    name="packageType"
+                    className="form-input"
                     value={
-                      formData.packageType === '' || ['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType || '')
+                      !formData.packageType || ['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType)
                         ? formData.packageType || ''
                         : 'Custom'
-                    } 
+                    }
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === 'Custom') {
@@ -719,8 +726,8 @@ export default function EditDeliveryOrder() {
                       }
                       setErrors(prev => ({ ...prev, customPackageName: '' }));
                     }}
-                    disabled={isReadOnly} 
-                    style={inputStyle}
+                    disabled={isReadOnly}
+                    style={getInputStyle('packageType')}
                   >
                     <option value="">Select Box Type</option>
                     <option value="Small Box">Small Box</option>
@@ -729,24 +736,25 @@ export default function EditDeliveryOrder() {
                     <option value="Document / Pouch">Document / Pouch</option>
                     <option value="Custom">Custom / Other</option>
                   </select>
+                  {errors.packageType && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.packageType}</span>}
                 </div>
                 {isCustomPackageSelected && (
-                  <div className="form-group animate-fade-in" style={{ marginTop: '12px' }}>
+                  <div className="form-group animate-fade-in">
                     <label className="form-label">CUSTOM PACKAGE TYPE <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="customPackageName"
-                      className="form-input" 
-                      value={customPackageName} 
+                      className="form-input"
+                      value={customPackageName}
                       onChange={(e) => {
                         setCustomPackageName(e.target.value);
                         if (errors.customPackageName) {
                           setErrors(prev => ({ ...prev, customPackageName: '' }));
                         }
-                      }} 
-                      placeholder="Specify custom package type..." 
-                      readOnly={isReadOnly} 
-                      style={getInputStyle('customPackageName')} 
+                      }}
+                      placeholder="Specify custom package type..."
+                      readOnly={isReadOnly}
+                      style={getInputStyle('customPackageName')}
                     />
                     {errors.customPackageName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.customPackageName}</span>}
                   </div>
@@ -754,11 +762,11 @@ export default function EditDeliveryOrder() {
                 <div className="form-group">
                   <label className="form-label">WEIGHT <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <div className="form-input-icon" style={{ position: 'relative' }}>
-                    <input 
+                    <input
                       type="text"
-                      name="weight" 
-                      className="form-input" 
-                      value={formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : ''} 
+                      name="weight"
+                      className="form-input"
+                      value={formData.weight ? formData.weight.toString().replace(/kg/i, '').trim() : ''}
                       onChange={(e) => {
                         const val = e.target.value;
                         const cleanVal = val.replace(/[^0-9.]/g, '');
@@ -768,10 +776,20 @@ export default function EditDeliveryOrder() {
                         if (errors.weight) {
                           setErrors(prev => ({ ...prev, weight: '' }));
                         }
-                      }} 
-                      placeholder="e.g. 1.5" 
-                      readOnly={isReadOnly} 
-                      style={getInputStyle('weight', { paddingRight: '40px' })} 
+                      }}
+                      onFocus={() => {
+                        if (formData.weight === '0.0' || formData.weight === '0') {
+                          setFormData(prev => ({ ...prev, weight: '' }));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!formData.weight) {
+                          setFormData(prev => ({ ...prev, weight: '0.0' }));
+                        }
+                      }}
+                      placeholder="0.0"
+                      readOnly={isReadOnly}
+                      style={getInputStyle('weight', { paddingRight: '40px', paddingLeft: '16px', textAlign: 'right' })}
                     />
                     <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '0.85rem', pointerEvents: 'none', fontWeight: 600 }}>kg</span>
                   </div>
@@ -783,31 +801,17 @@ export default function EditDeliveryOrder() {
                   {errors.itemCount && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.itemCount}</span>}
                 </div>
               </div>
-              <div className="form-row two-col" style={{ marginTop: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">DECLARED VALUE</label>
-                  <input
-                    name="declaredValue"
-                    className="form-input"
-                    value={formData.declaredValue || ''}
-                    onChange={handleChange}
-                    readOnly={isReadOnly}
-                    placeholder="e.g. ₱ 500.00"
-                    style={getInputStyle('declaredValue')}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">SPECIAL INSTRUCTIONS</label>
-                  <textarea
-                    name="specialInstructions"
-                    className="form-input form-textarea"
-                    value={formData.specialInstructions || ''}
-                    onChange={handleChange}
-                    readOnly={isReadOnly}
-                    placeholder="e.g. Fragile, handle with care"
-                    style={{ ...getInputStyle('specialInstructions'), minHeight: '72px' }}
-                  />
-                </div>
+              <div className="form-group">
+                <label className="form-label">SPECIAL INSTRUCTIONS</label>
+                <textarea
+                  name="specialInstructions"
+                  className="form-input form-textarea"
+                  value={formData.specialInstructions || ''}
+                  onChange={handleChange}
+                  readOnly={isReadOnly}
+                  placeholder="e.g. Fragile, handle with care"
+                  style={{ ...getInputStyle('specialInstructions'), minHeight: '72px' }}
+                />
               </div>
             </div>
 
@@ -874,14 +878,13 @@ export default function EditDeliveryOrder() {
               </div>
               <div className="POT-upload-area" style={{ marginTop: '12px', border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', background: 'var(--bg-main)' }}>
                 {formData.potImage ? (
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                     <img src={formData.potImage} alt="POT Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '4px' }} />
                     <button 
                       className="btn btn-sm btn-danger" 
-                      style={{ position: 'absolute', top: '8px', right: '8px' }}
                       onClick={(e) => { e.preventDefault(); setFormData(p => ({ ...p, potImage: undefined, potStatus: 'Not Submitted' })) }}
                     >
-                      Remove
+                      Remove Image
                     </button>
                   </div>
                 ) : (
@@ -918,7 +921,7 @@ export default function EditDeliveryOrder() {
               </button>
             )}
             <button className="btn btn-outline" disabled={isSubmitting} onClick={() => navigate(-1)}><Undo2 size={16} /> {(isDriver || isTransitOrOutForDelivery) ? 'Back' : 'Discard'}</button>
-            {!isNew && !isDriver && !isTransitOrOutForDelivery && <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> Delete Order</button>}
+            {!isNew && !isDriver && !isTransitOrOutForDelivery && <button className="btn btn-danger" disabled={isSubmitting} onClick={handleDelete}><Trash2 size={16} /> Cancel Order</button>}
           </div>
         </div>
       </div>
@@ -928,9 +931,11 @@ export default function EditDeliveryOrder() {
         <Modal isOpen={showSaveConfirm} onClose={() => setShowSaveConfirm(false)} title={isNew ? 'Confirm Create Order' : 'Confirm Save Changes'}>
           <div style={{ padding: '8px 0 16px' }}>
             <p style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>
-              {isNew
-                ? `You are about to create a new delivery order for <strong>${formData.clientName}</strong>.`
-                : `You are about to save changes to waybill <strong>${formData.waybillNo}</strong>.`}
+              {isNew ? (
+                <>You are about to create a new delivery order for <strong>{formData.clientName}</strong>.</>
+              ) : (
+                <>You are about to save changes to waybill <strong>{formData.waybillNo}</strong>.</>
+              )}
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
               Please confirm that all information is correct before proceeding.
@@ -942,6 +947,28 @@ export default function EditDeliveryOrder() {
             </button>
             <button className="btn btn-primary" onClick={handleSave} disabled={isSubmitting}>
               <Save size={14} /> {isNew ? 'Yes, Create Order' : 'Yes, Save Changes'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Cancel Delivery Order">
+          <div style={{ padding: '8px 0 16px' }}>
+            <p style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>
+              Are you sure you want to cancel order <strong>{formData.waybillNo}</strong>?
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              This action will move the order to the Archive. This cannot be undone from this page.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" onClick={() => setShowDeleteConfirm(false)}>
+              Keep Order
+            </button>
+            <button className="btn btn-danger" onClick={confirmDelete} disabled={isSubmitting}>
+              <Trash2 size={14} /> Yes, Cancel Order
             </button>
           </div>
         </Modal>

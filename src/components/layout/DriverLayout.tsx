@@ -13,13 +13,9 @@ export default function DriverLayout() {
     <div className="driver-layout">
       <header className="driver-header">
         <div className="driver-header-left">
-          {!isDashboard ? (
+          {!isDashboard && (
             <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Go Back">
               <ArrowLeft size={24} />
-            </button>
-          ) : (
-            <button className="icon-btn-plain" aria-label="Menu">
-              <Menu size={24} />
             </button>
           )}
         </div>

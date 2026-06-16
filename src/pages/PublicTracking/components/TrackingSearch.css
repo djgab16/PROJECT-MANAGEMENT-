@@ -71,11 +71,7 @@
   padding: 0 1rem;
 }
 
-.tracking-search-hero .search-icon {
-  color: #9CA3AF !important;
-  margin-right: 0.75rem;
-  flex-shrink: 0;
-}
+
 
 /* Force the input to always be white inside the pill */
 .tracking-search-hero .search-input,

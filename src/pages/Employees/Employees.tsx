@@ -8,10 +8,12 @@ import { Pencil, Trash2, Plus, X } from 'lucide-react';
 import type { Employee } from '../../types';
 
 export default function Employees() {
-  const { employees, addEmployee, deleteEmployee, updateEmployee, addActivityLog } = useData();
+  const { employees, addEmployee, deleteEmployee, updateEmployee } = useData();
   const { user } = useAuth();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [empToDelete, setEmpToDelete] = useState<{id: string, name: string} | null>(null);
   const [formData, setFormData] = useState<Partial<Employee>>({ status: 'Active', role: 'OP. TEAM', systemAccess: 'Delivery Tracker' });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -31,33 +33,22 @@ export default function Employees() {
     
     if (editingId) {
       updateEmployee(editingId, formData);
-      addActivityLog({
-        id: Date.now().toString(), timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System', userRole: user?.role || 'Admin',
-        userInitials: 'SY', userColor: '#FFB547', action: 'Update',
-        description: `Updated details for employee ${formData.name}`
-      });
     } else {
       addEmployee(formData as Employee);
-      addActivityLog({
-        id: Date.now().toString(), timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System', userRole: user?.role || 'Admin',
-        userInitials: 'SY', userColor: '#01B574', action: 'Create',
-        description: `Added new employee ${formData.name}`
-      });
     }
     setIsFormOpen(false);
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to remove ${name}?`)) {
-      deleteEmployee(id);
-      addActivityLog({
-        id: Date.now().toString(), timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System', userRole: user?.role || 'Admin',
-        userInitials: 'SY', userColor: '#E31A1A', action: 'Delete',
-        description: `Removed employee ${name}`
-      });
+    setEmpToDelete({ id, name });
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (empToDelete) {
+      deleteEmployee(empToDelete.id);
+      setShowDeleteConfirm(false);
+      setEmpToDelete(null);
     }
   };
 
@@ -88,7 +79,7 @@ export default function Employees() {
                 <label className="form-label">ROLE</label>
                 <select className="form-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value as Employee['role']})}>
                   <option>ADMIN</option>
-                  <option>OP. TEAM</option>
+                  <option value="OP. TEAM">ENCODER</option>
                   <option>DRIVER</option>
                 </select>
               </div>
@@ -158,6 +149,25 @@ export default function Employees() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: '#E31A1A' }}>
+              <Trash2 size={24} />
+              <h4 style={{ margin: 0 }}>Remove Employee</h4>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Are you sure you want to remove <strong>{empToDelete?.name}</strong>? This action will permanently delete their account and access.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+              <button className="btn btn-danger btn-sm" onClick={confirmDelete}>Yes, Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -2,7 +2,26 @@
 .logs-filter { position: sticky; top: 80px; height: fit-content; display: flex; flex-direction: column; gap: 16px; }
 .check-option { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 4px 0; cursor: pointer; }
 .check-option input[type="checkbox"] { accent-color: var(--primary); }
-.check-count { margin-left: auto; font-size: 0.72rem; color: var(--text-secondary); }
+.check-count { margin-left: auto; font-size: 0.72rem; color: var(--text-secondary); background: var(--bg-main); padding: 1px 6px; border-radius: 10px; min-width: 24px; text-align: center; }
+
+.filter-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding-right: 4px;
+}
+
+.filter-options-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-options-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
 .action-badge { display: inline-flex; padding: 4px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
 .desc-cell { max-width: 300px; line-height: 1.4; }
 .logs-table thead { background: var(--primary-dark); }

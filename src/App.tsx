@@ -25,6 +25,7 @@ import DriverSettings from './pages/DRIVER/DriverSettings';
 import PublicTracking from './pages/PublicTracking/PublicTracking';
 import Employees from './pages/Employees/Employees';
 import RoleAccess from './pages/RoleAccess/RoleAccess';
+import DesignSystem from './pages/DesignSystem/DesignSystem';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/role-access" element={<RoleAccess />} />
+              <Route path="/design-system" element={<DesignSystem />} />
             </Route>
           </Route>
         </Route>

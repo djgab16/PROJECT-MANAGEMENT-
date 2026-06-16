@@ -6,6 +6,13 @@ export type AccountStatus = 'Active' | 'Pending' | 'Locked';
 export type NotificationType = 'alert' | 'success' | 'system' | 'info';
 export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'POD Upload' | 'Login' | 'Archive' | 'Delete';
 
+/** Maps internal role values to their UI display labels. */
+export const ROLE_DISPLAY: Record<UserRole, string> = {
+  'ADMIN': 'ADMIN',
+  'OP. TEAM': 'ENCODER',
+  'DRIVER': 'DRIVER',
+};
+
 export interface Employee {
   id: string;
   employeeId: string;

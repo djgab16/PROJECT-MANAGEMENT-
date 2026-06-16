@@ -150,6 +150,22 @@ namespace SPXDeliveryAPI.Services
             {
                 throw new ArgumentException("Expected Delivery Date cannot be before the Order Date.");
             }
+
+            if (expectedDate.Year != orderDate.Year)
+            {
+                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) must match the Order Date Year ({orderDate.Year}).");
+            }
+
+            int currentYear = DateTime.UtcNow.Year;
+            if (orderDate.Year > currentYear)
+            {
+                throw new ArgumentException($"Order Date Year ({orderDate.Year}) cannot be in the future (current year is {currentYear}).");
+            }
+
+            if (expectedDate.Year > currentYear)
+            {
+                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) cannot be in the future (current year is {currentYear}).");
+            }
         }
 
         private async Task AutoExpireReadyPickupsAsync()
@@ -253,45 +269,21 @@ namespace SPXDeliveryAPI.Services
             if (string.IsNullOrWhiteSpace(order.Route))
                 order.Route = order.Area;
 
+            // Use the frontend-supplied waybill if it looks valid (SPX-YYYY-NNNNNN),
+            // otherwise generate one. We then rely on the DB unique constraint to catch
+            // the rare collision and surface it as a clear error — no retry loop needed.
             var year = DateTime.UtcNow.Year;
-            var maxRetries = 10;
-            var retryCount = 0;
-            bool saved = false;
-
-            while (retryCount < maxRetries)
+            if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"SPX-{year}"))
             {
-                try
-                {
-                    var baseCount = await _context.DeliveryOrders.CountAsync(o => o.WaybillNo.StartsWith($"SPX-{year}"));
-                    var count = baseCount + 1 + retryCount;
-                    order.WaybillNo = $"SPX-{year}-{count:D4}";
-
-                    if (await _context.DeliveryOrders.AnyAsync(o => o.WaybillNo == order.WaybillNo))
-                    {
-                        retryCount++;
-                        continue;
-                    }
-
-                    await _context.DeliveryOrders.AddAsync(order);
-                    await _context.SaveChangesAsync();
-                    saved = true;
-                    break;
-                }
-                catch (DbUpdateException)
-                {
-                    _context.Entry(order).State = EntityState.Detached;
-                    retryCount++;
-                    if (retryCount >= maxRetries)
-                    {
-                        throw new InvalidOperationException("Failed to generate a unique waybill number after multiple attempts. Please try again.");
-                    }
-                }
+                // Derive a waybill from the DB identity sequence: use the current max Id
+                // + 1 as the sequence number. This is a single non-locking read and avoids
+                // the COUNT/ANY/retry pattern that caused deadlocks under concurrent saves.
+                var maxId = await _context.DeliveryOrders.MaxAsync(o => (int?)o.Id) ?? 0;
+                order.WaybillNo = $"SPX-{year}-{maxId + 1:D4}";
             }
 
-            if (!saved)
-            {
-                throw new InvalidOperationException("Order could not be saved due to database issues.");
-            }
+            await _context.DeliveryOrders.AddAsync(order);
+            await _context.SaveChangesAsync();
 
             // Insert initial history log
             var historyLog = new DeliveryHistoryLog
@@ -629,6 +621,15 @@ namespace SPXDeliveryAPI.Services
             };
             await _context.ActivityLogs.AddAsync(activityLog);
 
+            // Cascade-delete all notifications linked to this order's waybill number
+            var linkedNotifications = await _context.Notifications
+                .Where(n => n.WaybillNo == order.WaybillNo)
+                .ToListAsync();
+            if (linkedNotifications.Count > 0)
+            {
+                _context.Notifications.RemoveRange(linkedNotifications);
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -704,7 +705,7 @@ namespace SPXDeliveryAPI.Services
 
                 // Delivery sequence: Pending -> Processing -> Assigned -> Picked Up -> In Transit -> Out for Delivery -> Delivered
                 bool isValid = false;
-                if (oldStatus == "Pending" && (newStatus == "Processing" || newStatus == "Cancelled")) isValid = true;
+                if (oldStatus == "Pending" && (newStatus == "Processing" || newStatus == "Assigned" || newStatus == "Picked Up" || newStatus == "In Transit" || newStatus == "Cancelled")) isValid = true;
                 else if (oldStatus == "Processing" && (newStatus == "Assigned" || newStatus == "Cancelled" || newStatus == "Pending")) isValid = true;
                 else if (oldStatus == "Assigned" && (newStatus == "Picked Up" || newStatus == "Cancelled" || newStatus == "Processing" || newStatus == "Pending")) isValid = true;
                 else if (oldStatus == "Picked Up" && (newStatus == "In Transit" || newStatus == "Cancelled" || newStatus == "Assigned" || newStatus == "Processing")) isValid = true;

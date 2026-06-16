@@ -23,6 +23,7 @@ export interface PublicTrackingResponse {
   driverColor?: string;
   redeliveryStatus?: 'Pending Approval' | 'Approved' | 'Rejected' | 'None';
   redeliveryRequestedDate?: string;
+  redeliveryScheduledDate?: string;
   redeliveryRemarks?: string;
   taskType?: 'Delivery' | 'Pickup';
   redeliveryAttemptCount?: number;

@@ -35,12 +35,6 @@ export default function RoleAccess() {
     localStorage.setItem('app-permissions', JSON.stringify(permissions));
     setIsSaved(true);
     addActivityLog({
-      id: Date.now().toString(),
-      timestamp: new Date().toLocaleString(),
-      userName: user?.name || 'System',
-      userRole: user?.role || 'Admin',
-      userInitials: 'AD',
-      userColor: '#E31A1A',
       action: 'Update',
       description: 'Modified role access permission matrix'
     });
@@ -60,12 +54,12 @@ export default function RoleAccess() {
             <thead>
               <tr>
                 <th>MODULE FEATURE</th>
-                <th style={{ textAlign: 'center' }}>OP. TEAM</th>
+                <th style={{ textAlign: 'center' }}>ENCODER</th>
                 <th style={{ textAlign: 'center' }}>ADMIN</th>
               </tr>
             </thead>
             <tbody>
-              {permissions.map((p, idx) => (
+              {permissions.map((p: { module: string; op: boolean; admin: boolean; }, idx: number) => (
                 <tr key={p.module}>
                   <td><strong>{p.module}</strong></td>
                   <td style={{ textAlign: 'center' }}><input type="checkbox" checked={p.op} onChange={() => handleToggle(idx, 'op')} style={{ transform: 'scale(1.2)' }} /></td>

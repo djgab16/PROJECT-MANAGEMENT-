@@ -1,11 +1,10 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, FileText, BarChart3,
-  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon, Sun, Moon,
-  Users, ShieldAlert
+  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { ROLE_DISPLAY } from '../../types';
 import logo from '../../assets/logo.png';
 import './Sidebar.css';
 
@@ -19,7 +18,7 @@ interface NavLinkConfig {
 }
 
 const mainLinks: NavLinkConfig[] = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/tasks', icon: ClipboardList, label: 'Tasks' },
   { to: '/archive', icon: ArchiveIcon, label: 'Archive' },
 ];
@@ -31,8 +30,6 @@ const integrationLinks: NavLinkConfig[] = [
 ];
 
 const systemLinks: NavLinkConfig[] = [
-  { to: '/employees', icon: Users, label: 'Employee Directory', allowedRoles: ['ADMIN'] },
-  { to: '/role-access', icon: ShieldAlert, label: 'Role Access Matrix', allowedRoles: ['ADMIN'] },
   { to: '/settings', icon: Settings, label: 'Settings', allowedRoles: ['ADMIN'] },
   { to: '/activity-logs', icon: Activity, label: 'Activity Logs' },
 ];
@@ -46,7 +43,6 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -74,8 +70,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       <div className="sidebar-role-section">
         <div className={`sidebar-role-badge ${user?.role ? user.role.toLowerCase().replaceAll('.', '').replaceAll(' ', '-') : 'employee'}`}>
-          {theme === 'dark' ? <Moon size={14} className="role-icon" /> : <Sun size={14} className="role-icon" />}
-          {user?.role || 'EMPLOYEE'}
+          {user?.role ? (ROLE_DISPLAY[user.role as keyof typeof ROLE_DISPLAY] ?? user.role) : 'EMPLOYEE'}
         </div>
       </div>
 

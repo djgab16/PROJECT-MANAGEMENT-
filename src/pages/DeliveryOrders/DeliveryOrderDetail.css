@@ -40,7 +40,7 @@
   position: relative;
 }
 
-.stepper-item {
+.detail-stepper .stepper-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -49,62 +49,62 @@
   flex: 1;
 }
 
-.stepper-circle {
+.detail-stepper .stepper-circle {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  border: 2px solid rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.65);
   transition: all 0.3s;
 }
 
-.stepper-done .stepper-circle {
+.detail-stepper .stepper-done .stepper-circle {
   background: var(--primary);
   border-color: var(--primary);
   color: white;
 }
 
-.stepper-current .stepper-circle {
+.detail-stepper .stepper-current .stepper-circle {
   background: var(--primary);
   border-color: var(--primary);
   color: white;
   box-shadow: 0 0 0 6px rgba(0, 169, 157, 0.2);
 }
 
-.stepper-label {
+.detail-stepper .stepper-label {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.65);
 }
 
-.stepper-done .stepper-label,
-.stepper-current .stepper-label {
+.detail-stepper .stepper-done .stepper-label,
+.detail-stepper .stepper-current .stepper-label {
   color: white;
 }
 
-.stepper-time {
+.detail-stepper .stepper-time {
   font-size: 0.65rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.65);
 }
 
-.stepper-line {
+.detail-stepper .stepper-line {
   position: absolute;
   top: 34px;
   left: 12.5%;
   right: 12.5%;
   height: 3px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   z-index: 1;
 }
 
-.stepper-line-fill {
+.detail-stepper .stepper-line-fill {
   height: 100%;
   background: var(--primary);
   border-radius: 2px;

@@ -46,9 +46,10 @@ namespace SPXDeliveryAPI.Controllers
             {
                 query = query.Where(o => o.Driver != null && o.Driver.EmployeeId == employeeId && o.TaskType != "Pickup");
             }
-            else if (userRole == "OP. TEAM")
+            if (userRole == "OP. TEAM")
             {
-                query = query.Where(o => o.EncodedBy == userName || o.UpdatedBy == userName);
+                // Allow OP. TEAM to see their own orders OR orders that need re-delivery approval
+                query = query.Where(o => o.EncodedBy == userName || o.UpdatedBy == userName || o.RedeliveryStatus == "Pending Approval");
             }
 
             if (isArchived.HasValue)
@@ -69,7 +70,34 @@ namespace SPXDeliveryAPI.Controllers
                                       || o.ClientName.ToLower().Contains(q));
             }
 
-            var orders = await query.ToListAsync();
+            // Project to exclude heavy nvarchar(max) image columns (PotImage, PodImage).
+            // Those are large base64 strings that make this query extremely slow.
+            // Use GET /{id} to retrieve the full record including images.
+            var orders = await query.Select(o => new
+            {
+                o.Id, o.WaybillNo, o.ClientName, o.ClientType, o.ContactNumber,
+                o.SenderAddress, o.RecipientName, o.RecipientContact, o.RecipientAddress,
+                o.Area, o.Landmark, o.Route, o.Status, o.TaskType,
+                o.PotStatus, o.PodStatus, o.PackageType, o.PackageDescription,
+                o.ItemCount, o.Weight, o.DeclaredValue,
+                PotImage = (string?)null,  // excluded from list — fetch via GET /{id}
+                PodImage = (string?)null,
+                o.RedeliveryScheduledDate, o.RedeliveryRemarks, o.RedeliveryAttemptCount,
+                o.RedeliveryDriverId, o.RedeliveryStatus, o.RedeliveryRequestedDate,
+                o.LiveLatitude, o.LiveLongitude, o.LastLiveUpdate,
+                o.RecipientLatitude, o.RecipientLongitude,
+                o.FailureReason, o.FailureRemarks,
+                o.Priority, o.SpecialInstructions,
+                o.OrderDate, o.ExpectedDelivery, o.DateCompleted,
+                o.IsArchived, o.CompletedAt, o.ArchivedReason,
+                o.EncodedBy, o.DateEncoded, o.LastUpdated, o.UpdatedBy, o.DriverId,
+                Driver = o.Driver == null ? null : new
+                {
+                    o.Driver.Id, o.Driver.Name, o.Driver.Initials,
+                    o.Driver.Color, o.Driver.EmployeeId, o.Driver.Role
+                }
+            }).ToListAsync();
+
             return Ok(orders);
         }
 
@@ -92,7 +120,7 @@ namespace SPXDeliveryAPI.Controllers
             }
             else if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -129,12 +157,24 @@ namespace SPXDeliveryAPI.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            var existingOrder = await _service.GetOrderByIdAsync(id);
+            if (existingOrder == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "OP. TEAM")
+            {
+                if (existingOrder.EncodedBy != userName && existingOrder.UpdatedBy != userName && existingOrder.RedeliveryStatus != "Pending Approval")
+                {
+                    return Forbid();
+                }
+            }
+
             try
             {
                 order.UpdatedBy = User.Identity?.Name ?? order.UpdatedBy ?? "System";
                 var updatedOrder = await _service.UpdateOrderAsync(id, order);
-                if (updatedOrder == null) return NotFound(new { message = "Order not found." });
-
                 return Ok(updatedOrder);
             }
             catch (ArgumentException ex)
@@ -151,6 +191,20 @@ namespace SPXDeliveryAPI.Controllers
         [Authorize(Policy = "OpTeamAndAbove")]
         public async Task<IActionResult> Delete(int id)
         {
+            var order = await _service.GetOrderByIdAsync(id);
+            if (order == null) return NotFound(new { message = "Order not found." });
+
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+            var userName = User.Identity?.Name;
+
+            if (userRole == "OP. TEAM")
+            {
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
+                {
+                    return Forbid();
+                }
+            }
+
             var success = await _service.DeleteOrderAsync(id);
             if (!success) return NotFound(new { message = "Order not found." });
 
@@ -176,7 +230,7 @@ namespace SPXDeliveryAPI.Controllers
             }
             else if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -218,7 +272,7 @@ namespace SPXDeliveryAPI.Controllers
             }
             else if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -287,7 +341,7 @@ namespace SPXDeliveryAPI.Controllers
 
             if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -323,7 +377,7 @@ namespace SPXDeliveryAPI.Controllers
 
             if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -363,7 +417,7 @@ namespace SPXDeliveryAPI.Controllers
 
             if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -419,7 +473,7 @@ namespace SPXDeliveryAPI.Controllers
             }
             else if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -521,6 +575,7 @@ namespace SPXDeliveryAPI.Controllers
                 driverColor = order.Driver?.Color ?? "#00A99D",
                 redeliveryStatus = order.RedeliveryStatus ?? "None",
                 redeliveryRequestedDate = order.RedeliveryRequestedDate,
+                redeliveryScheduledDate = order.RedeliveryScheduledDate,
                 redeliveryRemarks = order.RedeliveryRemarks,
                 taskType = order.TaskType,
                 redeliveryAttemptCount = order.RedeliveryAttemptCount
@@ -555,6 +610,7 @@ namespace SPXDeliveryAPI.Controllers
             order.RedeliveryRequestedDate = DateTime.Parse(model.RequestedDate).ToString("MMMM dd, yyyy");
             order.RedeliveryRemarks = model.Remarks;
             order.UpdatedBy = "Client Portal";
+            order.IsArchived = false;
             order.LastUpdated = DateTime.UtcNow.ToString("O");
 
             // Save history log
@@ -692,7 +748,7 @@ namespace SPXDeliveryAPI.Controllers
             }
             else if (userRole == "OP. TEAM")
             {
-                if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
                     return Forbid();
                 }
@@ -783,7 +839,7 @@ namespace SPXDeliveryAPI.Controllers
                     {
                         if (userRole == "OP. TEAM")
                         {
-                            if (order.EncodedBy != userName && order.UpdatedBy != userName)
+                            if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                             {
                                 return Forbid();
                             }

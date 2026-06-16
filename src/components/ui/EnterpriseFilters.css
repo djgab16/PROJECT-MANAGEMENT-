@@ -1,0 +1,233 @@
+.enterprise-filters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enterprise-filters-container:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+}
+
+/* Primary Top Bar */
+.filters-primary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.smart-search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.smart-search-input {
+  width: 100%;
+  padding: 12px 42px 12px 42px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.smart-search-input:focus {
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 4px rgba(0, 169, 157, 0.1);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.search-clear-btn:hover {
+  color: var(--status-failed);
+}
+
+.primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-toggle-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-toggle-filters:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.btn-toggle-filters.active {
+  border-color: var(--primary);
+  background: rgba(0, 169, 157, 0.05);
+  color: var(--primary);
+}
+
+.btn-reset-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-reset-filters:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(0, 169, 157, 0.02);
+}
+
+/* Expanded Grid */
+.filters-expanded-content {
+  border-top: 1px dashed var(--border);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.filter-category-card {
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.category-header h5 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.category-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Select inputs inside categories */
+.filter-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.filter-select:focus {
+  border-color: var(--primary);
+}
+
+/* Custom Dates Inside Date Category */
+.custom-date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.custom-date-inputs .form-input {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.date-error-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Color accents */
+.text-teal { color: var(--primary) !important; }
+.text-blue { color: var(--status-transit) !important; }
+.text-green { color: var(--status-active) !important; }
+.text-orange { color: var(--status-pending) !important; }
+.text-purple { color: #8B5CF6 !important; } /* Soft purple */
+
+.form-input.error {
+  border-color: var(--status-failed);
+  box-shadow: 0 0 0 4px var(--status-failed-bg);
+}
+
+@media (max-width: 768px) {
+  .smart-search-box {
+    min-width: 100%;
+  }
+  .primary-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

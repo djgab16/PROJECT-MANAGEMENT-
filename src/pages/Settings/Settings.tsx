@@ -17,9 +17,8 @@ export default function Settings() {
     localStorage.setItem('app-settings', JSON.stringify(settings));
     setIsSaved(true);
     addActivityLog({
-      id: Date.now().toString(), timestamp: new Date().toLocaleString(),
-      userName: 'System', userRole: 'Admin', userInitials: 'SY', userColor: '#A3AED0',
-      action: 'Update', description: 'Updated system preferences'
+      action: 'Update', 
+      description: 'Updated system preferences'
     });
     setTimeout(() => setIsSaved(false), 3000);
   };

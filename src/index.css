@@ -188,8 +188,117 @@ input, select, textarea {
 }
 
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
+}
+
+/* ─── Modern Data Table Design System ─── */
+.data-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.data-table thead {
+  background: rgba(0, 169, 157, 0.08); /* Soft brand teal tint for visual separation */
+}
+
+html.dark .data-table thead {
+  background: rgba(0, 169, 157, 0.15);
+}
+
+.data-table th {
+  padding: 16px 18px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border);
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+/* Rounded corners for the table header */
+.data-table thead tr:first-child th:first-child {
+  border-top-left-radius: var(--radius-md);
+}
+.data-table thead tr:first-child th:last-child {
+  border-top-right-radius: var(--radius-md);
+}
+
+.data-table td {
+  padding: 16px 18px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  transition: all 0.2s ease;
+}
+
+.data-table tbody tr {
+  background: transparent;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(0, 169, 157, 0.04);
+}
+
+html.dark .data-table tbody tr:hover {
+  background-color: rgba(0, 169, 157, 0.08);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  color: var(--text-primary);
+}
+
+/* Highlight waybill links in tables */
+.data-table .waybill-link {
+  font-weight: 700;
+  color: var(--primary);
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.data-table .waybill-link:hover {
+  color: var(--primary-hover);
+  text-decoration: none;
+  text-shadow: 0 0 8px rgba(0, 169, 157, 0.2);
+}
+
+/* ─── Driver Cell & Avatar ─── */
+.driver-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.driver-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 img {
@@ -572,14 +681,7 @@ html.dark .header {
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
-/* Table header in dark mode stays navy */
-html.dark .data-table thead tr {
-  background: #0F1E38;
-}
-
-html.dark .data-table th {
-  color: #94A3B8;
-}
+/* Table header dark mode overrides - cleaned and handled by global table styles */
 
 /* Card in dark mode \u2014 slightly lifted from bg */
 html.dark .card {

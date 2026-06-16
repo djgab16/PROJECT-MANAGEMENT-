@@ -20,7 +20,7 @@ interface DataContextType {
   markAllNotificationsRead: () => void;
   deleteNotification: (id: string) => void;
   clearAllNotifications: () => void;
-  addActivityLog: (log: ActivityLog) => void;
+  addActivityLog: (log: Pick<ActivityLog, 'action' | 'description' | 'reference'>) => Promise<void>;
   refreshOrders: () => Promise<void>;
 }
 
@@ -29,22 +29,28 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 async function geocodeAddress(address: string, city: string = ''): Promise<{ lat: number; lng: number } | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 1500);
+
   try {
     const query = encodeURIComponent(`${address}${city ? ', ' + city : ''}, Philippines`);
     const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'SpeedexCourierCapstoneApp/1.0'
       }
     });
     const data = await response.json();
+    clearTimeout(timeoutId);
     if (data && data.length > 0) {
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       console.log(`Geocoded address "${address}, ${city}" to: ${lat}, ${lng}`);
       return { lat, lng };
     }
-  } catch (e) {
-    console.warn("Nominatim geocoding failed, falling back to mock city center:", e);
+  } catch (e: any) {
+    clearTimeout(timeoutId);
+    console.warn("Nominatim geocoding failed/timed out, falling back to mock city center:", e.message || e);
   }
   return null;
 }
@@ -62,59 +68,86 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isAuthenticated) return;
 
     try {
-      // 1. Fetch Orders
-      const response = await apiClient.get('/api/deliveryorder');
-      const mappedOrders = response.data.map((order: any) => {
-        const dName = order.driver?.name || '';
-        const dInitials = order.driver?.initials || (dName ? dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '');
-        const dColor = order.driver?.color || '#6B7280';
-        
-        const recipientCoordinates = order.recipientLatitude && order.recipientLongitude ? {
-          lat: order.recipientLatitude,
-          lng: order.recipientLongitude
-        } : undefined;
-        
-        const liveCoordinates = order.liveLatitude && order.liveLongitude ? {
-          lat: order.liveLatitude,
-          lng: order.liveLongitude,
-          lastUpdated: order.lastLiveUpdate || order.lastUpdated
-        } : undefined;
+      // Run all 4 fetches in parallel to minimize UI loading delays
+      const [ordersResult, empResult, notifResult, logsResult] = await Promise.allSettled([
+        apiClient.get('/api/deliveryorder'),
+        apiClient.get('/api/employees'),
+        apiClient.get('/api/notifications'),
+        apiClient.get('/api/activity-logs')
+      ]);
 
-        return {
-          ...order,
-          id: String(order.id),
-          driverName: dName,
-          driverInitials: dInitials,
-          driverColor: dColor,
-          recipientCoordinates,
-          liveCoordinates
-        };
-      });
-      setDeliveryOrders(mappedOrders);
+      if (ordersResult.status === 'fulfilled') {
+        const response = ordersResult.value;
+        const mappedOrders = response.data.map((order: any) => {
+          const dName = order.driver?.name || '';
+          const dInitials = order.driver?.initials || (dName ? dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '');
+          const dColor = order.driver?.color || '#6B7280';
+          
+          const recipientCoordinates = order.recipientLatitude && order.recipientLongitude ? {
+            lat: order.recipientLatitude,
+            lng: order.recipientLongitude
+          } : undefined;
+          
+          const liveCoordinates = order.liveLatitude && order.liveLongitude ? {
+            lat: order.liveLatitude,
+            lng: order.liveLongitude,
+            lastUpdated: order.lastLiveUpdate || order.lastUpdated
+          } : undefined;
 
-      // 2. Fetch Employees
-      const empRes = await apiClient.get('/api/employees');
-      setEmployees(empRes.data.map((e: any) => ({ ...e, id: String(e.id) })));
+          return {
+            ...order,
+            id: String(order.id),
+            driverName: dName,
+            driverInitials: dInitials,
+            driverColor: dColor,
+            recipientCoordinates,
+            liveCoordinates
+          };
+        });
+        setDeliveryOrders(mappedOrders);
+      } else {
+        console.error('Failed to fetch delivery orders:', ordersResult.reason);
+      }
 
-      // 3. Fetch Notifications
-      const notifRes = await apiClient.get('/api/notifications');
-      setNotifications(notifRes.data.map((n: any) => ({ ...n, id: String(n.id) })));
+      if (empResult.status === 'fulfilled') {
+        setEmployees(empResult.value.data.map((e: any) => ({ ...e, id: String(e.id) })));
+      } else {
+        console.error('Failed to fetch employees:', empResult.reason);
+      }
 
-      // 4. Fetch Activity Logs
-      const logsRes = await apiClient.get('/api/activity-logs');
-      setActivityLogs(logsRes.data.map((l: any) => ({ ...l, id: String(l.id) })));
+      if (notifResult.status === 'fulfilled') {
+        setNotifications(notifResult.value.data.map((n: any) => ({ ...n, id: String(n.id) })));
+      } else {
+        console.error('Failed to fetch notifications:', notifResult.reason);
+      }
+
+      if (logsResult.status === 'fulfilled') {
+        setActivityLogs(logsResult.value.data.map((l: any) => ({ ...l, id: String(l.id) })));
+      } else {
+        console.error('Failed to fetch activity logs:', logsResult.reason);
+      }
     } catch (error) {
-      console.error('Failed to fetch data from API:', error);
+      console.error('Unexpected error during data refresh:', error);
     }
   };
 
   useEffect(() => {
     refreshOrders();
+    if (isAuthenticated) {
+      const interval = setInterval(() => {
+        refreshOrders().catch(err => console.warn('Background auto-refresh failed:', err));
+      }, 10000); // Poll every 10 seconds
+      return () => clearInterval(interval);
+    }
   }, [isAuthenticated]);
 
   const addEmployee = async (employee: Employee) => {
     try {
       await apiClient.post('/api/employees', employee);
+      await addActivityLog({
+        action: 'Create',
+        description: `Created new employee: ${employee.name} (${employee.employeeId})`
+      });
       await refreshOrders();
     } catch (error: any) {
       console.error("API error adding employee:", error);
@@ -126,6 +159,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateEmployee = async (id: string, updated: Partial<Employee>) => {
     try {
       await apiClient.put(`/api/employees/${id}`, updated);
+      const emp = employees.find(e => e.id === id);
+      await addActivityLog({
+        action: 'Update',
+        description: `Updated employee: ${emp?.name || id}`
+      });
       await refreshOrders();
     } catch (error: any) {
       console.error("API error updating employee:", error);
@@ -136,7 +174,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteEmployee = async (id: string) => {
     try {
+      const emp = employees.find(e => e.id === id);
       await apiClient.delete(`/api/employees/${id}`);
+      await addActivityLog({
+        action: 'Delete',
+        description: `Deleted employee: ${emp?.name || id}`
+      });
       await refreshOrders();
     } catch (error: any) {
       console.error("API error deleting employee:", error);
@@ -169,20 +212,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recipientCoordinates: { lat, lng }
       };
 
-      await apiClient.post('/api/deliveryorder', payload);
-      await refreshOrders();
+      // Use the created order returned by the API to update state immediately —
+      // avoids depending on a potentially slow GET /api/deliveryorder refresh.
+      const response = await apiClient.post('/api/deliveryorder', payload);
+      const created = response.data;
+      if (created) {
+        const dName = created.driver?.name || '';
+        const dInitials = created.driver?.initials || (dName ? dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '');
+        const dColor = created.driver?.color || '#6B7280';
+        const mappedOrder: DeliveryOrder = {
+          ...created,
+          id: String(created.id),
+          driverName: dName,
+          driverInitials: dInitials,
+          driverColor: dColor,
+          recipientCoordinates: created.recipientLatitude && created.recipientLongitude
+            ? { lat: created.recipientLatitude, lng: created.recipientLongitude }
+            : undefined,
+        };
+        setDeliveryOrders(prev => [...prev, mappedOrder]);
+        
+        await addActivityLog({
+          action: 'Create',
+          description: `Created new delivery order: ${mappedOrder.waybillNo}`,
+          reference: mappedOrder.waybillNo
+        });
+      }
+
+      // Background refresh to sync any other changes (non-blocking)
+      refreshOrders().catch(e => console.warn('Background refresh failed after create:', e));
     } catch (error: any) {
       console.error("API error creating delivery order:", error);
-      // Handle both { message: "..." } and ModelState validation error shapes
       let errorMessage = "Failed to create order. Please check all required fields.";
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
-      } else if (error.response?.data && typeof error.response.data === 'object') {
-        // ModelState errors: { fieldName: ["error1"] }
-        const firstErrors = Object.values(error.response.data)
-          .flat()
-          .filter((v): v is string => typeof v === 'string');
-        if (firstErrors.length > 0) errorMessage = firstErrors[0];
+      } else if (error.response?.data) {
+        const data = error.response.data;
+        const errorsObj = data.errors || (typeof data === 'object' ? data : null);
+        if (errorsObj && typeof errorsObj === 'object') {
+          const valuesToInspect = data.errors 
+            ? Object.values(errorsObj) 
+            : Object.entries(errorsObj)
+                .filter(([key]) => !['type', 'title', 'status', 'traceId'].includes(key))
+                .map(([_, val]) => val);
+
+          const firstErrors = valuesToInspect
+            .flat()
+            .filter((v): v is string => typeof v === 'string');
+          if (firstErrors.length > 0) {
+            errorMessage = firstErrors[0];
+          }
+        }
       }
       alert(errorMessage);
       throw error;
@@ -196,6 +276,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userName = profile ? profile.name : 'System';
       const userRole = profile ? profile.role : '';
 
+      let responseData: any = null;
+
       if (userRole === 'DRIVER') {
         const patchPayload: any = {};
         if (updated.status) patchPayload.status = updated.status;
@@ -205,7 +287,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (updated.recipientName) patchPayload.recipientName = updated.recipientName;
         if (updated.podImage) patchPayload.podImage = updated.podImage;
 
-        // Map live coordinates or gpsCoordinates
         if (updated.liveCoordinates) {
           patchPayload.latitude = updated.liveCoordinates.lat;
           patchPayload.longitude = updated.liveCoordinates.lng;
@@ -214,14 +295,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           patchPayload.longitude = updated.gpsCoordinates.lng;
         }
 
-        await apiClient.patch(`/api/deliveryorder/${id}/status`, patchPayload);
+        const res = await apiClient.patch(`/api/deliveryorder/${id}/status`, patchPayload);
+        responseData = res.data;
       } else {
         let newCoords = updated.recipientCoordinates;
         if (updated.recipientAddress) {
           const coords = await geocodeAddress(updated.recipientAddress, updated.area || '');
-          if (coords) {
-            newCoords = coords;
-          }
+          if (coords) newCoords = coords;
         }
 
         const payload = {
@@ -230,12 +310,63 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedBy: userName
         };
 
-        await apiClient.put(`/api/deliveryorder/${id}`, payload);
+        const res = await apiClient.put(`/api/deliveryorder/${id}`, payload);
+        responseData = res.data;
       }
-      await refreshOrders();
+
+      // Update local state immediately from the API response
+      if (responseData) {
+        const dName = responseData.driver?.name || '';
+        const dInitials = responseData.driver?.initials || (dName ? dName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '');
+        const dColor = responseData.driver?.color || '#6B7280';
+        const mappedOrder: DeliveryOrder = {
+          ...responseData,
+          id: String(responseData.id),
+          driverName: dName,
+          driverInitials: dInitials,
+          driverColor: dColor,
+          recipientCoordinates: responseData.recipientLatitude && responseData.recipientLongitude
+            ? { lat: responseData.recipientLatitude, lng: responseData.recipientLongitude }
+            : undefined,
+          liveCoordinates: responseData.liveLatitude && responseData.liveLongitude
+            ? { lat: responseData.liveLatitude, lng: responseData.liveLongitude, lastUpdated: responseData.lastLiveUpdate || responseData.lastUpdated }
+            : undefined,
+        };
+        setDeliveryOrders(prev => prev.map(o => o.id === id ? mappedOrder : o));
+        
+        await addActivityLog({
+          action: (updated.podImage || updated.potImage) ? 'POD Upload' : 'Update',
+          description: `Updated delivery order: ${mappedOrder.waybillNo} (Status: ${mappedOrder.status})`,
+          reference: mappedOrder.waybillNo
+        });
+      }
+
+      // Background refresh (non-blocking)
+      refreshOrders().catch(e => console.warn('Background refresh failed after update:', e));
     } catch (error: any) {
       console.error(`API error updating delivery order ${id}:`, error);
-      alert(error.response?.data?.message || "Failed to update order. Make sure you follow sequential workflow transitions.");
+      let errorMessage = "Failed to update order. Make sure you follow sequential workflow transitions.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data) {
+        const data = error.response.data;
+        const errorsObj = data.errors || (typeof data === 'object' ? data : null);
+        if (errorsObj && typeof errorsObj === 'object') {
+          const valuesToInspect = data.errors 
+            ? Object.values(errorsObj) 
+            : Object.entries(errorsObj)
+                .filter(([key]) => !['type', 'title', 'status', 'traceId'].includes(key))
+                .map(([_, val]) => val);
+
+          const firstErrors = valuesToInspect
+            .flat()
+            .filter((v): v is string => typeof v === 'string');
+          if (firstErrors.length > 0) {
+            errorMessage = firstErrors[0];
+          }
+        }
+      }
+      alert(errorMessage);
       throw error;
     }
   };
@@ -246,7 +377,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         orderIds: orderIds.map(Number),
         driverId
       });
-      await refreshOrders();
+      
+      const drv = employees.find(e => e.id === String(driverId));
+      await addActivityLog({
+        action: 'Assign',
+        description: `Bulk assigned ${orderIds.length} orders to driver: ${drv?.name || driverId}`
+      });
+
+      // Background refresh (non-blocking)
+      refreshOrders().catch(e => console.warn('Background refresh failed after bulk assign:', e));
     } catch (error: any) {
       console.error("API error bulk assigning driver:", error);
       alert(error.response?.data?.message || "Failed to bulk assign driver.");
@@ -256,8 +395,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteDeliveryOrder = async (id: string) => {
     try {
+      const order = deliveryOrders.find(o => o.id === id);
       await apiClient.delete(`/api/deliveryorder/${id}`);
-      await refreshOrders();
+      
+      await addActivityLog({
+        action: 'Delete',
+        description: `Deleted/Cancelled delivery order: ${order?.waybillNo || id}`,
+        reference: order?.waybillNo
+      });
+
+      // Remove from local state immediately
+      setDeliveryOrders(prev => prev.filter(o => o.id !== id));
+      // Background refresh (non-blocking)
+      refreshOrders().catch(e => console.warn('Background refresh failed after delete:', e));
     } catch (error: any) {
       console.error(`API error deleting delivery order ${id}:`, error);
       alert(error.response?.data?.message || "Failed to delete/cancel order.");
@@ -305,9 +455,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addActivityLog = async (log: ActivityLog) => {
+  const addActivityLog = async (log: Pick<ActivityLog, 'action' | 'description' | 'reference'>) => {
     try {
       await apiClient.post('/api/activity-logs', log);
+      // Optional: Update local state without full refresh if performance is an issue
       const logsRes = await apiClient.get('/api/activity-logs');
       setActivityLogs(logsRes.data.map((l: any) => ({ ...l, id: String(l.id) })));
     } catch (e) {

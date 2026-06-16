@@ -1,5 +1,5 @@
-.notif-layout { display: flex; gap: var(--gap); min-height: 600px; }
-.notif-list-panel { display: flex; flex-direction: column; gap: 0; }
+.notif-layout { display: flex; gap: var(--gap); align-items: flex-start; }
+.notif-list-panel { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .notif-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); }
 .notif-tab { padding: 10px 18px; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; gap: 6px; align-items: center; }
 .notif-tab:hover { color: var(--text-primary); }
@@ -37,6 +37,7 @@
 /* Floating Selection Bar */
 .floating-selection-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--primary-dark); color: white; padding: 12px 24px; border-radius: var(--radius-full); display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000; opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; }
 .floating-selection-bar.visible { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+
 .floating-selection-count { font-weight: 600; font-size: 0.9rem; margin-right: 8px; }
 .floating-selection-bar .btn { border-color: var(--primary); color: white; background: var(--primary); }
 .floating-selection-bar .btn:hover { background: #008F85; border-color: #008F85; }

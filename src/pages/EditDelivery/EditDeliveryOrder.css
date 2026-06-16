@@ -46,9 +46,15 @@
 .two-col { grid-template-columns: 1fr 1fr; }
 .three-col { grid-template-columns: 1fr 1fr 1fr; }
 .four-col { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.five-col { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
+
+@media (max-width: 1200px) {
+  .five-col { grid-template-columns: 1fr 1fr 1fr; }
+}
 
 @media (max-width: 992px) {
   .four-col { grid-template-columns: 1fr 1fr; }
+  .five-col { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 768px) {

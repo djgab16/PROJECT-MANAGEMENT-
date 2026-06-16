@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { Search, Download, Eye, Archive as ArchiveIcon, Lock, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Download, Eye, Archive as ArchiveIcon, Lock, Plus } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import { useData } from '../../context/DataContext';
+import EnterpriseFilters, { initialFilterState } from '../../components/ui/EnterpriseFilters';
+import type { EnterpriseFilterState } from '../../components/ui/EnterpriseFilters';
+import { fuzzyMatch, getDateRangeBounds, isDateInBounds } from '../../utils/filterUtils';
 import './Archive.css';
 
 const REGIONS = [
@@ -43,32 +46,111 @@ const getRegionForArea = (area: string) => {
 export default function Archive() {
   const { deliveryOrders } = useData();
   const navigate = useNavigate();
-  const archivedOrdersAll = deliveryOrders.filter(
-    o => o.status === 'Completed' || o.status === 'Delivered' || o.status === 'Cancelled'
-  );
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [driverFilter, setDriverFilter] = useState('All Drivers');
-  const [areaFilter, setAreaFilter] = useState('All Areas');
-  const [POTFilter, setPOTFilter] = useState('POT: All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  
+  const [filters, setFilters] = useState<EnterpriseFilterState>({
+    ...initialFilterState,
+    dateType: 'Yearly' // Default archive filter to Yearly
+  });
+
+  const handleResetFilters = () => {
+    setFilters({ ...initialFilterState, dateType: 'Yearly' });
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const filteredOrders = archivedOrdersAll.filter(o => {
-    if (searchQuery && !(o.waybillNo || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (driverFilter !== 'All Drivers' && o.driverName !== driverFilter) return false;
-    if (areaFilter !== 'All Areas' && o.area !== areaFilter) return false;
-    if (statusFilter !== 'All' && o.status !== statusFilter) return false;
-    if (POTFilter === 'POT: Submitted' && o.potStatus !== 'Submitted') return false;
-    if (POTFilter === 'No POT' && o.potStatus !== 'No POT') return false;
-    return true;
-  });
+  // Active archived base subset
+  const archivedOrdersAll = useMemo(() => {
+    return deliveryOrders.filter(
+      o => o.status === 'Completed' || o.status === 'Delivered' || o.status === 'Cancelled' || o.isArchived
+    );
+  }, [deliveryOrders]);
+
+  // Client counts cache for Frequent cohort matching
+  const clientCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    archivedOrdersAll.forEach(o => {
+      if (o.clientName) counts[o.clientName] = (counts[o.clientName] || 0) + 1;
+    });
+    return counts;
+  }, [archivedOrdersAll]);
+
+  // Filtered archived list
+  const filteredOrders = useMemo(() => {
+    return archivedOrdersAll.filter(order => {
+      // Smart Fuzzy Search
+      if (filters.searchQuery) {
+        const q = filters.searchQuery;
+        const matches = 
+          fuzzyMatch(order.waybillNo, q) ||
+          fuzzyMatch(order.clientName, q) ||
+          fuzzyMatch(order.recipientName, q) ||
+          fuzzyMatch(order.driverName, q);
+        if (!matches) return false;
+      }
+
+      // Date Range Match
+      const bounds = getDateRangeBounds(filters.dateType, filters.customStartDate, filters.customEndDate);
+      const oDateStr = order.dateCompleted || order.lastUpdated || order.orderDate;
+      if (!isDateInBounds(oDateStr, bounds)) return false;
+
+      // Order Task Type
+      if (filters.orderType !== 'All') {
+        if (order.taskType !== filters.orderType) return false;
+      }
+
+      // Status
+      if (filters.status !== 'All') {
+        if (order.status !== filters.status) return false;
+      }
+
+      // Driver
+      if (filters.driver !== 'All') {
+        if (filters.driver === 'Unassigned') {
+          if (order.driverName) return false;
+        } else if (order.driverName !== filters.driver) {
+          return false;
+        }
+      }
+
+      // Route
+      if (filters.route !== 'All') {
+        if (order.route !== filters.route) return false;
+      }
+
+      // Region
+      if (filters.region !== 'All') {
+        const reg = getRegionForArea(order.area);
+        if (reg !== filters.region) return false;
+      }
+
+      // Dispatcher
+      if (filters.dispatcher !== 'All') {
+        const disp = order.encodedBy || order.updatedBy;
+        if (disp !== filters.dispatcher) return false;
+      }
+
+      // Client Type
+      if (filters.clientType !== 'All') {
+        const count = clientCounts[order.clientName || ''] || 0;
+        if (filters.clientType === 'Frequent' && count < 3) return false;
+        if (filters.clientType === 'Repeat' && count < 2) return false;
+      }
+
+      // Package Type
+      if (filters.packageType !== 'All') {
+        if (order.packageType !== filters.packageType) return false;
+      }
+
+      return true;
+    });
+  }, [archivedOrdersAll, filters, clientCounts]);
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
-  const paginatedOrders = filteredOrders.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+  const paginatedOrders = useMemo(() => {
+    return filteredOrders.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+  }, [filteredOrders, activePage]);
 
   const pageRange = [];
   const startPage = Math.max(1, activePage - 2);
@@ -77,9 +159,6 @@ export default function Archive() {
     pageRange.push(i);
   }
 
-  const uniqueDrivers = Array.from(new Set(archivedOrdersAll.map(o => o.driverName).filter(Boolean)));
-  const uniqueAreas = Array.from(new Set(archivedOrdersAll.map(o => o.area).filter(Boolean)));
-
   const handleExport = () => {
     const headers = ['Waybill No', 'Client', 'Recipient', 'Area', 'Driver', 'Date Completed', 'POT Status'];
     const rows = filteredOrders.map(o => [o.waybillNo, o.clientName, o.recipientName, o.area, o.driverName, o.dateCompleted, o.potStatus].join(','));
@@ -87,7 +166,7 @@ export default function Archive() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "archive_export.csv");
+    link.setAttribute("download", "archive_export_filtered.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -127,44 +206,11 @@ export default function Archive() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="orders-filter-bar">
-          <div className="filter-search">
-            <Search size={16} className="filter-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search archived records by waybill..." 
-              className="filter-search-input" 
-              id="archive-search" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <select className="filter-select"><option>All Months</option></select>
-          <select className="filter-select" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
-            <option>All Drivers</option>
-            {uniqueDrivers.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select className="filter-select" value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
-            <option>All Areas</option>
-            {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-          <select className="filter-select" value={POTFilter} onChange={e => setPOTFilter(e.target.value)}>
-            <option>POT: All</option>
-            <option>POT: Submitted</option>
-            <option>No POT</option>
-          </select>
-          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="All">All Statuses</option>
-            <option value="Completed">Completed</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          <button className="btn btn-outline btn-sm" onClick={handleExport}><Download size={14} /> Export</button>
-        </div>
+        {/* Collapsible advanced filters */}
+        <EnterpriseFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} />
 
         {/* Table */}
-        <div className="card">
+        <div className="card animate-fade-in">
           <div className="card-header">
             <div className="flex items-center gap-sm">
               <h4>Archived Records</h4>
