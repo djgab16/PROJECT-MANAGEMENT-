@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
-import { Home, ScanLine, Settings, ArrowLeft, Menu, Bell } from 'lucide-react';
+import { Home, ScanLine, Settings, ArrowLeft, Bell } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import './DriverLayout.css';
 

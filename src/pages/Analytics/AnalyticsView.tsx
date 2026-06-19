@@ -159,15 +159,38 @@ export default function AnalyticsView() {
 
   // Export drilldown items as CSV
   const handleExportDrilldown = () => {
-    const headers = ['Waybill', 'Client', 'Recipient', 'Status', 'Driver', 'Date'];
+    const headers = [
+      'Waybill', 
+      'Client', 
+      'Sender Unit', 
+      'Sender Street', 
+      'Sender Barangay', 
+      'Sender City', 
+      'Recipient', 
+      'Recipient Unit', 
+      'Recipient Street', 
+      'Recipient Barangay', 
+      'Recipient City', 
+      'Status', 
+      'Driver', 
+      'Date'
+    ];
     const rows = drilldownOrders.map(o => [
       o.waybillNo, 
       o.clientName, 
+      o.senderUnit || '', 
+      o.senderStreet || '', 
+      o.senderBarangay || '', 
+      o.senderCity || '', 
       o.recipientName, 
+      o.recipientUnit || '', 
+      o.recipientStreet || '', 
+      o.recipientBarangay || '', 
+      o.recipientCity || '', 
       o.status, 
       o.driverName || 'Unassigned', 
       o.dateCompleted || o.orderDate
-    ].join(','));
+    ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");

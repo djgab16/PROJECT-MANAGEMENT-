@@ -35,6 +35,14 @@ export interface DeliveryOrder {
   recipientName: string;
   recipientContact: string;
   recipientAddress: string;
+  senderUnit?: string;
+  senderStreet?: string;
+  senderBarangay?: string;
+  senderCity?: string;
+  recipientUnit?: string;
+  recipientStreet?: string;
+  recipientBarangay?: string;
+  recipientCity?: string;
   area: string;
   landmark?: string;
   driverName: string;
@@ -101,6 +109,8 @@ export interface ActivityLog {
   action: ActionType;
   description: string;
   reference?: string;
+  location?: string;
+  deviceInfo?: string;
 }
 
 export interface DriverPerformance {

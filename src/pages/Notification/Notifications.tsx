@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCheck, Trash2, Eye, Check, Bell, X } from 'lucide-react';
+import { CheckCheck, Trash2, Eye, Check, Bell, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
@@ -17,6 +18,7 @@ export default function Notifications() {
   useEffect(() => {
     refreshOrders();
   }, [refreshOrders]);
+
   const [activeTab, setActiveTab] = useState('all');
   const [selectedId, setSelectedId] = useState('');
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
@@ -40,23 +42,37 @@ export default function Notifications() {
   const handleMarkCheckedAsRead = () => {
     if (checkedIds.length > 0) {
       checkedIds.forEach(id => markNotificationRead(id));
+      toast.success(`${checkedIds.length} notifications marked as read`);
       setCheckedIds([]);
       setIsSelectionMode(false);
     } else if (selectedId) {
       markNotificationRead(selectedId);
+      toast.success('Notification marked as read');
     }
   };
 
   const handleDeleteChecked = () => {
     if (checkedIds.length > 0) {
       checkedIds.forEach(id => deleteNotification(id));
+      toast.success(`${checkedIds.length} notifications deleted`);
       setCheckedIds([]);
       setIsSelectionMode(false);
       if (checkedIds.includes(selectedId)) setSelectedId('');
     } else if (selectedId) {
       deleteNotification(selectedId);
+      toast.success('Notification deleted');
       setSelectedId('');
     }
+  };
+
+  const handleMarkAllRead = () => {
+    markAllNotificationsRead();
+    toast.success('All notifications marked as read');
+  };
+
+  const handleClearAll = () => {
+    clearAllNotifications();
+    toast.success('All notifications cleared');
   };
 
   const tabs = [
@@ -112,7 +128,7 @@ export default function Notifications() {
             ) : (
               <>
                 <button className="btn btn-outline btn-sm" onClick={() => setIsSelectionMode(true)}>Select</button>
-                <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all read</button>
+                <button className="btn btn-outline btn-sm" onClick={handleMarkAllRead}><CheckCheck size={14} /> Mark all read</button>
               </>
             )}
           </div>
@@ -122,16 +138,16 @@ export default function Notifications() {
           title="Notifications Center"
           actions={
             <div className="flex gap-sm">
-              <button className="btn btn-outline btn-sm" onClick={markAllNotificationsRead}><CheckCheck size={14} /> Mark all as read</button>
-              <button className="btn btn-outline btn-sm" onClick={clearAllNotifications}><Trash2 size={14} /> Clear all</button>
+              <button className="btn btn-outline btn-sm" onClick={handleMarkAllRead}><CheckCheck size={14} /> Mark all as read</button>
+              <button className="btn btn-outline btn-sm" onClick={handleClearAll}><Trash2 size={14} /> Clear all</button>
             </div>
           }
         />
       )}
       <div className="page-content">
-        <div className="notif-layout">
-          {/* List */}
-          <div className="notif-list-panel" style={isDriver ? { width: '100%' } : undefined}>
+        <div className="notif-layout static-layout">
+          {/* List - Full Width (Static Layout) */}
+          <div className="notif-list-panel" style={{ width: '100%', maxWidth: '900px', margin: '0 auto' }}>
             <div className="notif-tabs">
               {tabs.map(tab => (
                 <button
@@ -196,71 +212,11 @@ export default function Notifications() {
               )}
             </div>
           </div>
-
-          {/* Detail Panel */}
-          {!isDriver && selected && (
-            <div className="notif-detail-panel card">
-              <div className="notif-detail-header">
-                <h4>Notification Detail</h4>
-                <button className="action-icon-btn" title="Close" onClick={() => setSelectedId('')}><X size={14} /></button>
-              </div>
-              <div className="notif-detail-alert">
-                <div className="notif-alert-icon">
-                  <Bell size={18} />
-                </div>
-                <div>
-                  <strong className="notif-alert-type" style={{ color: selected.type === 'alert' ? 'var(--status-failed)' : selected.type === 'success' ? 'var(--status-active)' : 'var(--text-primary)' }}>
-                    ▲ {selected.title.toUpperCase()}
-                  </strong>
-                  <span className="text-muted text-sm">Today, {selected.timestamp} · {selected.source}</span>
-                </div>
-              </div>
-
-              <div className="notif-detail-body card" style={{ background: 'var(--bg-main)', boxShadow: 'none' }}>
-                <strong>{selected.title} — Urgent Action Required</strong>
-                <p>{selected.description}</p>
-              </div>
-
-              <div className="summary-fields">
-                <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{selected.waybillNo || '—'}</span></div>
-                <div className="summary-field"><span>Alert Type</span><span className="summary-val" style={{ color: 'var(--status-failed)' }}>{selected.type === 'alert' ? 'Failed Pickup' : selected.type}</span></div>
-                <div className="summary-field"><span>Days Overdue</span><span className="summary-val" style={{ color: 'var(--status-failed)' }}>3 days</span></div>
-                <div className="summary-field"><span>Area</span><span>Marikina City</span></div>
-                <div className="summary-field"><span>Assigned Driver</span><span className="summary-val" style={{ color: 'var(--status-failed)' }}>Unassigned</span></div>
-                <div className="summary-field"><span>Client / Sender</span><span>Shopee Express</span></div>
-                <div className="summary-field"><span>Recipient</span><span>Torres, Miguel</span></div>
-                <div className="summary-field"><span>Notification Sent</span><span>Mar 29 · 10:15 AM</span></div>
-              </div>
-
-              <span className="label" style={{ marginTop: '16px' }}>ACTIONS</span>
-              <div className="detail-actions">
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    if (selected.waybillNo) {
-                      const matched = deliveryOrders.find(o => o.waybillNo?.trim().toUpperCase() === selected.waybillNo?.trim().toUpperCase());
-                      if (matched) {
-                        navigate(`/delivery-orders/${matched.id}`);
-                      } else {
-                        alert(`Order with Waybill ${selected.waybillNo} was not found.`);
-                      }
-                    } else {
-                      alert('This notification is not linked to any Waybill.');
-                    }
-                  }}
-                >
-                  <Eye size={16} /> View Order Details
-                </button>
-                <button className="btn btn-outline" onClick={() => { markNotificationRead(selected.id); setSelectedId(''); }}><Check size={16} /> Mark as Read</button>
-                <button className="btn btn-danger" onClick={() => { deleteNotification(selected.id); setSelectedId(''); }}><Trash2 size={16} /> Delete Notification</button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Detail Modal for Drivers (Mobile Optimized) */}
-      {isDriver && selected && (
+      {/* Detail Modal for Everyone (Universal Optimized Layout) */}
+      {selected && (
         <Modal
           isOpen={!!selectedId}
           onClose={() => setSelectedId('')}
@@ -273,48 +229,60 @@ export default function Notifications() {
                 <Bell size={18} />
               </div>
               <div>
-                <strong className="notif-alert-type" style={{ color: selected.type === 'alert' ? 'var(--status-failed)' : selected.type === 'success' ? 'var(--status-active)' : 'var(--text-primary)' }}>
-                  ▲ {selected.title.toUpperCase()}
+                <strong className="notif-alert-type" style={{ color: selected.type === 'alert' ? 'var(--status-failed)' : selected.type === 'success' ? 'var(--status-active)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {selected.type === 'alert' && <AlertTriangle size={14} />} {selected.title.toUpperCase()}
                 </strong>
                 <span className="text-muted text-sm">Today, {selected.timestamp} · {selected.source}</span>
               </div>
             </div>
 
             <div className="notif-detail-body card" style={{ background: 'var(--bg-main)', boxShadow: 'none', padding: '16px' }}>
-              <strong style={{ fontSize: '0.9rem', display: 'block', marginBottom: '8px' }}>{selected.title}</strong>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selected.description}</p>
+              <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '8px' }}>{selected.title}</strong>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{selected.description}</p>
             </div>
 
             <div className="summary-fields">
-              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Waybill No.</span>
                 <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{selected.waybillNo || '—'}</span>
               </div>
-              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Alert Type</span>
                 <span style={{ fontWeight: 600 }}>{selected.type}</span>
               </div>
-              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+              <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Source</span>
                 <span style={{ fontWeight: 600 }}>{selected.source}</span>
               </div>
+              {!isDriver && (
+                <>
+                  <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Area</span>
+                    <span style={{ fontWeight: 600 }}>Marikina City</span>
+                  </div>
+                  <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Recipient</span>
+                    <span style={{ fontWeight: 600 }}>Torres, Miguel</span>
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="detail-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+            <div className="detail-actions" style={{ display: 'flex', flexDirection: isDriver ? 'column' : 'row', gap: '10px', marginTop: '12px' }}>
               <button 
                 className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
+                style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => {
                   if (selected.waybillNo) {
                     const matched = deliveryOrders.find(o => o.waybillNo?.trim().toUpperCase() === selected.waybillNo?.trim().toUpperCase());
                     if (matched) {
                       setSelectedId('');
-                      navigate(`/driver/delivery/${matched.id}`);
+                      navigate(isDriver ? `/driver/delivery/${matched.id}` : `/delivery-orders/${matched.id}`);
                     } else {
-                      alert(`Order with Waybill ${selected.waybillNo} was not found.`);
+                      toast.error(`Order with Waybill ${selected.waybillNo} was not found.`);
                     }
                   } else {
-                    alert('This notification is not linked to any Waybill.');
+                    toast.error('This notification is not linked to any Waybill.');
                   }
                 }}
               >
@@ -322,11 +290,20 @@ export default function Notifications() {
               </button>
               <button 
                 className="btn btn-outline"
-                style={{ width: '100%', justifyContent: 'center' }}
+                style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => { markNotificationRead(selected.id); setSelectedId(''); }}
               >
                 <Check size={16} style={{ marginRight: '6px' }} /> Mark as Read
               </button>
+              {!isDriver && (
+                <button 
+                  className="btn btn-danger"
+                  style={{ flex: 1, justifyContent: 'center' }}
+                  onClick={() => { deleteNotification(selected.id); setSelectedId(''); }}
+                >
+                  <Trash2 size={16} style={{ marginRight: '6px' }} /> Delete
+                </button>
+              )}
             </div>
           </div>
         </Modal>

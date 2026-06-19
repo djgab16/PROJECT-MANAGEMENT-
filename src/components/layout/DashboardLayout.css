@@ -15,6 +15,11 @@
   width: calc(100% - var(--sidebar-width));
 }
 
+.sidebar-collapsed-layout .dashboard-main {
+  margin-left: 80px;
+  width: calc(100% - 80px);
+}
+
 .mobile-top-nav {
   display: none;
   align-items: center;

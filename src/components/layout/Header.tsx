@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Package, User } from 'lucide-react';
+import { Search, Bell, Package, User, AlertCircle, CheckCircle2, Info, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { ROLE_DISPLAY } from '../../types';
@@ -10,16 +10,29 @@ interface HeaderProps {
   subtitle?: string;
   date?: string;
   actions?: React.ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
 }
 
-export default function Header({ title, subtitle, date, actions }: HeaderProps) {
+export default function Header({ title, subtitle, date, actions, showBack, onBack }: HeaderProps) {
   const navigate = useNavigate();
-  const { notifications, deliveryOrders, employees } = useData();
+  const { notifications, deliveryOrders, employees, markNotificationRead } = useData();
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  
   const searchRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   const displayDate = date || new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -29,6 +42,9 @@ export default function Header({ title, subtitle, date, actions }: HeaderProps) 
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -59,8 +75,15 @@ export default function Header({ title, subtitle, date, actions }: HeaderProps) 
   return (
     <header className="header">
       <div className="header-left">
-        {subtitle && <span className="header-breadcrumb">{subtitle}</span>}
-        <h1 className="header-title">{title}</h1>
+        {showBack && (
+          <button className="header-back-btn" onClick={handleBack} title="Go Back">
+            <ArrowLeft size={20} />
+          </button>
+        )}
+        <div className="header-title-container">
+          {subtitle && <span className="header-breadcrumb">{subtitle}</span>}
+          <h1 className="header-title">{title}</h1>
+        </div>
       </div>
       <div className="header-right">
         <span className="header-date">{displayDate}</span>
@@ -135,10 +158,98 @@ export default function Header({ title, subtitle, date, actions }: HeaderProps) 
           )}
         </div>
 
-        <button className="header-notification-btn" id="header-notifications" title="Notifications" onClick={() => navigate('/notifications')}>
-          <Bell size={20} />
-          {unreadCount > 0 && <span className="notification-dot" />}
-        </button>
+        <div className="header-notification-container" ref={notificationRef}>
+          <button 
+            className="header-notification-btn" 
+            id="header-notifications" 
+            title="Notifications" 
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && <span className="notification-dot" />}
+          </button>
+          
+          {showNotifications && (
+            <div className="notification-dropdown">
+              <div className="notification-dropdown-header">
+                <span>Notifications Center</span>
+                {unreadCount > 0 && <span className="notification-unread-pill">{unreadCount} unread</span>}
+              </div>
+              <div className="notification-dropdown-list">
+                {notifications.length === 0 ? (
+                  <div className="notification-dropdown-empty">
+                    You don't have any notifications.
+                  </div>
+                ) : (
+                  notifications.slice(0, 5).map((n) => {
+                    const getIcon = () => {
+                      switch (n.type) {
+                        case 'alert':
+                          return <AlertCircle size={14} />;
+                        case 'success':
+                          return <CheckCircle2 size={14} />;
+                        default:
+                          return <Info size={14} />;
+                      }
+                    };
+
+                    return (
+                      <div 
+                        key={n.id} 
+                        className={`notification-dropdown-item ${!n.read ? 'unread' : ''}`}
+                        onClick={() => {
+                          setShowNotifications(false);
+                          if (!n.read) {
+                            markNotificationRead(n.id);
+                          }
+                          if (n.waybillNo) {
+                            const order = deliveryOrders.find(
+                              o => o.waybillNo?.trim().toUpperCase() === n.waybillNo?.trim().toUpperCase()
+                            );
+                            if (order) {
+                              navigate(`/delivery-orders/${order.id}`);
+                            } else {
+                              navigate('/notifications');
+                            }
+                          } else {
+                            navigate('/notifications');
+                          }
+                        }}
+                      >
+                        <div className="notification-dropdown-item-content">
+                          <div className={`notification-dropdown-icon-container ${n.type || 'info'}`}>
+                            {getIcon()}
+                          </div>
+                          <div className="notification-dropdown-text-container">
+                            <div className="notification-dropdown-item-header">
+                              <span className="notification-dropdown-item-title">{n.title}</span>
+                              {!n.read && <span className="notification-dropdown-unread-dot" />}
+                            </div>
+                            <p className="notification-dropdown-item-desc">{n.description}</p>
+                            <span className="notification-dropdown-item-time">{n.timestamp}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              {notifications.length > 5 && (
+                <div className="notification-dropdown-footer">
+                  <span 
+                    className="notification-dropdown-see-more" 
+                    onClick={() => {
+                      setShowNotifications(false);
+                      navigate('/notifications');
+                    }}
+                  >
+                    See More <ChevronRight size={14} style={{ marginLeft: '2px' }} />
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         {actions}
       </div>
     </header>

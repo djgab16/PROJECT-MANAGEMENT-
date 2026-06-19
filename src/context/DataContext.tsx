@@ -298,17 +298,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const res = await apiClient.patch(`/api/deliveryorder/${id}/status`, patchPayload);
         responseData = res.data;
       } else {
+        const existingOrder = deliveryOrders.find(o => o.id === id);
+
         let newCoords = updated.recipientCoordinates;
+        const area = updated.area || existingOrder?.area;
         if (updated.recipientAddress) {
-          const coords = await geocodeAddress(updated.recipientAddress, updated.area || '');
+          const coords = await geocodeAddress(updated.recipientAddress, area || '');
           if (coords) newCoords = coords;
         }
 
         const payload = {
+          ...existingOrder,
           ...updated,
-          recipientCoordinates: newCoords,
+          id: Number(id),
+          recipientCoordinates: newCoords || existingOrder?.recipientCoordinates,
           updatedBy: userName
         };
+
+        // Clean up virtual frontend-only fields
+        delete (payload as any).driverName;
+        delete (payload as any).driverInitials;
+        delete (payload as any).driverColor;
+        delete (payload as any).liveCoordinates;
 
         const res = await apiClient.put(`/api/deliveryorder/${id}`, payload);
         responseData = res.data;

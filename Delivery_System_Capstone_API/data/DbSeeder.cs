@@ -16,48 +16,71 @@ namespace SPXDeliveryAPI.Data
             await context.Database.MigrateAsync();
 
             // 1. Seed Employees
-            if (!await context.Employees.AnyAsync())
+            // 1. Seed Employees (Idempotent / Upsert)
+            var seedEmployees = new List<Employee>
             {
-                var employees = new List<Employee>
+                new Employee
                 {
-                    new Employee
-                    {
-                        EmployeeId = "EMP-001",
-                        Name = "Operations Admin",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
-                        Role = "ADMIN",
-                        SystemAccess = "All Systems",
-                        Status = "Active",
-                        Initials = "OA",
-                        Color = "#FFB547"
-                    },
-                    new Employee
-                    {
-                        EmployeeId = "EMP-002",
-                        Name = "Operations Team",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
-                        Role = "OP. TEAM",
-                        SystemAccess = "Operations",
-                        Status = "Active",
-                        Initials = "OT",
-                        Color = "#01B574"
-                    },
-                    new Employee
-                    {
-                        EmployeeId = "EMP-003",
-                        Name = "Test Driver",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
-                        Role = "DRIVER",
-                        SystemAccess = "Delivery Tracker",
-                        Status = "Active",
-                        Initials = "TD",
-                        Color = "#00A99D"
-                    }
-                };
+                    EmployeeId = "EMP-001",
+                    Name = "Carlos Mendoza",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "ADMIN",
+                    SystemAccess = "All Systems",
+                    Status = "Active",
+                    Initials = "CM",
+                    Color = "#FFB547"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-002",
+                    Name = "Maria Santos",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "OP. TEAM",
+                    SystemAccess = "Operations",
+                    Status = "Active",
+                    Initials = "MS",
+                    Color = "#01B574"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-003",
+                    Name = "Juan Dela Cruz",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "JD",
+                    Color = "#00A99D"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-004",
+                    Name = "Alex Rodriguez",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "AR",
+                    Color = "#7C3AED"
+                }
+            };
 
-                await context.Employees.AddRangeAsync(employees);
-                await context.SaveChangesAsync();
+            foreach (var se in seedEmployees)
+            {
+                var existing = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == se.EmployeeId);
+                if (existing == null)
+                {
+                    await context.Employees.AddAsync(se);
+                }
+                else
+                {
+                    existing.Name = se.Name;
+                    existing.Initials = se.Initials;
+                    existing.Color = se.Color;
+                    context.Employees.Update(existing);
+                }
             }
+            await context.SaveChangesAsync();
 
             // Get driver references for foreign keys
             var driver = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == "EMP-003");
@@ -95,7 +118,7 @@ namespace SPXDeliveryAPI.Data
                         EncodedBy = "Kenneth D. Yulip",
                         DateEncoded = "3/29/2026, 8:05:00 AM",
                         LastUpdated = "3/29/2026, 9:41:00 AM",
-                        UpdatedBy = "Test Driver",
+                        UpdatedBy = "Juan Dela Cruz",
                         LiveLatitude = 14.6200,
                         LiveLongitude = 121.0180,
                         LastLiveUpdate = DateTime.UtcNow.ToString("g"),
@@ -161,7 +184,7 @@ namespace SPXDeliveryAPI.Data
                         EncodedBy = "Kenneth D. Yulip",
                         DateEncoded = "3/28/2026, 7:00:00 AM",
                         LastUpdated = "3/28/2026, 2:14:00 PM",
-                        UpdatedBy = "Test Driver",
+                        UpdatedBy = "Juan Dela Cruz",
                         LiveLatitude = 14.5547,
                         LiveLongitude = 121.0244,
                         LastLiveUpdate = "3/28/2026, 2:14:00 PM",
@@ -229,10 +252,10 @@ namespace SPXDeliveryAPI.Data
                         Type = "success",
                         Title = "POD Submitted",
                         WaybillNo = "SPX-2026-0845",
-                        Description = "Test Driver submitted proof of delivery. Delivery auto-marked as Completed.",
+                        Description = "Juan Dela Cruz submitted proof of delivery. Delivery auto-marked as Completed.",
                         Timestamp = "10:12 AM",
                         Date = "3/29/2026",
-                        Source = "Test Driver",
+                        Source = "Juan Dela Cruz",
                         Read = false,
                         StatusBadge = "Success"
                     },
@@ -241,10 +264,10 @@ namespace SPXDeliveryAPI.Data
                         Type = "info",
                         Title = "Status Updated",
                         WaybillNo = "SPX-2026-0841",
-                        Description = "Delivery status changed from Pending → In Transit by Test Driver.",
+                        Description = "Delivery status changed from Pending → In Transit by Juan Dela Cruz.",
                         Timestamp = "10:11 AM",
                         Date = "3/29/2026",
-                        Source = "Test Driver",
+                        Source = "Juan Dela Cruz",
                         Read = false,
                         StatusBadge = "In Transit"
                     }
@@ -262,9 +285,9 @@ namespace SPXDeliveryAPI.Data
                     new ActivityLog
                     {
                         Timestamp = "3/29/2026, 10:22:00 AM",
-                        UserName = "Test Driver",
+                        UserName = "Juan Dela Cruz",
                         UserRole = "DRIVER",
-                        UserInitials = "TD",
+                        UserInitials = "JD",
                         UserColor = "#00A99D",
                         Action = "Update",
                         Description = "started transit for SPX-2026-0841",

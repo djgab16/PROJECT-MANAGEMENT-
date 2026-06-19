@@ -202,9 +202,11 @@ export default function FailedPickups() {
                     </td>
                     <td><span className="overdue-badge">{getOverdueDays(order)} days</span></td>
                     <td><StatusBadge status="Pending" size="sm" /></td>
-                    <td className="cell-actions">
-                      <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
-                      <button className="action-icon-btn" title="Assign Driver" onClick={() => navigate(`/delivery-orders/${order.id}/edit`)}><UserPlus size={14} /></button>
+                    <td>
+                      <div className="cell-actions">
+                        <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
+                        <button className="action-icon-btn" title="Assign Driver" onClick={() => navigate(`/delivery-orders/${order.id}/edit`)}><UserPlus size={14} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))

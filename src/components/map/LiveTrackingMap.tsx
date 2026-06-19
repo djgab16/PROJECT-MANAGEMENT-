@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Package } from 'lucide-react';
+import { Package, Check } from 'lucide-react';
 import { realtimeSync } from '../../utils/realtimeSync';
 import type { ConnectionState } from '../../utils/realtimeSync';
 import 'leaflet/dist/leaflet.css';
@@ -471,7 +471,7 @@ export default function LiveTrackingMap({
         {/* Static Delivered Card */}
         {isCompletedState && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', background: '#ecfdf5', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
-            <span style={{ fontSize: '16px' }}>✓</span> Package delivered at its destination.
+            <span style={{ fontSize: '16px' }}><Check size={16} /></span> Package delivered at its destination.
           </div>
         )}
 

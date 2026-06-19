@@ -76,7 +76,9 @@ namespace SPXDeliveryAPI.Controllers
             var orders = await query.Select(o => new
             {
                 o.Id, o.WaybillNo, o.ClientName, o.ClientType, o.ContactNumber,
-                o.SenderAddress, o.RecipientName, o.RecipientContact, o.RecipientAddress,
+                o.SenderAddress, o.SenderUnit, o.SenderStreet, o.SenderBarangay, o.SenderCity,
+                o.RecipientName, o.RecipientContact, o.RecipientAddress,
+                o.RecipientUnit, o.RecipientStreet, o.RecipientBarangay, o.RecipientCity,
                 o.Area, o.Landmark, o.Route, o.Status, o.TaskType,
                 o.PotStatus, o.PodStatus, o.PackageType, o.PackageDescription,
                 o.ItemCount, o.Weight, o.DeclaredValue,

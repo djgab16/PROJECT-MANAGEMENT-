@@ -6,9 +6,10 @@ import './DashboardLayout.css';
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="dashboard-layout">
+    <div className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed-layout' : ''}`}>
       {/* Mobile Top Navigation */}
       <div className="mobile-top-nav">
         <button className="icon-btn" onClick={() => setIsSidebarOpen(true)} aria-label="Open Menu">
@@ -20,7 +21,12 @@ export default function DashboardLayout() {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
       
       <main className="dashboard-main">
         <Outlet />

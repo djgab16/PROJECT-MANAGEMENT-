@@ -1,5 +1,4 @@
-
-
+import { Check } from 'lucide-react';
 import './ProgressStepper.css';
 
 interface Step {
@@ -28,7 +27,7 @@ export default function ProgressStepper({ steps, currentStep }: ProgressStepperP
               <div className="stepper-node">
                 {isCompleted ? (
                    <span className="stepper-check">
-                      ✓
+                      <Check size={14} />
                    </span>
                 ) : (
                   <span className="stepper-index">{index + 1}</span>

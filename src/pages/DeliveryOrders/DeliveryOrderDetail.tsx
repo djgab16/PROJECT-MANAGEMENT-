@@ -14,7 +14,7 @@ import './DeliveryOrderDetail.css';
 export default function DeliveryOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, refreshOrders } = useData();
+  const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, refreshOrders, addActivityLog } = useData();
   const { user } = useAuth();
 
   const order = deliveryOrders.find(o => o.id === id);
@@ -113,12 +113,6 @@ export default function DeliveryOrderDetail() {
       );
 
       await addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#4318FF',
         action: 'Update',
         description: `Scheduled re-delivery attempt #${(order.redeliveryAttemptCount || 0) + 1} for ${order.waybillNo} with driver ${selectedDriver?.name || 'Unassigned'}`,
         reference: order.waybillNo
@@ -150,7 +144,7 @@ export default function DeliveryOrderDetail() {
     try {
       setIsSubmitting(true);
       await updateDeliveryOrder(order.id, updatePayload);
-      
+
       setShowRejectPrompt(false);
     } catch (err: any) {
       console.error(err);
@@ -179,24 +173,24 @@ export default function DeliveryOrderDetail() {
     if (isSubmitting) return;
     const nextStatusMap: Record<string, DeliveryStatus> = isPickup
       ? {
-          'Pending': 'Processing',
-          'Processing': 'Preparing',
-          'Preparing': 'Ready for Pickup',
-          'Ready for Pickup': 'Picked Up',
-          'Picked Up': 'Pending',
-          'Failed': 'Processing'
-        }
+        'Pending': 'Processing',
+        'Processing': 'Preparing',
+        'Preparing': 'Ready for Pickup',
+        'Ready for Pickup': 'Picked Up',
+        'Picked Up': 'Pending',
+        'Failed': 'Processing'
+      }
       : {
-          'Pending': 'Processing',
-          'Processing': 'Assigned',
-          'Assigned': 'Picked Up',
-          'Picked Up': 'In Transit',
-          'In Transit': 'Out for Delivery',
-          'Out for Delivery': 'Delivered',
-          'Delivered': 'Completed',
-          'Completed': 'Pending',
-          'Failed': 'In Transit'
-        };
+        'Pending': 'Processing',
+        'Processing': 'Assigned',
+        'Assigned': 'Picked Up',
+        'Picked Up': 'In Transit',
+        'In Transit': 'Out for Delivery',
+        'Out for Delivery': 'Delivered',
+        'Delivered': 'Completed',
+        'Completed': 'Pending',
+        'Failed': 'In Transit'
+      };
 
     const nextStatus = nextStatusMap[order.status] || 'Pending';
 
@@ -220,12 +214,6 @@ export default function DeliveryOrderDetail() {
       await updateDeliveryOrder(order.id, updatePayload);
 
       await addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#00A99D',
         action: 'Update',
         description: `Updated status of ${order.waybillNo} to ${nextStatus}`,
         reference: order.waybillNo
@@ -243,14 +231,6 @@ export default function DeliveryOrderDetail() {
       setIsSubmitting(true);
       await deleteDeliveryOrder(order.id);
       await addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name
-          ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-          : 'SY',
-        userColor: '#E31A1A',
         action: 'Delete',
         description: `Cancelled delivery order ${order.waybillNo}`,
         reference: order.waybillNo,
@@ -267,6 +247,7 @@ export default function DeliveryOrderDetail() {
   return (
     <>
       <Header
+        showBack
         title={`${order.waybillNo} — Order Detail`}
         subtitle="Delivery Orders"
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -274,7 +255,7 @@ export default function DeliveryOrderDetail() {
           <div className="flex gap-sm">
             <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline btn-sm"><Clock size={14} /> View History Log</Link>
             {order.isArchived ? (
-              <button 
+              <button
                 className="btn btn-primary btn-sm"
                 disabled={isSubmitting}
                 onClick={() => setShowRestoreConfirm(true)}
@@ -353,7 +334,7 @@ export default function DeliveryOrderDetail() {
                     {(order.redeliveryAttemptCount || 0) >= 3 ? (
                       <span className="locked-tag animate-fade-in" style={{ background: 'var(--status-failed-bg)', color: 'var(--status-failed)', borderColor: 'var(--status-failed)', fontWeight: 600 }}>⚠️ Max attempts reached (Cannot Approve)</span>
                     ) : (
-                      <button 
+                      <button
                         className="btn btn-primary btn-sm"
                         onClick={() => {
                           if (order.redeliveryRequestedDate) {
@@ -373,7 +354,7 @@ export default function DeliveryOrderDetail() {
                         ✓ Approve & Assign Driver
                       </button>
                     )}
-                    <button 
+                    <button
                       className="btn btn-danger btn-sm"
                       onClick={handleRejectReschedule}
                     >
@@ -434,7 +415,7 @@ export default function DeliveryOrderDetail() {
                 <h4>Package Details</h4>
               </div>
               <div className="info-grid">
-                <div><span className="label">DESCRIPTION</span><strong>{order.packageDescription || 'N/A'}</strong></div>
+                <div><span className="label">PACKAGE TYPE</span><strong>{order.packageType || 'Parcel'}</strong></div>
                 <div><span className="label">ITEMS</span><strong>{order.itemCount}</strong></div>
                 <div><span className="label">WEIGHT</span><strong>{order.weight}</strong></div>
                 <div><span className="label">DECLARED VALUE</span><strong>{order.declaredValue}</strong></div>
@@ -535,7 +516,7 @@ export default function DeliveryOrderDetail() {
               <span className="label">QUICK ACTIONS</span>
               <div className="detail-actions">
                 {order.isArchived ? (
-                  <button 
+                  <button
                     className="btn btn-primary"
                     disabled={isSubmitting}
                     onClick={() => setShowRestoreConfirm(true)}
@@ -561,7 +542,7 @@ export default function DeliveryOrderDetail() {
                   </>
                 )}
                 <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline"><Clock size={16} /> VIEW HISTORY LOG</Link>
-                <button 
+                <button
                   className="btn btn-outline"
                   disabled={isSubmitting}
                   onClick={async () => {
@@ -671,7 +652,7 @@ export default function DeliveryOrderDetail() {
         onClose={() => {
           setIsModalOpen(false);
           setErrorMsg('');
-        }}        title="Schedule Re-delivery Attempt"
+        }} title="Schedule Re-delivery Attempt"
         size="md"
         footer={
           <div className="flex gap-sm justify-end" style={{ width: '100%' }}>
@@ -687,7 +668,7 @@ export default function DeliveryOrderDetail() {
               <strong>{errorMsg}</strong>
             </div>
           )}
-          
+
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>ASSIGN REDELIVERY COURIER / DRIVER *</label>
             <select
@@ -708,12 +689,12 @@ export default function DeliveryOrderDetail() {
 
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              SCHEDULED DATE * 
+              SCHEDULED DATE *
               <span style={{ fontWeight: 500, color: 'var(--primary)', marginLeft: '8px', fontSize: '0.72rem', background: 'var(--status-transit-bg)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 <Calendar size={10} /> Click field to open calendar
               </span>
             </label>
-            <div 
+            <div
               style={{ position: 'relative', cursor: 'pointer' }}
               title="Click anywhere here to open the calendar date picker"
               onClick={(e) => {

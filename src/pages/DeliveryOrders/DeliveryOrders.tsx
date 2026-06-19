@@ -270,61 +270,63 @@ export default function DeliveryOrders() {
                         </div>
                       )}
                     </td>
-                    <td className="cell-actions">
-                      <Link
-                        to={`/delivery-orders/${order.id}`}
-                        className="action-icon-btn"
-                        title="View"
-                      >
-                        <Eye size={14} />
-                      </Link>
-                      {order.status === 'Cancelled' ? (
-                        /* Cancelled orders are read-only — no edit/delete */
-                        <span
-                          className="action-icon-btn disabled"
-                          title="Order is cancelled"
-                          style={{
-                            opacity: 0.4,
-                            cursor: 'not-allowed',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
+                    <td>
+                      <div className="cell-actions">
+                        <Link
+                          to={`/delivery-orders/${order.id}`}
+                          className="action-icon-btn"
+                          title="View"
                         >
-                          <span>🚫</span>
-                        </span>
-                      ) : order.status === 'In Transit' || order.status === 'Out for Delivery' ? (
-                        <span
-                          className="action-icon-btn disabled"
-                          title="Order is in transit (Locked)"
-                          style={{
-                            opacity: 0.6,
-                            cursor: 'not-allowed',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <span>🔒</span>
-                        </span>
-                      ) : (
-                        <>
-                          <Link
-                            to={`/delivery-orders/${order.id}/edit`}
-                            className="action-icon-btn"
-                            title="Edit"
+                          <Eye size={14} />
+                        </Link>
+                        {order.status === 'Cancelled' ? (
+                          /* Cancelled orders are read-only — no edit/delete */
+                          <span
+                            className="action-icon-btn disabled"
+                            title="Order is cancelled"
+                            style={{
+                              opacity: 0.4,
+                              cursor: 'not-allowed',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
                           >
-                            <Pencil size={14} />
-                          </Link>
-                          <button
-                            className="action-icon-btn danger"
-                            title="Cancel / Delete"
-                            onClick={() => setDeleteTarget(order)}
+                            <span>🚫</span>
+                          </span>
+                        ) : order.status === 'In Transit' || order.status === 'Out for Delivery' ? (
+                          <span
+                            className="action-icon-btn disabled"
+                            title="Order is in transit (Locked)"
+                            style={{
+                              opacity: 0.6,
+                              cursor: 'not-allowed',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
                           >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
+                            <span>🔒</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Link
+                              to={`/delivery-orders/${order.id}/edit`}
+                              className="action-icon-btn"
+                              title="Edit"
+                            >
+                              <Pencil size={14} />
+                            </Link>
+                            <button
+                              className="action-icon-btn danger"
+                              title="Cancel / Delete"
+                              onClick={() => setDeleteTarget(order)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

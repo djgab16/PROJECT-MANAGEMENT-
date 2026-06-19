@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Header from '../../components/layout/Header';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
 import RoleBadge from '../../components/ui/RoleBadge';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { Pencil, Trash2, Plus, X } from 'lucide-react';
@@ -9,7 +8,6 @@ import type { Employee } from '../../types';
 
 export default function Employees() {
   const { employees, addEmployee, deleteEmployee, updateEmployee } = useData();
-  const { user } = useAuth();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -137,11 +135,13 @@ export default function Employees() {
                   <td><RoleBadge role={emp.role} /></td>
                   <td className="cell-muted">{emp.systemAccess}</td>
                   <td><StatusBadge status={emp.status} size="sm" /></td>
-                  <td className="cell-actions">
-                    <button className="action-icon-btn" title="Edit" onClick={() => handleOpenForm(emp)}><Pencil size={14} /></button>
-                    {emp.role !== 'ADMIN' && (
-                      <button className="action-icon-btn danger" title="Remove" onClick={() => handleDelete(emp.id, emp.name)}><Trash2 size={14} /></button>
-                    )}
+                  <td>
+                    <div className="cell-actions">
+                      <button className="action-icon-btn" title="Edit" onClick={() => handleOpenForm(emp)}><Pencil size={14} /></button>
+                      {emp.role !== 'ADMIN' && (
+                        <button className="action-icon-btn danger" title="Remove" onClick={() => handleDelete(emp.id, emp.name)}><Trash2 size={14} /></button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

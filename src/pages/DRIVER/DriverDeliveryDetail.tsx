@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
+import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, AlertCircle, FileText, Radio, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 import { useData } from '../../context/DataContext';
 import StatusBadge from '../../components/ui/StatusBadge';
 import PODModal from './components/PODModal';
@@ -31,7 +32,7 @@ export default function DriverDeliveryDetail() {
   const withLocation = (callback: (coords: { lat: number; lng: number } | null) => Promise<void> | void) => {
     setIsUpdating(true);
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      toast.error("Geolocation is not supported by your browser.");
       Promise.resolve(callback(null)).then(() => setIsUpdating(false));
       return;
     }
@@ -49,7 +50,7 @@ export default function DriverDeliveryDetail() {
       },
       async (error) => {
         console.error("Error obtaining location", error);
-        alert("Could not get location. Proceeding without GPS tag.");
+        toast.warning("Could not get location. Proceeding without GPS tag.");
         try {
           await callback(null);
         } catch (err) {
@@ -73,9 +74,10 @@ export default function DriverDeliveryDetail() {
               status: 'Picked Up',
               gpsCoordinates: coords || undefined
             });
+            toast.success("Order picked up successfully");
           } catch (err: any) {
             console.error(err);
-            alert(err.response?.data?.message || err.message || "Failed to confirm pickup.");
+            toast.error(err.response?.data?.message || err.message || "Failed to confirm pickup.");
           }
         });
       }
@@ -94,9 +96,10 @@ export default function DriverDeliveryDetail() {
               status: 'In Transit',
               gpsCoordinates: coords || undefined
             });
+            toast.success("Transit started");
           } catch (err: any) {
             console.error(err);
-            alert(err.response?.data?.message || err.message || "Failed to start transit.");
+            toast.error(err.response?.data?.message || err.message || "Failed to start transit.");
           }
         });
       }
@@ -115,9 +118,10 @@ export default function DriverDeliveryDetail() {
               status: 'Out for Delivery',
               gpsCoordinates: coords || undefined
             });
+            toast.success("Order is now out for delivery");
           } catch (err: any) {
             console.error(err);
-            alert(err.response?.data?.message || err.message || "Failed to mark Out for Delivery.");
+            toast.error(err.response?.data?.message || err.message || "Failed to mark Out for Delivery.");
           }
         });
       }
@@ -136,11 +140,12 @@ export default function DriverDeliveryDetail() {
           dateCompleted: new Date().toLocaleString(),
           gpsCoordinates: coords || undefined
         });
+        toast.success("Delivery completed successfully");
         setShowPODModal(false);
         navigate('/driver/dashboard');
       } catch (err: any) {
         console.error(err);
-        alert(err.response?.data?.message || err.message || "Failed to submit POD.");
+        toast.error(err.response?.data?.message || err.message || "Failed to submit POD.");
       }
     });
   };
@@ -154,11 +159,12 @@ export default function DriverDeliveryDetail() {
           failureRemarks: data.remarks,
           gpsCoordinates: coords || undefined
         });
+        toast.error("Delivery marked as failed");
         setShowFailureModal(false);
         navigate('/driver/dashboard');
       } catch (err: any) {
         console.error(err);
-        alert(err.response?.data?.message || err.message || "Failed to record failure.");
+        toast.error(err.response?.data?.message || err.message || "Failed to record failure.");
       }
     });
   };
@@ -168,7 +174,7 @@ export default function DriverDeliveryDetail() {
       {isTracking && (
         <div className="live-gps-streaming-badge" style={{ background: 'var(--status-active-bg)', border: '1px solid var(--status-active)', padding: '10px 14px', borderRadius: '10px', color: 'var(--status-active)', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0, 169, 157, 0.08)' }}>
           <span className="pulse-dot-live" style={{ width: '8px', height: '8px', background: 'var(--status-active)', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px var(--status-active)', animation: 'dot-pulse 1.5s infinite alternate' }} />
-          📡 Live GPS Tracking is ACTIVE. Your movement is streamed to client.
+          <Radio size={16} /> Live GPS Tracking is ACTIVE. Your movement is streamed to client.
         </div>
       )}
       {gpsError && (
@@ -212,6 +218,14 @@ export default function DriverDeliveryDetail() {
             <div className="info-text">
               <span className="label">Delivery Address</span>
               <span className="value address-block">{order.recipientAddress}</span>
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.recipientAddress)}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--primary)', marginTop: '4px', fontWeight: 600 }}
+              >
+                <ExternalLink size={12} /> View on Google Maps
+              </a>
             </div>
           </div>
           {order.specialInstructions && (
@@ -247,19 +261,19 @@ export default function DriverDeliveryDetail() {
         </div>
       )}
 
-      {/* Sandbox Geolocation Simulator */}
+      {/* Sandbox Geolocation Simulator - Professionalized */}
       {order.status === 'In Transit' && (
         <div className="detail-section sandbox-section" style={{ background: 'var(--bg-main)', border: '1px dashed var(--border)', marginTop: '16px', padding: '16px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#3b82f6', borderRadius: '50%', animation: 'dot-pulse 1.5s infinite alternate' }} />
-            <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)' }}>Sandbox Geolocation Simulator</h3>
+            <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)' }}>Route Progress Simulator</h3>
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
-            Simulate driving along the route. Drag this slider to push live GPS coordinates to customer's map in real-time.
+            Simulate your position along the route. This updates the customer tracking map in real-time.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              <span>Start (Manila)</span>
+              <span>Origin</span>
               <span>Destination ({order.area})</span>
             </div>
             <input
@@ -300,17 +314,18 @@ export default function DriverDeliveryDetail() {
               style={{ width: '100%', height: '6px', borderRadius: '3px', accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
             {order.liveCoordinates && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                <span>Lat: {order.liveCoordinates.lat.toFixed(5)}</span>
-                <span>Lng: {order.liveCoordinates.lng.toFixed(5)}</span>
-                <span>Updated: {order.liveCoordinates.lastUpdated.split(', ')[1] || 'Just now'}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MapPin size={10} /> {order.liveCoordinates.lat.toFixed(4)}, {order.liveCoordinates.lng.toFixed(4)}
+                </span>
+                <span>Last sync: {order.liveCoordinates.lastUpdated.split(', ')[1] || 'Just now'}</span>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Tracking History (PB-018) */}
+      {/* Tracking History */}
       <div className="detail-section" style={{ marginTop: '16px', paddingBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 style={{ color: 'var(--text-primary)' }}>Tracking History</h3>

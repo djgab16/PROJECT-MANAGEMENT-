@@ -17,6 +17,7 @@ import Settings from './pages/Settings/Settings';
 import DeliverySummary from './pages/DeliverySummary/DeliverySummary';
 import AnalyticsView from './pages/Analytics/AnalyticsView';
 import Tasks from './pages/DRIVER/Tasks';
+import Dispatch from './pages/Dispatch/Dispatch';
 import DeliveryHistoryLog from './pages/DeliveryOrders/DeliveryHistoryLog';
 import DriverDashboard from './pages/DRIVER/DriverDashboard';
 import QRScannerView from './pages/DRIVER/QRScannerView';
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/failed-pickups" element={<FailedPickups />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/dispatch" element={<Dispatch />} />
             <Route path="/POT-records" element={<Navigate to="/archive" replace />} />
             <Route path="/activity-logs" element={<ActivityLogs />} />
             

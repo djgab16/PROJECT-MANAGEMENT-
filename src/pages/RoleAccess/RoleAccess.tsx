@@ -2,7 +2,6 @@ import { useState } from 'react';
 import Header from '../../components/layout/Header';
 import { Save } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
 
 const permissionsData = [
   { module: 'View Dashboard Elements', op: true, admin: true },
@@ -22,7 +21,6 @@ export default function RoleAccess() {
   });
   const [isSaved, setIsSaved] = useState(false);
   const { addActivityLog } = useData();
-  const { user } = useAuth();
 
   const handleToggle = (index: number, role: 'op' | 'admin') => {
     const updated = [...permissions];

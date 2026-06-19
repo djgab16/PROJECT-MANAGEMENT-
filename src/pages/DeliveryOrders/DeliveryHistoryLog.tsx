@@ -1,5 +1,8 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Download, CheckCircle2, Clock, MapPin, Package, FileText, Image as ImageIcon } from 'lucide-react';
+import { 
+  Download, CheckCircle2, Clock, MapPin, Package, FileText, 
+  Image as ImageIcon, User, ArrowRight, Check, Monitor, Smartphone 
+} from 'lucide-react';
 import Header from '../../components/layout/Header';
 import { useData } from '../../context/DataContext';
 import type { DeliveryStatus } from '../../types';
@@ -36,12 +39,12 @@ export default function DeliveryHistoryLog() {
   return (
     <>
       <Header
+        showBack
         title={`${order.waybillNo} Delivery History Log`}
         subtitle={`Delivery Orders · ${order.waybillNo}`}
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         actions={
           <div className="flex gap-sm">
-            <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>{"< Back"}</button>
             <button className="btn btn-outline btn-sm"><Download size={14} /> Export Log</button>
           </div>
         }
@@ -80,7 +83,9 @@ export default function DeliveryHistoryLog() {
             </div>
             <div className="detail-item">
               <span className="label" style={{ opacity: 0 }}>STATUS</span>
-              <span className="action-badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>● {order.status}</span>
+              <span className="action-badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '8px', height: '8px', background: 'white', borderRadius: '50%' }}></span> {order.status}
+              </span>
             </div>
           </div>
         </div>
@@ -91,7 +96,7 @@ export default function DeliveryHistoryLog() {
             {steps.map((step, i) => (
               <div key={step} className={`stepper-item ${i <= currentStep ? 'stepper-done' : ''} ${i === currentStep ? 'stepper-current' : ''}`}>
                 <div className="stepper-circle">
-                  {i < currentStep ? '✓' : i === currentStep ? <Clock size={14} /> : i === 2 ? <FileText size={14} /> : <MapPin size={14} />}
+                  {i < currentStep ? <Check size={14} /> : i === currentStep ? <Clock size={14} /> : i === 2 ? <FileText size={14} /> : <MapPin size={14} />}
                 </div>
                 <span className="stepper-label">{step.toUpperCase()}</span>
                 {i <= currentStep && <span className="stepper-time">{i === 0 ? order.dateEncoded.split(',')[1] : (i === currentStep ? order.lastUpdated.split(',')[1] : '')}</span>}
@@ -129,16 +134,33 @@ export default function DeliveryHistoryLog() {
                              log.action === 'POT Upload' ? 'Proof of Transaction (POT) Submitted' : 
                              log.description.includes('Completed') ? 'Order Marked as Completed' : 
                              'Status Updated'}
-                            {log.action !== 'Create' && <span style={{ fontSize: '0.8rem', marginLeft: '12px', fontWeight: 'normal', color: 'var(--text-secondary)' }}>● {log.action}</span>}
+                            {log.action !== 'Create' && <span style={{ fontSize: '0.8rem', marginLeft: '12px', fontWeight: 'normal', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ width: '4px', height: '4px', background: 'var(--text-secondary)', borderRadius: '50%' }}></span> {log.action}
+                            </span>}
                           </h4>
                           <span className="timeline-time">{log.timestamp}</span>
                         </div>
                         <div className="timeline-body">
                           <p>{log.description}</p>
                         </div>
-                        <div className="timeline-meta">
-                          <div className="meta-item"><span style={{ color: 'var(--text-muted)' }}>👤 {log.userName} ({log.userRole === 'DRIVER' ? 'Driver' : 'System Auto'})</span></div>
-                          {log.action === 'POT Upload' && <div className="meta-item ml-2"><ImageIcon size={12} /> Photo attached</div>}
+                        <div className="timeline-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                          <div className="meta-item"><span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} /> {log.userName} ({log.userRole === 'DRIVER' ? 'Driver' : 'System Auto'})</span></div>
+                          {log.location && (
+                            <div className="meta-item">
+                              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <MapPin size={12} /> {log.location}
+                              </span>
+                            </div>
+                          )}
+                          {log.deviceInfo && (
+                            <div className="meta-item">
+                              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {log.deviceInfo.toLowerCase().includes('mobile') || log.deviceInfo.toLowerCase().includes('android') || log.deviceInfo.toLowerCase().includes('ios') ? <Smartphone size={12} /> : <Monitor size={12} />}
+                                {log.deviceInfo}
+                              </span>
+                            </div>
+                          )}
+                          {log.action === 'POT Upload' && <div className="meta-item"><ImageIcon size={12} /> Photo attached</div>}
                         </div>
                       </div>
                     </div>
@@ -174,7 +196,9 @@ export default function DeliveryHistoryLog() {
             <div className="card" style={{ marginTop: '24px' }}>
               <div className="card-header">
                 <h4>Order Info</h4>
-                <Link to={`/delivery-orders/${order.id}`} className="card-header-view-all">View Full \u2192</Link>
+                <Link to={`/delivery-orders/${order.id}`} className="card-header-view-all" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  View Full <ArrowRight size={14} />
+                </Link>
               </div>
               <div className="info-list">
                 <div className="info-list-item">

@@ -26,6 +26,18 @@ namespace SPXDeliveryAPI.Models
         [Required]
         public string SenderAddress { get; set; } = string.Empty;
 
+        [MaxLength(100)]
+        public string? SenderUnit { get; set; }
+
+        [MaxLength(200)]
+        public string? SenderStreet { get; set; }
+
+        [MaxLength(100)]
+        public string? SenderBarangay { get; set; }
+
+        [MaxLength(100)]
+        public string? SenderCity { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string RecipientName { get; set; } = string.Empty;
@@ -36,6 +48,18 @@ namespace SPXDeliveryAPI.Models
 
         [Required]
         public string RecipientAddress { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string? RecipientUnit { get; set; }
+
+        [MaxLength(200)]
+        public string? RecipientStreet { get; set; }
+
+        [MaxLength(100)]
+        public string? RecipientBarangay { get; set; }
+
+        [MaxLength(100)]
+        public string? RecipientCity { get; set; }
 
         [Required]
         [MaxLength(100)]

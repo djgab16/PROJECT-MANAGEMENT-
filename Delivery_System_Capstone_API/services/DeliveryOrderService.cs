@@ -65,8 +65,101 @@ namespace SPXDeliveryAPI.Services
             }
         }
 
+        private void SyncAndStructureAddresses(DeliveryOrder order)
+        {
+            // 1. Sender Address
+            if (!string.IsNullOrWhiteSpace(order.SenderAddress) && 
+                string.IsNullOrWhiteSpace(order.SenderStreet) && 
+                string.IsNullOrWhiteSpace(order.SenderBarangay) && 
+                string.IsNullOrWhiteSpace(order.SenderCity))
+            {
+                var parts = order.SenderAddress.Split(',').Select(p => p.Trim()).ToList();
+                if (parts.Count >= 4)
+                {
+                    order.SenderUnit = parts[0];
+                    order.SenderStreet = parts[1];
+                    order.SenderBarangay = parts[2];
+                    order.SenderCity = string.Join(", ", parts.Skip(3));
+                }
+                else if (parts.Count == 3)
+                {
+                    order.SenderStreet = parts[0];
+                    order.SenderBarangay = parts[1];
+                    order.SenderCity = parts[2];
+                }
+                else if (parts.Count == 2)
+                {
+                    order.SenderStreet = parts[0];
+                    order.SenderCity = parts[1];
+                }
+                else if (parts.Count == 1)
+                {
+                    order.SenderStreet = parts[0];
+                }
+            }
+            else
+            {
+                var senderParts = new[] { order.SenderUnit, order.SenderStreet, order.SenderBarangay, order.SenderCity }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s!.Trim());
+                if (senderParts.Any())
+                {
+                    order.SenderAddress = string.Join(", ", senderParts);
+                }
+            }
+
+            // 2. Recipient Address
+            if (!string.IsNullOrWhiteSpace(order.RecipientAddress) && 
+                string.IsNullOrWhiteSpace(order.RecipientStreet) && 
+                string.IsNullOrWhiteSpace(order.RecipientBarangay) && 
+                string.IsNullOrWhiteSpace(order.RecipientCity))
+            {
+                var parts = order.RecipientAddress.Split(',').Select(p => p.Trim()).ToList();
+                var remainingParts = new List<string>(parts);
+                if (remainingParts.Count > 0 && !string.IsNullOrWhiteSpace(order.Area) && 
+                    remainingParts.Last().Equals(order.Area.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    order.RecipientCity = remainingParts.Last();
+                    remainingParts.RemoveAt(remainingParts.Count - 1);
+                }
+
+                if (remainingParts.Count >= 3)
+                {
+                    order.RecipientUnit = remainingParts[0];
+                    order.RecipientStreet = remainingParts[1];
+                    order.RecipientBarangay = string.Join(", ", remainingParts.Skip(2));
+                }
+                else if (remainingParts.Count == 2)
+                {
+                    order.RecipientStreet = remainingParts[0];
+                    order.RecipientBarangay = remainingParts[1];
+                }
+                else if (remainingParts.Count == 1)
+                {
+                    order.RecipientStreet = remainingParts[0];
+                }
+
+                if (string.IsNullOrWhiteSpace(order.RecipientCity))
+                {
+                    order.RecipientCity = order.Area;
+                }
+            }
+            else
+            {
+                var recipientParts = new[] { order.RecipientUnit, order.RecipientStreet, order.RecipientBarangay, order.RecipientCity }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s!.Trim());
+                if (recipientParts.Any())
+                {
+                    order.RecipientAddress = string.Join(", ", recipientParts);
+                }
+            }
+        }
+
         private void ValidateOrderDetails(DeliveryOrder order)
         {
+            SyncAndStructureAddresses(order);
+
             if (string.IsNullOrWhiteSpace(order.ClientName))
                 throw new ArgumentException("Client Name is required.");
 
@@ -269,17 +362,30 @@ namespace SPXDeliveryAPI.Services
             if (string.IsNullOrWhiteSpace(order.Route))
                 order.Route = order.Area;
 
-            // Use the frontend-supplied waybill if it looks valid (SPX-YYYY-NNNNNN),
-            // otherwise generate one. We then rely on the DB unique constraint to catch
-            // the rare collision and surface it as a clear error — no retry loop needed.
+            // Generate a unique waybill number or validate the client-supplied one.
+            // This prevents duplicate keys and ensures clean validation feedback.
             var year = DateTime.UtcNow.Year;
             if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"SPX-{year}"))
             {
-                // Derive a waybill from the DB identity sequence: use the current max Id
-                // + 1 as the sequence number. This is a single non-locking read and avoids
-                // the COUNT/ANY/retry pattern that caused deadlocks under concurrent saves.
                 var maxId = await _context.DeliveryOrders.MaxAsync(o => (int?)o.Id) ?? 0;
-                order.WaybillNo = $"SPX-{year}-{maxId + 1:D4}";
+                var seq = maxId + 1;
+                string generatedWaybill;
+                do
+                {
+                    generatedWaybill = $"SPX-{year}-{seq:D4}";
+                    seq++;
+                } while (await _context.DeliveryOrders.AnyAsync(o => o.WaybillNo == generatedWaybill));
+
+                order.WaybillNo = generatedWaybill;
+            }
+            else
+            {
+                // Check if the user-supplied waybill already exists in the database
+                var exists = await _context.DeliveryOrders.AnyAsync(o => o.WaybillNo == order.WaybillNo);
+                if (exists)
+                {
+                    throw new InvalidOperationException($"A delivery order with waybill number '{order.WaybillNo}' already exists.");
+                }
             }
 
             await _context.DeliveryOrders.AddAsync(order);
@@ -407,9 +513,18 @@ namespace SPXDeliveryAPI.Services
                 if (!string.IsNullOrEmpty(updatedOrder.ClientType)) order.ClientType = updatedOrder.ClientType;
                 if (!string.IsNullOrEmpty(updatedOrder.ContactNumber)) order.ContactNumber = updatedOrder.ContactNumber;
                 if (!string.IsNullOrEmpty(updatedOrder.SenderAddress)) order.SenderAddress = updatedOrder.SenderAddress;
+                order.SenderUnit = updatedOrder.SenderUnit;
+                order.SenderStreet = updatedOrder.SenderStreet;
+                order.SenderBarangay = updatedOrder.SenderBarangay;
+                order.SenderCity = updatedOrder.SenderCity;
+
                 if (!string.IsNullOrEmpty(updatedOrder.RecipientName)) order.RecipientName = updatedOrder.RecipientName;
                 if (!string.IsNullOrEmpty(updatedOrder.RecipientContact)) order.RecipientContact = updatedOrder.RecipientContact;
                 if (!string.IsNullOrEmpty(updatedOrder.RecipientAddress)) order.RecipientAddress = updatedOrder.RecipientAddress;
+                order.RecipientUnit = updatedOrder.RecipientUnit;
+                order.RecipientStreet = updatedOrder.RecipientStreet;
+                order.RecipientBarangay = updatedOrder.RecipientBarangay;
+                order.RecipientCity = updatedOrder.RecipientCity;
                 
                 // For pickups, area/route is locked to Manila
                 if (order.TaskType != "Pickup")

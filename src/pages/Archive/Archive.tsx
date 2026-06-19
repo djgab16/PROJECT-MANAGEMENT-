@@ -160,8 +160,40 @@ export default function Archive() {
   }
 
   const handleExport = () => {
-    const headers = ['Waybill No', 'Client', 'Recipient', 'Area', 'Driver', 'Date Completed', 'POT Status'];
-    const rows = filteredOrders.map(o => [o.waybillNo, o.clientName, o.recipientName, o.area, o.driverName, o.dateCompleted, o.potStatus].join(','));
+    const headers = [
+      'Waybill No', 
+      'Client', 
+      'Sender Unit', 
+      'Sender Street', 
+      'Sender Barangay', 
+      'Sender City', 
+      'Recipient', 
+      'Recipient Unit', 
+      'Recipient Street', 
+      'Recipient Barangay', 
+      'Recipient City', 
+      'Area', 
+      'Driver', 
+      'Date Completed', 
+      'POT Status'
+    ];
+    const rows = filteredOrders.map(o => [
+      o.waybillNo, 
+      o.clientName, 
+      o.senderUnit || '', 
+      o.senderStreet || '', 
+      o.senderBarangay || '', 
+      o.senderCity || '', 
+      o.recipientName, 
+      o.recipientUnit || '', 
+      o.recipientStreet || '', 
+      o.recipientBarangay || '', 
+      o.recipientCity || '', 
+      o.area, 
+      o.driverName || 'Unassigned', 
+      o.dateCompleted || '', 
+      o.potStatus
+    ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -251,7 +283,6 @@ export default function Archive() {
                   <tr key={order.id} style={{ opacity: order.status === 'Cancelled' ? 0.75 : 1 }}>
                     <td>
                       <span className="waybill-link" onClick={() => navigate(`/delivery-orders/${order.id}`)} style={{ cursor: 'pointer', color: 'var(--primary)' }}>{order.waybillNo}</span>
-                      <div className="cell-sub">{order.orderDate ? order.orderDate.split(',')[0] : 'No date'}</div>
                     </td>
                     <td>
                       <span className="cell-name">{order.clientName}</span>
@@ -279,9 +310,10 @@ export default function Archive() {
                         : order.dateCompleted || '—'}
                     </td>
                     <td><StatusBadge status={order.potStatus} size="sm" /></td>
-                    <td className="cell-actions">
-                      <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
-                      <button className="action-icon-btn" title="Archive" disabled><ArchiveIcon size={14} /></button>
+                    <td>
+                      <div className="cell-actions">
+                        <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))

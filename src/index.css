@@ -460,6 +460,39 @@ h4 { font-size: 1.1rem; }
   transform: scale(0.98);
 }
 
+.cell-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all 0.2s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.action-icon-btn:hover {
+  background: var(--bg-main);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.action-icon-btn.danger:hover {
+  background: var(--status-failed-bg);
+  color: var(--status-failed);
+  border-color: var(--status-failed);
+}
+
 .btn-danger {
   background: transparent;
   border: 1.5px solid var(--status-failed);

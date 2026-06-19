@@ -55,83 +55,126 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <div className="login-content-wrapper">
-        <div className="login-left">
-          <div className="login-logo-wrapper">
-            <img src={logo} alt="Speedex Logo" className="login-logo-img" />
+      <div className="login-left">
+        <div className="login-left-content">
+          <div className="login-logo" style={{ background: 'transparent', padding: '0' }}>
+            <img src={logo} alt="Speedex Logo" style={{ height: '48px', objectFit: 'contain' }} />
           </div>
-          
-          <div className="login-hero-text">
-            <h1>Three Decades of<br />Trust & Reliability.</h1>
-            <p>Every freight, parcel, and mail we handle reflects our commitment to speed, safety, and security. We guarantee exceptional value while maintaining the highest level of service.</p>
+          <p className="login-tagline">30SPEEDEX DELIVERY TRACKING SYSTEM</p>
+          <div className="login-steps">
+            <div className="login-step">
+              <div className="login-step-number">1</div>
+              <div>
+                <strong>Enter Credentials</strong>
+                <p>Use your assigned Employee ID and password to access DTS.</p>
+              </div>
+            </div>
+            <div className="login-step">
+              <div className="login-step-number">2</div>
+              <div>
+                <strong>Track Deliveries</strong>
+                <p>Monitor courier shipments, waybills, and delivery statuses in real-time.</p>
+              </div>
+            </div>
+            <div className="login-step">
+              <div className="login-step-number">3</div>
+              <div>
+                <strong>Manage POD Records</strong>
+                <p>Upload and verify Proof of Delivery (POD) records and driver updates.</p>
+              </div>
+            </div>
+          </div>
+          <div className="login-decorative-circles">
+            <div className="circle circle-1" />
+            <div className="circle circle-2" />
           </div>
         </div>
+      </div>
 
-        <div className="login-right">
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className="login-form-header">
-              <h2 className="login-form-title">Welcome Back</h2>
-              <p className="login-form-subtitle">Sign in to your Speedex account</p>
+      <div className="login-right">
+        <form className="login-form" onSubmit={handleSubmit}>
+          <span className="login-form-label label" style={{ color: 'var(--primary)' }}>SECURE ACCESS</span>
+          <h2 className="login-form-title">Login to Delivery Tracking System (DTS)</h2>
+          <p className="login-form-subtitle">Enter your credentials below to continue.</p>
+
+          <hr className="login-divider" />
+
+          {error && (
+            <div
+              className="login-alert error"
+              style={{
+                background: '#FFF1F1',
+                border: '1px solid #FFCDCD',
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                color: '#E31A1A',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <AlertTriangleIcon />
+              <p>{error}</p>
             </div>
+          )}
 
-            {error && (
-              <div className="login-alert error">
-                <AlertTriangleIcon />
-                <p>{error}</p>
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label login-label">Employee ID</label>
-              <div className="form-input-icon">
-                <User size={18} className="icon-left" style={{ color: '#A3AED0' }} />
-                <input
-                  type="text"
-                  className="form-input login-input"
-                  placeholder="EMP-001"
-                  value={employeeId}
-                  onChange={e => setEmployeeId(e.target.value)}
-                  required
-                />
-              </div>
+          <div className="form-group">
+            <label className="form-label">Employee ID</label>
+            <div className="form-input-icon">
+              <User size={16} className="icon-left" />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="EMP-001"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                required
+                style={{ paddingLeft: '42px' }}
+              />
             </div>
+            <small style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              Try: EMP-001 (Admin), EMP-002 (Ops), or EMP-003 (Driver)
+            </small>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label login-label">Password</label>
-              <div className="form-input-icon">
-                <Lock size={18} className="icon-left" style={{ color: '#A3AED0' }} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input login-input"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
-                <button type="button" className="icon-right" onClick={() => setShowPassword(!showPassword)} style={{ color: '#A3AED0' }}>
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="form-input-icon">
+              <Lock size={16} className="icon-left" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ paddingLeft: '42px' }}
+              />
+              <button type="button" className="icon-right" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', marginBottom: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#A3AED0' }}>
-                <input type="checkbox" className="login-checkbox" /> Remember me
-              </label>
-              <a href="#" style={{ color: 'var(--primary)', fontSize: '13px', textDecoration: 'none', fontWeight: '600' }}>Forgot password?</a>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+              <input type="checkbox" /> Remember me
+            </label>
+            <a href="#" style={{ color: 'var(--primary)', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>
+              Forgot password?
+            </a>
+          </div>
 
-            <button type="submit" className="btn btn-primary login-submit-btn" disabled={isSubmitting}>
-              {isSubmitting ? 'AUTHENTICATING...' : 'SIGN IN'}
-            </button>
-            
-            <div className="login-demo-hints">
-              <span>Demo Accounts:</span> EMP-001 (Admin) • EMP-002 (Ops) • EMP-003 (Driver)
-            </div>
-          </form>
+          <button type="submit" className="btn btn-dark btn-lg login-submit-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'LOGGING IN...' : 'LOG IN'}
+          </button>
+        </form>
 
-          <p className="login-footer">© 2026 Speedex Courier & Forwarder, Inc.</p>
-        </div>
+        <p className="login-footer">
+          © 2026 <a href="#">Speedex Courier & Forwarder, Inc.</a> · All rights reserved.
+        </p>
       </div>
     </div>
   );

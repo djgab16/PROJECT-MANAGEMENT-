@@ -64,6 +64,57 @@ const REGIONS = [
   }
 ];
 
+const parseRecipientAddress = (addressStr: string, areaVal: string) => {
+  const parts = addressStr ? addressStr.split(',').map(p => p.trim()) : [];
+  let remainingParts = [...parts];
+  if (remainingParts.length > 0 && areaVal && remainingParts[remainingParts.length - 1].toLowerCase() === areaVal.toLowerCase()) {
+    remainingParts.pop();
+  }
+  
+  let unit = '';
+  let street = '';
+  let barangay = '';
+  
+  if (remainingParts.length >= 3) {
+    unit = remainingParts[0];
+    street = remainingParts[1];
+    barangay = remainingParts.slice(2).join(', ');
+  } else if (remainingParts.length === 2) {
+    street = remainingParts[0];
+    barangay = remainingParts[1];
+  } else if (remainingParts.length === 1) {
+    street = remainingParts[0];
+  }
+  
+  return { unit, street, barangay };
+};
+
+const parseSenderAddress = (addressStr: string) => {
+  const parts = addressStr ? addressStr.split(',').map(p => p.trim()) : [];
+  let unit = '';
+  let street = '';
+  let barangay = '';
+  let city = '';
+  
+  if (parts.length >= 4) {
+    unit = parts[0];
+    street = parts[1];
+    barangay = parts[2];
+    city = parts.slice(3).join(', ');
+  } else if (parts.length === 3) {
+    street = parts[0];
+    barangay = parts[1];
+    city = parts[2];
+  } else if (parts.length === 2) {
+    street = parts[0];
+    city = parts[1];
+  } else if (parts.length === 1) {
+    street = parts[0];
+  }
+  
+  return { unit, street, barangay, city };
+};
+
 export default function EditDeliveryOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -88,6 +139,16 @@ export default function EditDeliveryOrder() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  const [recipientUnit, setRecipientUnit] = useState('');
+  const [recipientStreet, setRecipientStreet] = useState('');
+  const [recipientBarangay, setRecipientBarangay] = useState('');
+
+  const [senderUnit, setSenderUnit] = useState('');
+  const [senderStreet, setSenderStreet] = useState('');
+  const [senderBarangay, setSenderBarangay] = useState('');
+  const [senderCity, setSenderCity] = useState('');
+
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
@@ -127,6 +188,28 @@ export default function EditDeliveryOrder() {
           if (order.packageType && !['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch', ''].includes(order.packageType)) {
             setCustomPackageName(order.packageType);
           }
+          if (order.recipientAddress) {
+            const { unit, street, barangay } = parseRecipientAddress(order.recipientAddress, order.area || '');
+            setRecipientUnit(unit);
+            setRecipientStreet(street);
+            setRecipientBarangay(barangay);
+          } else {
+            setRecipientUnit('');
+            setRecipientStreet('');
+            setRecipientBarangay('');
+          }
+          if (order.senderAddress) {
+            const { unit, street, barangay, city } = parseSenderAddress(order.senderAddress);
+            setSenderUnit(unit);
+            setSenderStreet(street);
+            setSenderBarangay(barangay);
+            setSenderCity(city);
+          } else {
+            setSenderUnit('');
+            setSenderStreet('');
+            setSenderBarangay('');
+            setSenderCity('');
+          }
         }
       } else {
         navigate(isDriver ? '/tasks' : '/delivery-orders');
@@ -137,6 +220,13 @@ export default function EditDeliveryOrder() {
         return;
       }
       if (!formData.waybillNo) {
+        setRecipientUnit('');
+        setRecipientStreet('');
+        setRecipientBarangay('');
+        setSenderUnit('');
+        setSenderStreet('');
+        setSenderBarangay('');
+        setSenderCity('');
         setFormData({
           waybillNo: `SPX-2026-${Math.floor(100000 + Math.random() * 900000)}`,
           orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
@@ -156,6 +246,42 @@ export default function EditDeliveryOrder() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, deliveryOrders, navigate, user, formData.waybillNo]);
+
+  // Synchronize structured recipient address fields to recipientAddress
+  useEffect(() => {
+    const parts = [
+      recipientUnit.trim(),
+      recipientStreet.trim(),
+      recipientBarangay.trim(),
+      (formData.area || '').trim()
+    ].filter(Boolean);
+    setFormData(prev => ({
+      ...prev,
+      recipientAddress: parts.join(', '),
+      recipientUnit: recipientUnit.trim(),
+      recipientStreet: recipientStreet.trim(),
+      recipientBarangay: recipientBarangay.trim(),
+      recipientCity: (formData.area || '').trim()
+    }));
+  }, [recipientUnit, recipientStreet, recipientBarangay, formData.area]);
+
+  // Synchronize structured sender address fields to senderAddress
+  useEffect(() => {
+    const parts = [
+      senderUnit.trim(),
+      senderStreet.trim(),
+      senderBarangay.trim(),
+      senderCity.trim()
+    ].filter(Boolean);
+    setFormData(prev => ({
+      ...prev,
+      senderAddress: parts.join(', '),
+      senderUnit: senderUnit.trim(),
+      senderStreet: senderStreet.trim(),
+      senderBarangay: senderBarangay.trim(),
+      senderCity: senderCity.trim()
+    }));
+  }, [senderUnit, senderStreet, senderBarangay, senderCity]);
 
   // Enforce Manila as Area and Route for Pickup tasks automatically
   useEffect(() => {
@@ -316,9 +442,22 @@ export default function EditDeliveryOrder() {
 
     if (!formData.area) newErrors.area = 'Area / Route is required';
     if (!formData.clientName) newErrors.clientName = 'Client Name is required';
-    if (!formData.senderAddress) newErrors.senderAddress = 'Sender Address is required';
     if (!formData.recipientName) newErrors.recipientName = 'Recipient Name is required';
-    if (!formData.recipientAddress) newErrors.recipientAddress = 'Delivery Address is required';
+    if (!senderStreet.trim()) {
+      newErrors.senderAddress = 'Sender House No. & Street is required';
+    } else if (!senderBarangay.trim()) {
+      newErrors.senderAddress = 'Sender Barangay is required';
+    } else if (!senderCity.trim()) {
+      newErrors.senderAddress = 'Sender City is required';
+    }
+    
+    if (!recipientStreet.trim()) {
+      newErrors.recipientAddress = 'Recipient House No. & Street is required';
+    } else if (!recipientBarangay.trim()) {
+      newErrors.recipientAddress = 'Recipient Barangay is required';
+    } else if (!formData.area) {
+      newErrors.recipientAddress = 'Recipient City (Area / Route) is required';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -353,12 +492,6 @@ export default function EditDeliveryOrder() {
 
         await addDeliveryOrder(newOrder);
         await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: user?.name || 'System',
-          userRole: user?.role || 'Staff',
-          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-          userColor: '#00A99D',
           action: 'Create',
           description: `Created new delivery order`,
           reference: newOrder.waybillNo
@@ -375,12 +508,6 @@ export default function EditDeliveryOrder() {
         };
         await updateDeliveryOrder(id!, updatedOrder);
         await addActivityLog({
-          id: Date.now().toString(),
-          timestamp: new Date().toLocaleString(),
-          userName: user?.name || 'System',
-          userRole: user?.role || 'Staff',
-          userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-          userColor: '#FF7B42',
           action: 'Update',
           description: `Updated delivery order ${formData.waybillNo}`,
           reference: formData.waybillNo
@@ -406,12 +533,6 @@ export default function EditDeliveryOrder() {
       setIsSubmitting(true);
       await deleteDeliveryOrder(id!);
       await addActivityLog({
-        id: Date.now().toString(),
-        timestamp: new Date().toLocaleString(),
-        userName: user?.name || 'System',
-        userRole: user?.role || 'Staff',
-        userInitials: user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'SY',
-        userColor: '#E31A1A',
         action: 'Update',
         description: `Cancelled delivery order ${formData.waybillNo}`,
         reference: formData.waybillNo
@@ -429,6 +550,7 @@ export default function EditDeliveryOrder() {
   return (
     <>
       <Header
+        showBack
         title={isNew ? "Create New Order" : (isDriver ? "Update Order" : "Edit Order")}
         subtitle={isNew ? "Delivery Orders" : `Delivery Orders · ${formData.waybillNo}`}
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -829,9 +951,77 @@ export default function EditDeliveryOrder() {
                   {errors.contactNumber && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.contactNumber}</span>}
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">SENDER ADDRESS <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                <textarea name="senderAddress" className="form-input form-textarea" value={formData.senderAddress} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('senderAddress')} />
+              <div className="form-row four-col" style={{ marginTop: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">UNIT / APARTMENT / FLOOR</label>
+                  <input 
+                    name="senderUnit" 
+                    className="form-input" 
+                    value={senderUnit} 
+                    onChange={e => {
+                      setSenderUnit(e.target.value);
+                      if (errors.senderAddress) setErrors(prev => ({ ...prev, senderAddress: '' }));
+                    }} 
+                    placeholder="e.g. Unit 4B"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('senderAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">HOUSE NO. & STREET <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input 
+                    name="senderStreet" 
+                    className="form-input" 
+                    value={senderStreet} 
+                    onChange={e => {
+                      setSenderStreet(e.target.value);
+                      if (errors.senderAddress) setErrors(prev => ({ ...prev, senderAddress: '' }));
+                    }} 
+                    placeholder="House No., Street Name"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('senderAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">BARANGAY <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input 
+                    name="senderBarangay" 
+                    className="form-input" 
+                    value={senderBarangay} 
+                    onChange={e => {
+                      setSenderBarangay(e.target.value);
+                      if (errors.senderAddress) setErrors(prev => ({ ...prev, senderAddress: '' }));
+                    }} 
+                    placeholder="e.g. Brgy. Paligsahan"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('senderAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">CITY <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input 
+                    name="senderCity" 
+                    className="form-input" 
+                    value={senderCity} 
+                    onChange={e => {
+                      setSenderCity(e.target.value);
+                      if (errors.senderAddress) setErrors(prev => ({ ...prev, senderAddress: '' }));
+                    }} 
+                    placeholder="e.g. Quezon City"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('senderAddress')} 
+                  />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginTop: '12px' }}>
+                <label className="form-label">COMBINED SENDER ADDRESS (PREVIEW)</label>
+                <textarea 
+                  name="senderAddress" 
+                  className="form-input form-textarea" 
+                  value={formData.senderAddress || ''} 
+                  readOnly={true} 
+                  style={{ background: 'var(--bg-main)', cursor: 'not-allowed', minHeight: '60px' }} 
+                />
                 {errors.senderAddress && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.senderAddress}</span>}
               </div>
             </div>
@@ -850,9 +1040,73 @@ export default function EditDeliveryOrder() {
                   {errors.recipientContact && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.recipientContact}</span>}
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">DELIVERY ADDRESS <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                <textarea name="recipientAddress" className="form-input form-textarea" value={formData.recipientAddress} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('recipientAddress')} />
+              <div className="form-row four-col" style={{ marginTop: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">UNIT / APARTMENT / FLOOR</label>
+                  <input 
+                    name="recipientUnit" 
+                    className="form-input" 
+                    value={recipientUnit} 
+                    onChange={e => {
+                      setRecipientUnit(e.target.value);
+                      if (errors.recipientAddress) setErrors(prev => ({ ...prev, recipientAddress: '' }));
+                    }} 
+                    placeholder="e.g. Unit 4B"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('recipientAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">HOUSE NO. & STREET <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input 
+                    name="recipientStreet" 
+                    className="form-input" 
+                    value={recipientStreet} 
+                    onChange={e => {
+                      setRecipientStreet(e.target.value);
+                      if (errors.recipientAddress) setErrors(prev => ({ ...prev, recipientAddress: '' }));
+                    }} 
+                    placeholder="House No., Street Name"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('recipientAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">BARANGAY <span style={{ color: 'var(--status-failed)' }}>*</span></label>
+                  <input 
+                    name="recipientBarangay" 
+                    className="form-input" 
+                    value={recipientBarangay} 
+                    onChange={e => {
+                      setRecipientBarangay(e.target.value);
+                      if (errors.recipientAddress) setErrors(prev => ({ ...prev, recipientAddress: '' }));
+                    }} 
+                    placeholder="e.g. Brgy. Paligsahan"
+                    readOnly={isReadOnly} 
+                    style={getInputStyle('recipientAddress')} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">CITY (FROM AREA / ROUTE)</label>
+                  <input 
+                    name="recipientCity" 
+                    className="form-input" 
+                    value={formData.area || ''} 
+                    readOnly={true} 
+                    placeholder="Select Area/Route above"
+                    style={{ background: 'var(--bg-main)', cursor: 'not-allowed' }}
+                  />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginTop: '12px' }}>
+                <label className="form-label">COMBINED DELIVERY ADDRESS (PREVIEW)</label>
+                <textarea 
+                  name="recipientAddress" 
+                  className="form-input form-textarea" 
+                  value={formData.recipientAddress || ''} 
+                  readOnly={true} 
+                  style={{ background: 'var(--bg-main)', cursor: 'not-allowed', minHeight: '60px' }} 
+                />
                 {errors.recipientAddress && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.recipientAddress}</span>}
               </div>
             </div>

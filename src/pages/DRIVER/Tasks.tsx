@@ -12,7 +12,7 @@ import EnterpriseFilters, { initialFilterState } from '../../components/ui/Enter
 import type { EnterpriseFilterState } from '../../components/ui/EnterpriseFilters';
 import Modal from '../../components/ui/Modal';
 import { fuzzyMatch, getDateRangeBounds, isDateInBounds } from '../../utils/filterUtils';
-import type { DeliveryOrder } from '../../types';
+import type { DeliveryOrder, Employee } from '../../types';
 import './Tasks.css';
 
 interface ColumnProps {
@@ -105,6 +105,7 @@ export default function Tasks() {
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [targetDriver, setTargetDriver] = useState<Employee | null>(null);
+  const [activeAssignDropdown, setActiveAssignDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     refreshOrders();
@@ -362,29 +363,30 @@ export default function Tasks() {
               onReset={() => setFilters({ ...initialFilterState, dateType: 'Last 30 Days' })} 
             />
 
-            {/* Bulk Actions Panel */}
+            {/* Bulk Actions Panel (Floating Action Bar) */}
             {!isDriver && selectedOrderIds.length > 0 && (
-              <div className="bulk-actions-panel animate-fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: 'var(--status-transit-bg)', border: '1px solid var(--primary)', padding: '12px 20px', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={18} style={{ color: 'var(--primary)' }} />
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+              <div className="bulk-actions-panel-floating">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <ShieldCheck size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>
                     {selectedOrderIds.length} orders selected
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <select 
                     className="filter-select" 
-                    style={{ background: 'white' }} 
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', height: '38px', fontSize: '0.85rem' }} 
                     value={bulkDriverId} 
                     onChange={e => setBulkDriverId(e.target.value)}
                   >
-                    <option value="">Select driver to assign...</option>
+                    <option value="">Select courier to assign...</option>
                     {drivers.map(drv => (
                       <option key={drv.id} value={drv.id}>{drv.name}</option>
                     ))}
                   </select>
                   <button 
                     className="btn btn-primary btn-sm"
+                    style={{ height: '38px', padding: '0 16px' }}
                     disabled={isBulkAssigning || !bulkDriverId}
                     onClick={handleBulkAssign}
                   >
@@ -464,15 +466,60 @@ export default function Tasks() {
                           <td>
                             {order.taskType === 'Pickup' ? (
                               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Office Pickup</span>
-                            ) : order.driverName ? (
-                              <div className="driver-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div className="driver-avatar" style={{ background: order.driverColor, color: 'white', width: '24px', height: '24px', fontSize: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                  {order.driverInitials}
-                                </div>
-                                <span style={{ fontSize: '0.85rem' }}>{order.driverName}</span>
-                              </div>
                             ) : (
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Unassigned</span>
+                              <div style={{ position: 'relative' }}>
+                                <button 
+                                  className="inline-driver-btn"
+                                  disabled={isDriver}
+                                  onClick={() => setActiveAssignDropdown(activeAssignDropdown === order.id ? null : order.id)}
+                                >
+                                  {order.driverName ? (
+                                    <>
+                                      <div className="driver-avatar" style={{ background: order.driverColor }}>
+                                        {order.driverInitials}
+                                      </div>
+                                      <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>{order.driverName}</span>
+                                    </>
+                                  ) : (
+                                    <span style={{ fontSize: '0.8rem', color: '#D97706', background: 'rgba(217, 119, 6, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      + Assign Courier
+                                    </span>
+                                  )}
+                                </button>
+                                
+                                {activeAssignDropdown === order.id && (
+                                  <>
+                                    <div 
+                                      style={{ position: 'fixed', inset: 0, zIndex: 998 }} 
+                                      onClick={() => setActiveAssignDropdown(null)} 
+                                    />
+                                    <div className="inline-driver-dropdown">
+                                      <div style={{ padding: '6px 14px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', borderBottom: '1px solid var(--border)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        Select Courier
+                                      </div>
+                                      {drivers.map(drv => (
+                                        <button
+                                          key={drv.id}
+                                          className="dropdown-item"
+                                          onClick={async () => {
+                                            setActiveAssignDropdown(null);
+                                            try {
+                                              await bulkAssignDriver([order.id], Number(drv.id));
+                                            } catch (err) {
+                                              console.error("Assignment failed:", err);
+                                            }
+                                          }}
+                                        >
+                                          <div style={{ background: drv.color || '#6B7280', color: 'white', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold' }}>
+                                            {drv.initials || drv.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                          </div>
+                                          <span style={{ fontWeight: 500 }}>{drv.name}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td>

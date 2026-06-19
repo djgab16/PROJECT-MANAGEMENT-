@@ -1,7 +1,8 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, FileText, BarChart3,
-  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon
+  Settings, Activity, LogOut, FileBarChart, Archive as ArchiveIcon,
+  ChevronLeft, ChevronRight, X, Truck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_DISPLAY } from '../../types';
@@ -20,6 +21,7 @@ interface NavLinkConfig {
 const mainLinks: NavLinkConfig[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/tasks', icon: ClipboardList, label: 'Tasks' },
+  { to: '/dispatch', icon: Truck, label: 'Dispatch Control', allowedRoles: ['ADMIN', 'OP. TEAM'] },
   { to: '/archive', icon: ArchiveIcon, label: 'Archive' },
 ];
 
@@ -37,9 +39,11 @@ const systemLinks: NavLinkConfig[] = [
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen = false, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -50,6 +54,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   };
 
   const getInitials = (name: string) => {
+    if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
@@ -60,50 +65,61 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   };
 
   return (
-    <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+    <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''} ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-wrapper">
           <img src={logo} alt="Speedex Logo" className="sidebar-logo-img" />
         </div>
-        <button className="sidebar-close-btn" onClick={onClose}>×</button>
+        
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={onToggleCollapse} 
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
+
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close Sidebar">
+          <X size={20} />
+        </button>
       </div>
 
       <div className="sidebar-role-section">
         <div className={`sidebar-role-badge ${user?.role ? user.role.toLowerCase().replaceAll('.', '').replaceAll(' ', '-') : 'employee'}`}>
-          {user?.role ? (ROLE_DISPLAY[user.role as keyof typeof ROLE_DISPLAY] ?? user.role) : 'EMPLOYEE'}
+          {isCollapsed ? (user?.role?.[0] || 'E') : (user?.role ? (ROLE_DISPLAY[user.role as keyof typeof ROLE_DISPLAY] ?? user.role) : 'EMPLOYEE')}
         </div>
       </div>
 
       <nav className="sidebar-nav">
         <div className="nav-section">
-          <span className="nav-section-title">MAIN MENU</span>
+          {!isCollapsed && <span className="nav-section-title">MAIN MENU</span>}
           {mainLinks.filter(hasAccess).map(link => (
             <NavLink
               key={link.to}
               to={link.to}
+              title={isCollapsed ? link.label : ''}
               className={({ isActive }) =>
                 `nav-item ${isActive || (link.to === '/dashboard' && location.pathname === '/') ? 'nav-item-active' : ''}`
               }
             >
               <link.icon size={18} />
-              <span className="nav-item-label">{link.label}</span>
+              {!isCollapsed && <span className="nav-item-label">{link.label}</span>}
             </NavLink>
           ))}
         </div>
 
         {integrationLinks.filter(hasAccess).length > 0 && (
           <div className="nav-section">
-            <span className="nav-section-title">INTEGRATION</span>
+            {!isCollapsed && <span className="nav-section-title">INTEGRATION</span>}
             {integrationLinks.filter(hasAccess).map(link => (
               <NavLink
                 key={link.to}
                 to={link.to}
-                className={({ isActive }) =>
-                  `nav-item ${isActive ? 'nav-item-active' : ''}`
-                }
+                title={isCollapsed ? link.label : ''}
+                className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
               >
                 <link.icon size={18} />
-                <span className="nav-item-label">{link.label}</span>
+                {!isCollapsed && <span className="nav-item-label">{link.label}</span>}
               </NavLink>
             ))}
           </div>
@@ -111,30 +127,31 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
         {systemLinks.filter(hasAccess).length > 0 && (
           <div className="nav-section">
-            <span className="nav-section-title">SYSTEM</span>
+            {!isCollapsed && <span className="nav-section-title">SYSTEM</span>}
             {systemLinks.filter(hasAccess).map(link => (
               <NavLink
                 key={link.to}
                 to={link.to}
-                className={({ isActive }) =>
-                  `nav-item ${isActive ? 'nav-item-active' : ''}`
-                }
+                title={isCollapsed ? link.label : ''}
+                className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
               >
                 <link.icon size={18} />
-                <span className="nav-item-label">{link.label}</span>
+                {!isCollapsed && <span className="nav-item-label">{link.label}</span>}
               </NavLink>
             ))}
           </div>
         )}
       </nav>
 
-      <div className="sidebar-footer-profile">
+      <div className="sidebar-footer">
         <div className="sidebar-profile-card">
           <div className="profile-avatar">{user ? getInitials(user.name) : '??'}</div>
-          <div className="profile-info">
-            <span className="profile-name">{user?.name || 'Guest User'}</span>
-            <span className="profile-role">{user?.role || 'Staff'}</span>
-          </div>
+          {!isCollapsed && (
+            <div className="profile-info">
+              <span className="profile-name">{user?.name || 'Guest User'}</span>
+              <span className="profile-role">{user?.role || 'Staff'}</span>
+            </div>
+          )}
           <button className="profile-logout" title="Logout" onClick={handleLogout}>
             <LogOut size={16} />
           </button>
