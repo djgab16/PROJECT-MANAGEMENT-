@@ -141,15 +141,20 @@ namespace SPXDeliveryAPI.Models
         public bool IsArchived { get; set; } = false;
         public string? CompletedAt { get; set; }
         public string? ArchivedReason { get; set; }
+        [MaxLength(100)]
+        public string? ArchivedAt { get; set; }
+        public string? ArchivedBy { get; set; }
 
         [Required]
         [MaxLength(100)]
         public string EncodedBy { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(100)]
         public string DateEncoded { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(100)]
         public string LastUpdated { get; set; } = string.Empty;
 
         [Required]
@@ -169,6 +174,12 @@ namespace SPXDeliveryAPI.Models
         public int? DriverId { get; set; }
         [ForeignKey("DriverId")]
         public virtual Employee? Driver { get; set; }
+
+        [ForeignKey("RedeliveryDriverId")]
+        public virtual Employee? RedeliveryDriver { get; set; }
+
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
     }
 
     public class CoordinateModel

@@ -206,13 +206,30 @@ export default function AnalyticsView() {
   // ==========================================
   const execMetrics = useMemo(() => {
     const total = filteredOrders.length;
-    const completed = filteredOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
+    
+    // Terminal orders: Completed, Delivered, Picked Up (if taskType is Pickup), Failed, Returned, Cancelled
+    const terminalOrders = filteredOrders.filter(o => 
+      o.status === 'Completed' || 
+      o.status === 'Delivered' || 
+      (o.status === 'Picked Up' && o.taskType === 'Pickup') || 
+      o.status === 'Failed' || 
+      o.status === 'Returned' || 
+      o.status === 'Cancelled'
+    );
+    const terminalCount = terminalOrders.length;
+
+    const completed = filteredOrders.filter(o => 
+      o.status === 'Completed' || 
+      o.status === 'Delivered' || 
+      (o.status === 'Picked Up' && o.taskType === 'Pickup')
+    ).length;
+
     const failed = filteredOrders.filter(o => o.status === 'Failed').length;
     const cancelled = filteredOrders.filter(o => o.status === 'Cancelled').length;
-    const inTransit = filteredOrders.filter(o => o.status === 'In Transit' || o.status === 'Out for Delivery').length;
+    const inTransit = filteredOrders.filter(o => o.status === 'In Transit' || o.status === 'Out for Delivery' || (o.status === 'Picked Up' && o.taskType === 'Delivery')).length;
 
-    const successRate = total ? (completed / total) * 100 : 0;
-    const failedRate = total ? (failed / total) * 100 : 0;
+    const successRate = terminalCount ? (completed / terminalCount) * 100 : 0;
+    const failedRate = terminalCount ? (failed / terminalCount) * 100 : 0;
 
     // Daily history trends
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -225,7 +242,7 @@ export default function AnalyticsView() {
       if (isNaN(d.getTime())) return;
       const dayIdx = d.getDay();
       trendMap[dayIdx].Total++;
-      if (o.status === 'Completed' || o.status === 'Delivered') {
+      if (o.status === 'Completed' || o.status === 'Delivered' || (o.status === 'Picked Up' && o.taskType === 'Pickup')) {
         trendMap[dayIdx].Delivered++;
       } else if (o.status === 'Failed') {
         trendMap[dayIdx].Failed++;
@@ -269,6 +286,7 @@ export default function AnalyticsView() {
         list[dName] = {
           name: dName,
           total: 0,
+          terminalCount: 0,
           completed: 0,
           failed: 0,
           cancelled: 0,
@@ -284,7 +302,20 @@ export default function AnalyticsView() {
 
       list[dName].total++;
       list[dName].orders.push(o);
-      if (o.status === 'Completed' || o.status === 'Delivered') list[dName].completed++;
+
+      const isTerminal = o.status === 'Completed' || 
+                         o.status === 'Delivered' || 
+                         (o.status === 'Picked Up' && o.taskType === 'Pickup') || 
+                         o.status === 'Failed' || 
+                         o.status === 'Returned' || 
+                         o.status === 'Cancelled';
+      if (isTerminal) {
+        list[dName].terminalCount++;
+      }
+
+      if (o.status === 'Completed' || o.status === 'Delivered' || (o.status === 'Picked Up' && o.taskType === 'Pickup')) {
+        list[dName].completed++;
+      }
       if (o.status === 'Failed') list[dName].failed++;
       if (o.status === 'Cancelled') list[dName].cancelled++;
       if (o.potStatus === 'Submitted') list[dName].potCount++;
@@ -299,8 +330,8 @@ export default function AnalyticsView() {
     });
 
     const parsed = Object.values(list).map(drv => {
-      const successRate = drv.total ? (drv.completed / drv.total) * 100 : 0;
-      const failureRate = drv.total ? (drv.failed / drv.total) * 100 : 0;
+      const successRate = drv.terminalCount ? (drv.completed / drv.terminalCount) * 100 : 0;
+      const failureRate = drv.terminalCount ? (drv.failed / drv.terminalCount) * 100 : 0;
       const potCompliance = drv.completed ? (drv.potCount / drv.completed) * 100 : 0;
       const podCompliance = drv.completed ? (drv.podCount / drv.completed) * 100 : 0;
       const averageTime = drv.total ? (drv.avgTimeMs / drv.total).toFixed(1) : '4.0';
@@ -390,7 +421,7 @@ export default function AnalyticsView() {
       const region = getRegionForArea(o.area);
       if (!regionMap[region]) regionMap[region] = { total: 0, delivered: 0, failed: 0 };
       regionMap[region].total++;
-      if (o.status === 'Completed' || o.status === 'Delivered') regionMap[region].delivered++;
+      if (o.status === 'Completed' || o.status === 'Delivered' || (o.status === 'Picked Up' && o.taskType === 'Pickup')) regionMap[region].delivered++;
       if (o.status === 'Failed') regionMap[region].failed++;
     });
 

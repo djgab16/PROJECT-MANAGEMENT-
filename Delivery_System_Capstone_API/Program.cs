@@ -73,6 +73,7 @@ builder.Services.AddCors(options =>
 // ─── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDeliveryOrderService, DeliveryOrderService>();
+builder.Services.AddHostedService<DataRetentionService>();
 
 // ─── Swagger ──────────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();

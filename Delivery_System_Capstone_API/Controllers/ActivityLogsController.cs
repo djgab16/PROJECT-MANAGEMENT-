@@ -36,6 +36,7 @@ namespace SPXDeliveryAPI.Controllers
         {
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var userName = User.Identity?.Name;
+            var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             log.UserName = userName ?? "Unknown User";
             log.UserRole = userRole ?? "DRIVER";
@@ -43,11 +44,15 @@ namespace SPXDeliveryAPI.Controllers
             // Find current employee initials and color
             var initials = "TD";
             var color = "#00A99D";
-            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Name == log.UserName);
-            if (employee != null)
+
+            if (!string.IsNullOrEmpty(employeeId))
             {
-                initials = employee.Initials;
-                color = employee.Color;
+                var employee = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == employeeId);
+                if (employee != null)
+                {
+                    initials = employee.Initials;
+                    color = employee.Color;
+                }
             }
 
             log.UserInitials = initials;

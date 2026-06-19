@@ -365,14 +365,28 @@ namespace SPXDeliveryAPI.Services
             // Generate a unique waybill number or validate the client-supplied one.
             // This prevents duplicate keys and ensures clean validation feedback.
             var year = DateTime.UtcNow.Year;
-            if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"SPX-{year}"))
+            if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"WB-{year}"))
             {
-                var maxId = await _context.DeliveryOrders.MaxAsync(o => (int?)o.Id) ?? 0;
-                var seq = maxId + 1;
+                int seq = 1;
+                var lastOrder = await _context.DeliveryOrders
+                    .Where(o => o.WaybillNo.StartsWith($"WB-{year}-"))
+                    .OrderByDescending(o => o.WaybillNo)
+                    .FirstOrDefaultAsync();
+
+                if (lastOrder != null)
+                {
+                    var lastWaybill = lastOrder.WaybillNo;
+                    var parts = lastWaybill.Split('-');
+                    if (parts.Length == 3 && int.TryParse(parts[2], out var lastSeq))
+                    {
+                        seq = lastSeq + 1;
+                    }
+                }
+
                 string generatedWaybill;
                 do
                 {
-                    generatedWaybill = $"SPX-{year}-{seq:D4}";
+                    generatedWaybill = $"WB-{year}-{seq:D6}";
                     seq++;
                 } while (await _context.DeliveryOrders.AnyAsync(o => o.WaybillNo == generatedWaybill));
 
@@ -389,12 +403,11 @@ namespace SPXDeliveryAPI.Services
             }
 
             await _context.DeliveryOrders.AddAsync(order);
-            await _context.SaveChangesAsync();
 
-            // Insert initial history log
+            // Insert initial history log (using navigation property for single SaveChangesAsync batching)
             var historyLog = new DeliveryHistoryLog
             {
-                DeliveryOrderId = order.Id,
+                DeliveryOrder = order,
                 FromStatus = "None",
                 ToStatus = "Pending",
                 Notes = "Order created in system",
@@ -641,6 +654,8 @@ namespace SPXDeliveryAPI.Services
                     order.ArchivedReason = newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Picked Up" 
                         ? "Completed Transaction" 
                         : (newStatus == "Returned" ? "Returned to Sender" : (newStatus == "Failed" ? $"Failed Delivery: {order.FailureReason}" : "Cancelled Order"));
+                    order.ArchivedAt = DateTime.UtcNow.ToString("O");
+                    order.ArchivedBy = updatedOrder.UpdatedBy ?? "Operations Admin";
                 }
                 else
                 {
@@ -709,6 +724,8 @@ namespace SPXDeliveryAPI.Services
             order.IsArchived = true;
             order.CompletedAt = DateTime.UtcNow.ToString("O");
             order.ArchivedReason = "Cancelled Order";
+            order.ArchivedAt = DateTime.UtcNow.ToString("O");
+            order.ArchivedBy = "Operations Admin";
             order.LastUpdated = DateTime.UtcNow.ToString("O");
             order.UpdatedBy = "Operations Admin";
 

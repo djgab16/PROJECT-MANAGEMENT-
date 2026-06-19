@@ -166,6 +166,12 @@ namespace SPXDeliveryAPI.Controllers
                 order.DriverId = null;
             }
 
+            var redeliveryOrders = await _context.DeliveryOrders.Where(o => o.RedeliveryDriverId == id).ToListAsync();
+            foreach (var order in redeliveryOrders)
+            {
+                order.RedeliveryDriverId = null;
+            }
+
             _context.Employees.Remove(employee);
             await _context.SaveChangesAsync();
 

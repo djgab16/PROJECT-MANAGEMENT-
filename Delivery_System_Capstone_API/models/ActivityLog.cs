@@ -8,6 +8,7 @@ namespace SPXDeliveryAPI.Models
         public int Id { get; set; }
 
         [Required]
+        [MaxLength(100)]
         public string Timestamp { get; set; } = string.Empty;
 
         [Required]

@@ -222,7 +222,7 @@ namespace SPXDeliveryAPI.Data
                         UpdatedBy = "Kenneth D. Yulip",
                         RecipientLatitude = 14.6299,
                         RecipientLongitude = 121.1001,
-                        DriverId = driver?.Id
+                        DriverId = null
                     }
                 };
 

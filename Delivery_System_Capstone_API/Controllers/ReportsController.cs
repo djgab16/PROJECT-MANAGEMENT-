@@ -28,9 +28,18 @@ namespace SPXDeliveryAPI.Controllers
             var orders = await _context.DeliveryOrders.ToListAsync();
 
             var totalCount = orders.Count;
-            var completedCount = orders.Count(o => o.Status == "Completed" || o.Status == "Delivered" || o.Status == "Picked Up");
+            var terminalOrders = orders.Where(o => 
+                o.Status == "Completed" || 
+                o.Status == "Delivered" || 
+                (o.Status == "Picked Up" && o.TaskType == "Pickup") || 
+                o.Status == "Failed" || 
+                o.Status == "Returned" ||
+                o.Status == "Cancelled"
+            ).ToList();
+
+            var completedCount = orders.Count(o => o.Status == "Completed" || o.Status == "Delivered" || (o.Status == "Picked Up" && o.TaskType == "Pickup"));
             var failedCount = orders.Count(o => o.Status == "Failed");
-            var successRate = totalCount > 0 ? $"{(int)Math.Round((double)completedCount / totalCount * 100)}%" : "0%";
+            var successRate = terminalOrders.Count > 0 ? $"{(int)Math.Round((double)completedCount / terminalOrders.Count * 100)}%" : "0%";
             var potSubmittedCount = orders.Count(o => o.PotStatus == "Submitted");
 
             var days = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };

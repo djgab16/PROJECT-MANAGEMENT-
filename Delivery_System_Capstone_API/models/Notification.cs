@@ -25,6 +25,7 @@ namespace SPXDeliveryAPI.Models
         public string Timestamp { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(100)]
         public string Date { get; set; } = string.Empty;
 
         [Required]

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SPXDeliveryAPI.Data;
 
@@ -11,9 +12,11 @@ using SPXDeliveryAPI.Data;
 namespace SPXDeliveryAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619182446_AddDbIntegrityAndConcurrency")]
+    partial class AddDbIntegrityAndConcurrency
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,8 +48,7 @@ namespace SPXDeliveryAPI.Migrations
 
                     b.Property<string>("Timestamp")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserColor")
                         .IsRequired()
@@ -69,8 +71,6 @@ namespace SPXDeliveryAPI.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Timestamp");
 
                     b.ToTable("ActivityLogs");
                 });
@@ -156,8 +156,7 @@ namespace SPXDeliveryAPI.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ArchivedAt")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ArchivedBy")
                         .HasColumnType("nvarchar(max)");
@@ -193,8 +192,7 @@ namespace SPXDeliveryAPI.Migrations
 
                     b.Property<string>("DateEncoded")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("DeclaredValue")
                         .IsRequired()
@@ -234,8 +232,7 @@ namespace SPXDeliveryAPI.Migrations
 
                     b.Property<string>("LastUpdated")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<double?>("LiveLatitude")
                         .HasColumnType("float");
@@ -391,15 +388,11 @@ namespace SPXDeliveryAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ArchivedAt");
-
                     b.HasIndex("DateEncoded");
 
                     b.HasIndex("DriverId");
 
                     b.HasIndex("IsArchived");
-
-                    b.HasIndex("LastUpdated");
 
                     b.HasIndex("RedeliveryDriverId");
 
@@ -487,8 +480,7 @@ namespace SPXDeliveryAPI.Migrations
 
                     b.Property<string>("Date")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -525,8 +517,6 @@ namespace SPXDeliveryAPI.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Date");
 
                     b.ToTable("Notifications");
                 });

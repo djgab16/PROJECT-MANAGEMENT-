@@ -6,6 +6,7 @@ import Login from './pages/Login/Login';
 import AccountLocked from './pages/AccountLocked/AccountLocked';
 import Dashboard from './pages/Dashboard/Dashboard';
 import DeliveryOrderDetail from './pages/DeliveryOrders/DeliveryOrderDetail';
+import DeliveryOrders from './pages/DeliveryOrders/DeliveryOrders';
 import EditDeliveryOrder from './pages/EditDelivery/EditDeliveryOrder';
 import TrackDelivery from './pages/TrackDelivery/TrackDelivery';
 import Notifications from './pages/Notification/Notifications';
@@ -53,8 +54,8 @@ export default function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* /delivery-orders list redirects to /archive — detail and edit routes remain intact */}
-            <Route path="/delivery-orders" element={<Navigate to="/archive" replace />} />
+            {/* Restored active orders list route */}
+            <Route path="/delivery-orders" element={<DeliveryOrders />} />
             <Route path="/delivery-orders/:id" element={<DeliveryOrderDetail />} />
             <Route path="/delivery-orders/:id/history" element={<DeliveryHistoryLog />} />
             <Route path="/delivery-orders/:id/edit" element={<EditDeliveryOrder />} />

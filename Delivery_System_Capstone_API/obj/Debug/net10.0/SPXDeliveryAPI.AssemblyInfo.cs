@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2619da0039d620d0a0f9f69f17b2ff06040a145f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+adb608beb277bc603849f952cf13a29b6d41632f")]
 [assembly: System.Reflection.AssemblyProductAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SPXDeliveryAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

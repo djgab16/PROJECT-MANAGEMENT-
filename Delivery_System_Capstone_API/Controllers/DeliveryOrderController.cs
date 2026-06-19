@@ -179,6 +179,10 @@ namespace SPXDeliveryAPI.Controllers
                 var updatedOrder = await _service.UpdateOrderAsync(id, order);
                 return Ok(updatedOrder);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -207,10 +211,17 @@ namespace SPXDeliveryAPI.Controllers
                 }
             }
 
-            var success = await _service.DeleteOrderAsync(id);
-            if (!success) return NotFound(new { message = "Order not found." });
+            try
+            {
+                var success = await _service.DeleteOrderAsync(id);
+                if (!success) return NotFound(new { message = "Order not found." });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
         }
 
         [HttpGet("{id}/history")]
@@ -321,6 +332,10 @@ namespace SPXDeliveryAPI.Controllers
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -357,6 +372,10 @@ namespace SPXDeliveryAPI.Controllers
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -373,6 +392,11 @@ namespace SPXDeliveryAPI.Controllers
         {
             var order = await _service.GetOrderByIdAsync(id);
             if (order == null) return NotFound(new { message = "Order not found." });
+
+            if (order.Status != "Failed" && order.Status != "Cancelled")
+            {
+                return BadRequest(new { message = "Re-delivery can only be scheduled for failed or cancelled orders." });
+            }
 
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var userName = User.Identity?.Name;
@@ -396,6 +420,10 @@ namespace SPXDeliveryAPI.Controllers
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
             }
             catch (ArgumentException ex)
             {
@@ -435,6 +463,10 @@ namespace SPXDeliveryAPI.Controllers
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
             }
             catch (ArgumentException ex)
             {
@@ -497,6 +529,10 @@ namespace SPXDeliveryAPI.Controllers
 
                 var updated = await _service.UpdateOrderAsync(id, order);
                 return Ok(updated);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
             }
             catch (ArgumentException ex)
             {
@@ -608,56 +644,68 @@ namespace SPXDeliveryAPI.Controllers
                 return BadRequest(new { message = "Cannot schedule redelivery. Maximum attempt limit (3 attempts) has been reached. Package must be returned to sender." });
             }
 
-            order.RedeliveryStatus = "Pending Approval";
-            order.RedeliveryRequestedDate = DateTime.Parse(model.RequestedDate).ToString("MMMM dd, yyyy");
-            order.RedeliveryRemarks = model.Remarks;
-            order.UpdatedBy = "Client Portal";
-            order.IsArchived = false;
-            order.LastUpdated = DateTime.UtcNow.ToString("O");
-
-            // Save history log
-            var historyLog = new DeliveryHistoryLog
+            if (!DateTime.TryParse(model.RequestedDate, out var requestedDate) || requestedDate.Date < DateTime.UtcNow.AddHours(8).Date)
             {
-                DeliveryOrderId = order.Id,
-                FromStatus = order.Status,
-                ToStatus = order.Status,
-                Notes = $"Reschedule requested for {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
-                ChangedBy = "Client Portal",
-                ChangedAt = DateTime.UtcNow.ToString("O")
-            };
-            await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+                return BadRequest("Re-delivery date cannot be in the past.");
+            }
 
-            // Save activity log
-            var activityLog = new ActivityLog
+            try
             {
-                Timestamp = DateTime.UtcNow.ToString("O"),
-                UserName = "Client Portal",
-                UserRole = "CLIENT",
-                UserInitials = "CL",
-                UserColor = "#7C3AED",
-                Action = "Update",
-                Description = $"Client requested re-delivery reschedule for {order.WaybillNo} on {order.RedeliveryRequestedDate}",
-                Reference = order.WaybillNo
-            };
-            await _context.ActivityLogs.AddAsync(activityLog);
+                order.RedeliveryStatus = "Pending Approval";
+                order.RedeliveryRequestedDate = requestedDate.ToString("MMMM dd, yyyy");
+                order.RedeliveryRemarks = model.Remarks;
+                order.UpdatedBy = "Client Portal";
+                order.IsArchived = false;
+                order.LastUpdated = DateTime.UtcNow.ToString("O");
 
-            // Create notification for admin/operations
-            var notification = new Notification
+                // Save history log
+                var historyLog = new DeliveryHistoryLog
+                {
+                    DeliveryOrderId = order.Id,
+                    FromStatus = order.Status,
+                    ToStatus = order.Status,
+                    Notes = $"Reschedule requested for {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
+                    ChangedBy = "Client Portal",
+                    ChangedAt = DateTime.UtcNow.ToString("O")
+                };
+                await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+
+                // Save activity log
+                var activityLog = new ActivityLog
+                {
+                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    UserName = "Client Portal",
+                    UserRole = "CLIENT",
+                    UserInitials = "CL",
+                    UserColor = "#7C3AED",
+                    Action = "Update",
+                    Description = $"Client requested re-delivery reschedule for {order.WaybillNo} on {order.RedeliveryRequestedDate}",
+                    Reference = order.WaybillNo
+                };
+                await _context.ActivityLogs.AddAsync(activityLog);
+
+                // Create notification for admin/operations
+                var notification = new Notification
+                {
+                    Type = "alert",
+                    Title = "Reschedule Request Received",
+                    WaybillNo = order.WaybillNo,
+                    Description = $"Client requested a re-delivery attempt for waybill {order.WaybillNo} on {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
+                    Timestamp = DateTime.UtcNow.ToString("t"),
+                    Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                    Source = "Client Portal",
+                    Read = false,
+                    StatusBadge = "New Request"
+                };
+                await _context.Notifications.AddAsync(notification);
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Reschedule request submitted successfully." });
+            }
+            catch (DbUpdateConcurrencyException)
             {
-                Type = "alert",
-                Title = "Reschedule Request Received",
-                WaybillNo = order.WaybillNo,
-                Description = $"Client requested a re-delivery attempt for waybill {order.WaybillNo} on {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
-                Timestamp = DateTime.UtcNow.ToString("t"),
-                Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
-                Source = "Client Portal",
-                Read = false,
-                StatusBadge = "New Request"
-            };
-            await _context.Notifications.AddAsync(notification);
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Reschedule request submitted successfully." });
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
         }
 
         [HttpPost("import")]
@@ -889,58 +937,65 @@ namespace SPXDeliveryAPI.Controllers
                 return BadRequest("Delivery can only be confirmed for delivered orders.");
             }
 
-            string oldStatus = order.Status;
-            order.Status = "Completed";
-            order.IsArchived = true;
-            order.CompletedAt = DateTime.UtcNow.ToString("O");
-            order.DateCompleted = DateTime.UtcNow.ToString("O");
-            order.ArchivedReason = "Completed Transaction (Confirmed by Client)";
-            order.UpdatedBy = "Client Portal";
-            order.LastUpdated = DateTime.UtcNow.ToString("O");
-
-            // Save history log
-            var historyLog = new DeliveryHistoryLog
+            try
             {
-                DeliveryOrderId = order.Id,
-                FromStatus = oldStatus,
-                ToStatus = "Completed",
-                Notes = "Delivery confirmed by client via tracking portal.",
-                ChangedBy = "Client Portal",
-                ChangedAt = DateTime.UtcNow.ToString("O")
-            };
-            await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+                string oldStatus = order.Status;
+                order.Status = "Completed";
+                order.IsArchived = true;
+                order.CompletedAt = DateTime.UtcNow.ToString("O");
+                order.DateCompleted = DateTime.UtcNow.ToString("O");
+                order.ArchivedReason = "Completed Transaction (Confirmed by Client)";
+                order.UpdatedBy = "Client Portal";
+                order.LastUpdated = DateTime.UtcNow.ToString("O");
 
-            // Save activity log
-            var activityLog = new ActivityLog
+                // Save history log
+                var historyLog = new DeliveryHistoryLog
+                {
+                    DeliveryOrderId = order.Id,
+                    FromStatus = oldStatus,
+                    ToStatus = "Completed",
+                    Notes = "Delivery confirmed by client via tracking portal.",
+                    ChangedBy = "Client Portal",
+                    ChangedAt = DateTime.UtcNow.ToString("O")
+                };
+                await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+
+                // Save activity log
+                var activityLog = new ActivityLog
+                {
+                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    UserName = "Client Portal",
+                    UserRole = "CLIENT",
+                    UserInitials = "CL",
+                    UserColor = "#7C3AED",
+                    Action = "Update",
+                    Description = $"Client confirmed delivery of package {order.WaybillNo}",
+                    Reference = order.WaybillNo
+                };
+                await _context.ActivityLogs.AddAsync(activityLog);
+
+                // Create notification for admin/operations
+                var notification = new Notification
+                {
+                    Type = "success",
+                    Title = "Delivery Confirmed by Client",
+                    WaybillNo = order.WaybillNo,
+                    Description = $"Client has confirmed receipt of package {order.WaybillNo}. Order status auto-updated to Completed.",
+                    Timestamp = DateTime.UtcNow.ToString("t"),
+                    Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                    Source = "Client Portal",
+                    Read = false,
+                    StatusBadge = "Confirmed"
+                };
+                await _context.Notifications.AddAsync(notification);
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Delivery confirmed successfully." });
+            }
+            catch (DbUpdateConcurrencyException)
             {
-                Timestamp = DateTime.UtcNow.ToString("O"),
-                UserName = "Client Portal",
-                UserRole = "CLIENT",
-                UserInitials = "CL",
-                UserColor = "#7C3AED",
-                Action = "Update",
-                Description = $"Client confirmed delivery of package {order.WaybillNo}",
-                Reference = order.WaybillNo
-            };
-            await _context.ActivityLogs.AddAsync(activityLog);
-
-            // Create notification for admin/operations
-            var notification = new Notification
-            {
-                Type = "success",
-                Title = "Delivery Confirmed by Client",
-                WaybillNo = order.WaybillNo,
-                Description = $"Client has confirmed receipt of package {order.WaybillNo}. Order status auto-updated to Completed.",
-                Timestamp = DateTime.UtcNow.ToString("t"),
-                Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
-                Source = "Client Portal",
-                Read = false,
-                StatusBadge = "Confirmed"
-            };
-            await _context.Notifications.AddAsync(notification);
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Delivery confirmed successfully." });
+                return Conflict(new { message = "A concurrency conflict occurred. The order has been modified by another user. Please refresh and try again." });
+            }
         }
     }
 
