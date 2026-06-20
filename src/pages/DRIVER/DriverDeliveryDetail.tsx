@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, User, Phone, Navigation, CheckCircle, XCircle, AlertCircle, FileText, Radio, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +22,16 @@ export default function DriverDeliveryDetail() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [simulatedCoords, setSimulatedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Continuous GPS watch tracking
   const { isTracking, gpsError } = useDriverGPS(order, updateDeliveryOrder);
@@ -292,33 +302,42 @@ export default function DriverDeliveryDetail() {
                 const simulatedLng = startLng + (endLng - startLng) * pct;
                 const timestampStr = new Date().toLocaleString();
 
-                // Update local context
-                updateDeliveryOrder(order.id, {
-                  liveCoordinates: {
+                // Update local UI immediately
+                setSimulatedCoords({ lat: simulatedLat, lng: simulatedLng });
+
+                if (debounceTimerRef.current) {
+                  clearTimeout(debounceTimerRef.current);
+                }
+
+                debounceTimerRef.current = setTimeout(() => {
+                  // Update local context
+                  updateDeliveryOrder(order.id, {
+                    liveCoordinates: {
+                      lat: simulatedLat,
+                      lng: simulatedLng,
+                      lastUpdated: timestampStr
+                    }
+                  });
+
+                  // Publish WebSocket broadcast
+                  realtimeSync.publish({
+                    waybillNo: order.waybillNo,
                     lat: simulatedLat,
                     lng: simulatedLng,
-                    lastUpdated: timestampStr
-                  }
-                });
-
-                // Publish WebSocket broadcast
-                realtimeSync.publish({
-                  waybillNo: order.waybillNo,
-                  lat: simulatedLat,
-                  lng: simulatedLng,
-                  timestamp: timestampStr,
-                  driverId: order.driverName || 'Test Driver',
-                  orderId: order.id
-                });
+                    timestamp: timestampStr,
+                    driverId: order.driverName || 'Test Driver',
+                    orderId: order.id
+                  });
+                }, 1000);
               }}
               style={{ width: '100%', height: '6px', borderRadius: '3px', accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
-            {order.liveCoordinates && (
+            {(simulatedCoords || order.liveCoordinates) && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={10} /> {order.liveCoordinates.lat.toFixed(4)}, {order.liveCoordinates.lng.toFixed(4)}
+                  <MapPin size={10} /> {(simulatedCoords || order.liveCoordinates)!.lat.toFixed(4)}, {(simulatedCoords || order.liveCoordinates)!.lng.toFixed(4)}
                 </span>
-                <span>Last sync: {order.liveCoordinates.lastUpdated.split(', ')[1] || 'Just now'}</span>
+                <span>Last sync: {order.liveCoordinates?.lastUpdated ? (order.liveCoordinates.lastUpdated.split(', ')[1] || 'Just now') : 'Pending sync'}</span>
               </div>
             )}
           </div>

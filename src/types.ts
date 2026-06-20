@@ -31,6 +31,7 @@ export interface DeliveryOrder {
   clientName: string;
   clientType: string;
   contactNumber: string;
+  contactPerson?: string;
   senderAddress: string;
   recipientName: string;
   recipientContact: string;

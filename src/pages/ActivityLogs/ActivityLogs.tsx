@@ -103,12 +103,6 @@ export default function ActivityLogs() {
         title={isAdmin ? "System Activity Logs" : "Your Activity Logs"}
         subtitle="DELIVERY TRACKER · SYSTEM"
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        actions={
-          <div className="flex gap-sm">
-            <button className="btn btn-outline btn-sm" onClick={() => window.print()}><Download size={14} /> Export Logs</button>
-            <button className="btn btn-dark btn-sm"><FileText size={14} /> View Full Report</button>
-          </div>
-        }
       />
       <div className="page-content">
         <div className="stats-row" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
@@ -200,7 +194,24 @@ export default function ActivityLogs() {
                 <h4>{isAdmin ? 'System Activity Log' : 'Your Activity Log'}</h4>
                 <span className="archive-count-badge">{filteredLogs.length} entries</span>
               </div>
-              <button className="view-all-link" onClick={() => window.print()} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Export →</button>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button 
+                  className="btn btn-outline btn-sm" 
+                  onClick={() => window.print()} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Download size={14} /> Export Logs
+                </button>
+                {isAdmin && (
+                  <button 
+                    className="btn btn-dark btn-sm" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => navigate('/reports')}
+                  >
+                    <FileText size={14} /> View Full Report
+                  </button>
+                )}
+              </div>
             </div>
             <div className="table-responsive">
               <table className="data-table logs-table">
@@ -240,7 +251,7 @@ export default function ActivityLogs() {
                           <button 
                             className="action-icon-btn" 
                             onClick={() => {
-                              if (log.reference && log.reference.startsWith('SPX-')) {
+                              if (log.reference && (log.reference.startsWith('SPX-') || log.reference.startsWith('WB-'))) {
                                 const order = deliveryOrders.find(o => o.waybillNo === log.reference);
                                 if (order) navigate(`/delivery-orders/${order.id}/history`);
                                 else alert('Delivery Order not found for reference: ' + log.reference);

@@ -35,6 +35,7 @@ interface EnterpriseFiltersProps {
     operations?: boolean;
     client?: boolean;
   };
+  showReset?: boolean;
 }
 
 export const initialFilterState: EnterpriseFilterState = {
@@ -81,7 +82,8 @@ export default function EnterpriseFilters({
   onChange,
   onReset,
   title = "Advanced Search & Enterprise Filters",
-  showCategoryFilters = { date: true, order: true, driver: true, operations: true, client: true }
+  showCategoryFilters = { date: true, order: true, driver: true, operations: true, client: true },
+  showReset = true
 }: EnterpriseFiltersProps) {
   const { deliveryOrders } = useData();
   const [isOpen, setIsOpen] = useState(false);
@@ -169,17 +171,19 @@ export default function EnterpriseFilters({
             {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           
-          <button 
-            type="button" 
-            className="btn-reset-filters" 
-            onClick={() => {
-              setDateError(null);
-              onReset();
-            }}
-          >
-            <RefreshCw size={12} />
-            <span>Reset</span>
-          </button>
+          {showReset && (
+            <button 
+              type="button" 
+              className="btn-reset-filters" 
+              onClick={() => {
+                setDateError(null);
+                onReset();
+              }}
+            >
+              <RefreshCw size={12} />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -32,7 +32,7 @@ export default function TrackingSearch({ onSearch, loading }: TrackingSearchProp
           <input
             type="text"
             className="search-input"
-            placeholder="e.g. SPX-2026-0841"
+            placeholder="e.g. WB-2026-0841"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);

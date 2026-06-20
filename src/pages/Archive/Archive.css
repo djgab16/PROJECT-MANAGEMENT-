@@ -126,3 +126,17 @@
   justify-content: space-between;
   align-items: center;
 }
+
+#export-archive {
+  transition: all 0.2s ease;
+}
+
+#export-archive:hover {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  background: rgba(0, 169, 157, 0.06) !important;
+}
+
+html.dark #export-archive:hover {
+  background: rgba(0, 169, 157, 0.12) !important;
+}

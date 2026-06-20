@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import { toast } from 'sonner';
 import { 
   Truck, ShieldCheck, MapPin, Calendar, 
-  Search, ClipboardList, CircleDot, RefreshCw
+  Search, ClipboardList, CircleDot
 } from 'lucide-react';
 import './Dispatch.css';
 
@@ -14,7 +14,6 @@ export default function Dispatch() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('All');
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Sync data on load
   useEffect(() => {
@@ -117,34 +116,11 @@ export default function Dispatch() {
     }
   };
 
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshOrders();
-      toast.success("Orders list updated");
-    } catch {
-      toast.error("Failed to refresh orders");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   return (
     <>
       <Header 
         title="Dispatch Control" 
         subtitle="Operations"
-        actions={
-          <button 
-            className="btn btn-outline btn-sm"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        }
       />
       <div className="page-content dispatch-page-container">
         <div className="dispatch-layout-grid">

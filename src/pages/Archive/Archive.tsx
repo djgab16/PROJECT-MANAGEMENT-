@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Download, Eye, Archive as ArchiveIcon, Lock, Plus } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Download, Eye, Archive as ArchiveIcon, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -61,9 +61,7 @@ export default function Archive() {
 
   // Active archived base subset
   const archivedOrdersAll = useMemo(() => {
-    return deliveryOrders.filter(
-      o => o.status === 'Completed' || o.status === 'Delivered' || o.status === 'Cancelled' || o.isArchived
-    );
+    return deliveryOrders.filter(o => o.isArchived);
   }, [deliveryOrders]);
 
   // Client counts cache for Frequent cohort matching
@@ -77,7 +75,7 @@ export default function Archive() {
 
   // Filtered archived list
   const filteredOrders = useMemo(() => {
-    return archivedOrdersAll.filter(order => {
+    const filtered = archivedOrdersAll.filter(order => {
       // Smart Fuzzy Search
       if (filters.searchQuery) {
         const q = filters.searchQuery;
@@ -144,6 +142,20 @@ export default function Archive() {
 
       return true;
     });
+
+    const parseDate = (dateStr: string | null | undefined): number => {
+      if (!dateStr) return 0;
+      const t = Date.parse(dateStr);
+      return isNaN(t) ? 0 : t;
+    };
+
+    return filtered.sort((a, b) => {
+      const dateA = a.dateCompleted || a.dateEncoded;
+      const dateB = b.dateCompleted || b.dateEncoded;
+      const diff = parseDate(dateB) - parseDate(dateA);
+      if (diff !== 0) return diff;
+      return Number(b.id) - Number(a.id);
+    });
   }, [archivedOrdersAll, filters, clientCounts]);
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
@@ -208,16 +220,6 @@ export default function Archive() {
     <>
       <Header
         title="Data Archive"
-        actions={
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <Link to="/delivery-orders/new/edit" className="btn btn-primary btn-sm">
-              <Plus size={14} /> New Order
-            </Link>
-            <button className="btn btn-outline btn-sm" id="export-archive" onClick={handleExport}>
-              <Download size={14} /> Export Archive
-            </button>
-          </div>
-        }
       />
       <div className="page-content">
         {/* Archive Banner */}
@@ -239,7 +241,7 @@ export default function Archive() {
         </div>
 
         {/* Collapsible advanced filters */}
-        <EnterpriseFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} />
+        <EnterpriseFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} showReset={false} />
 
         {/* Table */}
         <div className="card animate-fade-in">
@@ -249,7 +251,12 @@ export default function Archive() {
               <span className="archive-count-badge">{filteredOrders.length} records</span>
               <span className="archive-readonly-tag"><Lock size={12} /> READ-ONLY</span>
             </div>
-            <span className="text-muted text-sm">Sort by: Date Completed (Newest)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className="text-muted text-sm">Sort by: Date Completed (Newest)</span>
+              <button className="btn btn-outline btn-sm" id="export-archive" onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Download size={14} /> Export Archive
+              </button>
+            </div>
           </div>
           <div className="table-responsive">
             <table className="data-table">
@@ -325,7 +332,7 @@ export default function Archive() {
             <span className="pagination-info">
               Showing {filteredOrders.length > 0 ? (activePage - 1) * itemsPerPage + 1 : 0} to {Math.min(activePage * itemsPerPage, filteredOrders.length)} of {filteredOrders.length} records
             </span>
-            {totalPages > 1 && (
+            {totalPages >= 1 && (
               <div className="pagination-controls">
                 <button className="pagination-btn" disabled={activePage === 1} onClick={() => setCurrentPage(activePage - 1)}>‹</button>
                 {startPage > 1 && <button className="pagination-btn" onClick={() => setCurrentPage(1)}>1</button>}

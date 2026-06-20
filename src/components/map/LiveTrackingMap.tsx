@@ -164,20 +164,25 @@ export default function LiveTrackingMap({
     return () => clearTimeout(timer);
   }, [liveCoordinates, recipientCoordinates, status, orderId]);
 
-  // Subscribe to real-time WebSockets
+  // Subscribe to real-time polling-based GPS updates
   useEffect(() => {
     if (status !== 'In Transit' && status !== 'Out for Delivery') {
       return;
     }
 
-    // Subscribe to WebSocket channel
+    // Pre-register the orderId so polling uses the fast /api/deliveryorder/{id} path
+    if (orderId) {
+      realtimeSync.setOrderId(waybillNo, orderId);
+    }
+
+    // Subscribe to GPS coordinate updates
     const unsubscribeMessage = realtimeSync.subscribe(waybillNo, (msg) => {
-      console.log('LiveTrackingMap: Received real-time location payload:', msg);
+      console.log('LiveTrackingMap: Received live GPS update from polling:', msg);
       setDriverPos([msg.lat, msg.lng]);
       setLastUpdated(msg.timestamp);
     });
 
-    // Subscribe to WebSocket state
+    // Subscribe to connection state
     const unsubscribeState = realtimeSync.subscribeState((state) => {
       setConnState(state);
     });
@@ -186,7 +191,7 @@ export default function LiveTrackingMap({
       unsubscribeMessage();
       unsubscribeState();
     };
-  }, [waybillNo, status]);
+  }, [waybillNo, status, orderId]);
 
   // Also listen for same-browser storage events for tab-based testing fallbacks
   useEffect(() => {
@@ -449,7 +454,7 @@ export default function LiveTrackingMap({
           {/* Connection status badge */}
           {isTrackingActive && (
             <span className={`sync-status-badge ${connState}`}>
-              {connState === 'connected' ? 'Live GPS' : connState === 'reconnecting' ? 'Reconnecting' : 'Offline'}
+              {connState === 'connected' ? 'Live GPS' : connState === 'connecting' || connState === 'reconnecting' ? 'Polling...' : 'Offline'}
             </span>
           )}
         </div>

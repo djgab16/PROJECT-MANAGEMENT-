@@ -70,7 +70,7 @@ export default function TrackDelivery() {
                   value={query} 
                   onChange={e => setQuery(e.target.value)} 
                   onKeyDown={e => e.key === 'Enter' && handleTrack()}
-                  placeholder="Enter waybill number (e.g. SPX-2026-0841)" 
+                  placeholder="Enter waybill number (e.g. WB-2026-0841)" 
                   id="track-search-input" 
                 />
               </div>

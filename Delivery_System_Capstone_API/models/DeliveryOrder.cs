@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace SPXDeliveryAPI.Models
 {
@@ -22,6 +23,9 @@ namespace SPXDeliveryAPI.Models
 
         [MaxLength(20)]
         public string ContactNumber { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string? ContactPerson { get; set; }
 
         [Required]
         public string SenderAddress { get; set; } = string.Empty;
@@ -173,9 +177,11 @@ namespace SPXDeliveryAPI.Models
         // Relationships
         public int? DriverId { get; set; }
         [ForeignKey("DriverId")]
+        [ValidateNever]
         public virtual Employee? Driver { get; set; }
 
         [ForeignKey("RedeliveryDriverId")]
+        [ValidateNever]
         public virtual Employee? RedeliveryDriver { get; set; }
 
         [Timestamp]

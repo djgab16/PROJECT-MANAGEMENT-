@@ -244,20 +244,15 @@ namespace SPXDeliveryAPI.Services
                 throw new ArgumentException("Expected Delivery Date cannot be before the Order Date.");
             }
 
-            if (expectedDate.Year != orderDate.Year)
-            {
-                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) must match the Order Date Year ({orderDate.Year}).");
-            }
-
             int currentYear = DateTime.UtcNow.Year;
             if (orderDate.Year > currentYear)
             {
                 throw new ArgumentException($"Order Date Year ({orderDate.Year}) cannot be in the future (current year is {currentYear}).");
             }
 
-            if (expectedDate.Year > currentYear)
+            if (expectedDate.Year > currentYear + 1)
             {
-                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) cannot be in the future (current year is {currentYear}).");
+                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) cannot be further than 1 year in the future.");
             }
         }
 
@@ -525,6 +520,7 @@ namespace SPXDeliveryAPI.Services
                 if (!string.IsNullOrEmpty(updatedOrder.ClientName)) order.ClientName = updatedOrder.ClientName;
                 if (!string.IsNullOrEmpty(updatedOrder.ClientType)) order.ClientType = updatedOrder.ClientType;
                 if (!string.IsNullOrEmpty(updatedOrder.ContactNumber)) order.ContactNumber = updatedOrder.ContactNumber;
+                order.ContactPerson = updatedOrder.ContactPerson;
                 if (!string.IsNullOrEmpty(updatedOrder.SenderAddress)) order.SenderAddress = updatedOrder.SenderAddress;
                 order.SenderUnit = updatedOrder.SenderUnit;
                 order.SenderStreet = updatedOrder.SenderStreet;

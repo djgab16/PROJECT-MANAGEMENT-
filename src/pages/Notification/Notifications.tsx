@@ -25,6 +25,22 @@ export default function Notifications() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   
   const selected = selectedId ? notifications.find(n => n.id === selectedId) : null;
+  const matchedOrderForSelected = selected?.waybillNo
+    ? deliveryOrders.find(o => o.waybillNo?.trim().toUpperCase() === selected.waybillNo?.trim().toUpperCase())
+    : null;
+
+  let parsedArea = '—';
+  let parsedRecipient = '—';
+  if (selected?.description) {
+    const inMatch = selected.description.match(/in\s+([^for\n]+?)\s+for\s+([^\n.]+)/i);
+    if (inMatch) {
+      parsedArea = inMatch[1].trim();
+      parsedRecipient = inMatch[2].trim();
+    }
+  }
+
+  const selectedArea = matchedOrderForSelected ? (matchedOrderForSelected.area || '—') : parsedArea;
+  const selectedRecipient = matchedOrderForSelected ? (matchedOrderForSelected.recipientName || '—') : parsedRecipient;
   const filtered = activeTab === 'all' ? notifications : activeTab === 'read' ? notifications.filter(n => n.read) : notifications.filter(n => n.type === activeTab && !n.read);
 
   const handleToggleCheck = (e?: React.ChangeEvent<HTMLInputElement> | React.MouseEvent, id?: string) => {
@@ -258,11 +274,11 @@ export default function Notifications() {
                 <>
                   <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Area</span>
-                    <span style={{ fontWeight: 600 }}>Marikina City</span>
+                    <span style={{ fontWeight: 600 }}>{selectedArea}</span>
                   </div>
                   <div className="summary-field" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Recipient</span>
-                    <span style={{ fontWeight: 600 }}>Torres, Miguel</span>
+                    <span style={{ fontWeight: 600 }}>{selectedRecipient}</span>
                   </div>
                 </>
               )}

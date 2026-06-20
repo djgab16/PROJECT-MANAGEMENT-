@@ -55,6 +55,20 @@ async function geocodeAddress(address: string, city: string = ''): Promise<{ lat
   return null;
 }
 
+const parseDate = (dateStr: string | null | undefined): number => {
+  if (!dateStr) return 0;
+  const t = Date.parse(dateStr);
+  return isNaN(t) ? 0 : t;
+};
+
+const sortOrdersDescending = (orders: DeliveryOrder[]): DeliveryOrder[] => {
+  return [...orders].sort((a, b) => {
+    const diff = parseDate(b.dateEncoded) - parseDate(a.dateEncoded);
+    if (diff !== 0) return diff;
+    return Number(b.id) - Number(a.id);
+  });
+};
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   
@@ -104,7 +118,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             liveCoordinates
           };
         });
-        setDeliveryOrders(mappedOrders);
+        setDeliveryOrders(sortOrdersDescending(mappedOrders));
       } else {
         console.error('Failed to fetch delivery orders:', ordersResult.reason);
       }
@@ -230,7 +244,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? { lat: created.recipientLatitude, lng: created.recipientLongitude }
             : undefined,
         };
-        setDeliveryOrders(prev => [...prev, mappedOrder]);
+        setDeliveryOrders(prev => sortOrdersDescending([...prev, mappedOrder]));
         
         await addActivityLog({
           action: 'Create',
@@ -343,7 +357,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? { lat: responseData.liveLatitude, lng: responseData.liveLongitude, lastUpdated: responseData.lastLiveUpdate || responseData.lastUpdated }
             : undefined,
         };
-        setDeliveryOrders(prev => prev.map(o => o.id === id ? mappedOrder : o));
+        setDeliveryOrders(prev => sortOrdersDescending(prev.map(o => o.id === id ? mappedOrder : o)));
         
         await addActivityLog({
           action: (updated.podImage || updated.potImage) ? 'POD Upload' : 'Update',

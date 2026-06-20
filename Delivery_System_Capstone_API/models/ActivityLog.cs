@@ -11,19 +11,15 @@ namespace SPXDeliveryAPI.Models
         [MaxLength(100)]
         public string Timestamp { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(100)]
         public string UserName { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(50)]
         public string UserRole { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(2)]
         public string UserInitials { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(7)]
         public string UserColor { get; set; } = string.Empty;
 

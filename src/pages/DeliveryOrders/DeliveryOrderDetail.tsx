@@ -251,35 +251,6 @@ export default function DeliveryOrderDetail() {
         title={`${order.waybillNo} — Order Detail`}
         subtitle="Delivery Orders"
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        actions={
-          <div className="flex gap-sm">
-            <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline btn-sm"><Clock size={14} /> View History Log</Link>
-            {order.isArchived ? (
-              <button
-                className="btn btn-primary btn-sm"
-                disabled={isSubmitting}
-                onClick={() => setShowRestoreConfirm(true)}
-              >
-                <RefreshCw size={14} /> Restore Order
-              </button>
-            ) : (
-              <>
-                {!(['Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'].includes(order.status)) && (
-                  <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline btn-sm" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={14} /> Edit Order</Link>
-                )}
-                {['Failed', 'Cancelled'].includes(order.status) ? (
-                  (order.redeliveryAttemptCount || 0) >= 3 ? (
-                    <span className="locked-tag" style={{ background: 'var(--status-failed-bg)', color: 'var(--status-failed)', borderColor: 'var(--status-failed)', display: 'inline-flex', alignItems: 'center', height: '36px', padding: '0 12px', fontSize: '0.8rem', borderRadius: '6px', fontWeight: 600 }}>⚠️ Max Redelivery Attempts Reached</span>
-                  ) : (
-                    <button className="btn btn-primary btn-sm" id="schedule-redelivery-btn" disabled={isSubmitting} onClick={() => setIsModalOpen(true)}><RefreshCw size={14} /> Schedule Re-delivery</button>
-                  )
-                ) : (
-                  <button className="btn btn-primary btn-sm" id="update-status-btn" disabled={isSubmitting} onClick={handleUpdateStatus}><RefreshCw size={14} /> Update Status</button>
-                )}
-              </>
-            )}
-          </div>
-        }
       />
       <div className="page-content">
         {/* Header Banner */}
@@ -389,6 +360,9 @@ export default function DeliveryOrderDetail() {
                 <div><span className="label">CLIENT / SENDER</span><strong>{order.clientName}</strong></div>
                 <div><span className="label">CONTACT</span><strong>{order.contactNumber || 'N/A'}</strong></div>
                 <div><span className="label">CLIENT TYPE</span><strong>{order.clientType || 'Standard'}</strong></div>
+                {order.clientType === 'Corporate' && order.contactPerson && (
+                  <div><span className="label">CONTACT PERSON</span><strong>{order.contactPerson}</strong></div>
+                )}
                 <div className="info-full"><span className="label">SENDER ADDRESS</span><strong>{order.senderAddress}</strong></div>
               </div>
             </div>

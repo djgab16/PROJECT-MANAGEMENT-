@@ -1,4 +1,5 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
+import { Download } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import { useData } from '../../context/DataContext';
 import '../../pages/Report/Reports.css';
@@ -56,16 +57,14 @@ export default function DeliverySummary() {
       <Header
         title="Delivery Summary"
         subtitle="Data & Reports"
-        actions={
-          <button className="btn btn-primary btn-sm" onClick={handleExport}>
-            EXPORT CSV
-          </button>
-        }
       />
       <div className="page-content">
         <div className="card">
           <div className="card-header">
             <h4>Generated Summary</h4>
+            <button className="btn btn-outline btn-sm" id="export-csv" onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Download size={14} /> Export CSV
+            </button>
           </div>
           <table className="data-table driver-perf-table">
             <thead>

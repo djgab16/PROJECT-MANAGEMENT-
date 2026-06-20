@@ -22,7 +22,7 @@ export default function FailedPickups() {
   });
 
   const failedOrdersAll = useMemo(() => {
-    return deliveryOrders.filter((o: DeliveryOrder) => o.status === 'Pending' || o.redeliveryStatus === 'Pending Approval');
+    return deliveryOrders.filter((o: DeliveryOrder) => o.status === 'Failed');
   }, [deliveryOrders]);
 
   const clientCounts = useMemo(() => {
@@ -201,7 +201,7 @@ export default function FailedPickups() {
                       ) : <span style={{ color: 'var(--status-failed)', fontWeight: 600 }}>Unassigned</span>}
                     </td>
                     <td><span className="overdue-badge">{getOverdueDays(order)} days</span></td>
-                    <td><StatusBadge status="Pending" size="sm" /></td>
+                    <td><StatusBadge status={order.status} size="sm" /></td>
                     <td>
                       <div className="cell-actions">
                         <button className="action-icon-btn" title="View" onClick={() => navigate(`/delivery-orders/${order.id}`)}><Eye size={14} /></button>

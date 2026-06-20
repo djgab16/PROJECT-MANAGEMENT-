@@ -510,7 +510,7 @@ export default function AnalyticsView() {
       <div className="page-content">
         
         {/* Unified Enterprise Filters */}
-        <EnterpriseFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} />
+        <EnterpriseFilters filters={filters} onChange={setFilters} onReset={handleResetFilters} showReset={false} />
 
         {/* Tab Selection Bar */}
         <div className="analytics-tab-bar">

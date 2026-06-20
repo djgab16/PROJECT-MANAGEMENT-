@@ -75,7 +75,7 @@ namespace SPXDeliveryAPI.Controllers
             // Use GET /{id} to retrieve the full record including images.
             var orders = await query.Select(o => new
             {
-                o.Id, o.WaybillNo, o.ClientName, o.ClientType, o.ContactNumber,
+                o.Id, o.WaybillNo, o.ClientName, o.ClientType, o.ContactNumber, o.ContactPerson,
                 o.SenderAddress, o.SenderUnit, o.SenderStreet, o.SenderBarangay, o.SenderCity,
                 o.RecipientName, o.RecipientContact, o.RecipientAddress,
                 o.RecipientUnit, o.RecipientStreet, o.RecipientBarangay, o.RecipientCity,

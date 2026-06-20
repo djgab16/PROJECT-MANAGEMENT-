@@ -268,11 +268,6 @@ export default function Reports() {
     <>
       <Header
         title="Reports"
-        actions={
-          <button className="btn btn-primary btn-sm" id="export-report-btn" onClick={handleExport}>
-            <Download size={14} /> EXPORT REPORT
-          </button>
-        }
       />
       <div className="page-content">
         

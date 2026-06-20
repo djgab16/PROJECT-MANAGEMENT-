@@ -156,7 +156,7 @@ export default function EditDeliveryOrder() {
   const isAreaReadOnly = isReadOnly || isPickup;
   const isCustomPackageSelected = formData.packageType === 'Custom' || 
     (formData.packageType !== undefined && formData.packageType !== '' && 
-     !['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType));
+     !['Small Box', 'Medium Box', 'Large Box'].includes(formData.packageType));
 
   const getInputStyle = (field: string, extraStyle = {}) => {
     const baseReadOnly = field === 'area' ? isAreaReadOnly : isReadOnly;
@@ -185,7 +185,7 @@ export default function EditDeliveryOrder() {
         }
         if (formData.id !== id) {
           setFormData(order);
-          if (order.packageType && !['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch', ''].includes(order.packageType)) {
+          if (order.packageType && !['Small Box', 'Medium Box', 'Large Box', ''].includes(order.packageType)) {
             setCustomPackageName(order.packageType);
           }
           if (order.recipientAddress) {
@@ -228,7 +228,7 @@ export default function EditDeliveryOrder() {
         setSenderBarangay('');
         setSenderCity('');
         setFormData({
-          waybillNo: `SPX-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+          waybillNo: `WB-2026-${Math.floor(100000 + Math.random() * 900000)}`,
           orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           status: 'Pending',
@@ -344,13 +344,13 @@ export default function EditDeliveryOrder() {
     if (!formData.waybillNo) {
       newErrors.waybillNo = 'Waybill number is required';
     } else {
-      const startsWithSPX = formData.waybillNo.startsWith('SPX-');
-      const waybillPartAfterPrefix = formData.waybillNo.substring(4);
+      const startsWithWB = formData.waybillNo.startsWith('WB-2026-');
+      const waybillPartAfterPrefix = formData.waybillNo.substring(8);
       const hasLettersAfterPrefix = /[a-zA-Z]/.test(waybillPartAfterPrefix);
-      if (!startsWithSPX) {
-        newErrors.waybillNo = 'Waybill number must start with "SPX-"';
+      if (!startsWithWB) {
+        newErrors.waybillNo = 'Waybill number must start with "WB-2026-"';
       } else if (hasLettersAfterPrefix) {
-        newErrors.waybillNo = 'Waybill number cannot contain letters after "SPX-"';
+        newErrors.waybillNo = 'Waybill number cannot contain letters after "WB-2026-"';
       }
     }
 
@@ -378,8 +378,8 @@ export default function EditDeliveryOrder() {
     } else {
       const expectedD = new Date(formData.expectedDelivery);
       if (!isNaN(expectedD.getTime())) {
-        if (expectedD.getFullYear() > currentYear) {
-          newErrors.expectedDelivery = `Expected Delivery year cannot be in the future (current year is ${currentYear})`;
+        if (expectedD.getFullYear() > currentYear + 1) {
+          newErrors.expectedDelivery = `Expected Delivery year cannot be further than 1 year in the future (max year is ${currentYear + 1})`;
         } else {
           expectedD.setHours(0, 0, 0, 0);
           if (isNew && expectedD < today) {
@@ -390,8 +390,8 @@ export default function EditDeliveryOrder() {
               orderD.setHours(0, 0, 0, 0);
               if (expectedD < orderD) {
                 newErrors.expectedDelivery = 'Expected Delivery date cannot be before the Order Date';
-              } else if (expectedD.getFullYear() !== orderD.getFullYear()) {
-                newErrors.expectedDelivery = `Expected Delivery year must match the Order Date year (${orderD.getFullYear()})`;
+              } else if (expectedD.getFullYear() > orderD.getFullYear() + 1) {
+                newErrors.expectedDelivery = `Expected Delivery year cannot be further than 1 year after the Order Date year (${orderD.getFullYear() + 1})`;
               }
             }
           }
@@ -430,6 +430,10 @@ export default function EditDeliveryOrder() {
       const cleanPhone = formData.contactNumber.replace(/[^0-9]/g, '');
       const validPhoneChar = /^[0-9+\s()-]+$/.test(formData.contactNumber);
       if (!validPhoneChar || cleanPhone.length < 7) newErrors.contactNumber = 'Please enter a valid contact number (at least 7 digits)';
+    }
+
+    if (formData.clientType === 'Corporate' && !formData.contactPerson?.trim()) {
+      newErrors.contactPerson = 'Contact Person is required for Corporate clients';
     }
 
     if (!formData.recipientContact) {
@@ -554,7 +558,7 @@ export default function EditDeliveryOrder() {
         title={isNew ? "Create New Order" : (isDriver ? "Update Order" : "Edit Order")}
         subtitle={isNew ? "Delivery Orders" : `Delivery Orders · ${formData.waybillNo}`}
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        actions={<span className="edit-mode-badge">● {isNew ? 'Create Mode' : 'Edit Mode'}</span>}
+        actions={!isNew ? <span className="edit-mode-badge">● Edit Mode</span> : undefined}
       />
       <div className="page-content">
         {isTransitOrOutForDelivery ? (
@@ -830,19 +834,14 @@ export default function EditDeliveryOrder() {
                     name="packageType"
                     className="form-input"
                     value={
-                      !formData.packageType || ['Small Box', 'Medium Box', 'Large Box', 'Document / Pouch'].includes(formData.packageType)
+                      !formData.packageType || ['Small Box', 'Medium Box', 'Large Box'].includes(formData.packageType)
                         ? formData.packageType || ''
                         : 'Custom'
                     }
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val === 'Custom') {
-                        setFormData(prev => ({ ...prev, packageType: 'Custom' }));
-                        setCustomPackageName('');
-                      } else {
-                        setFormData(prev => ({ ...prev, packageType: val }));
-                        setCustomPackageName('');
-                      }
+                      setFormData(prev => ({ ...prev, packageType: val }));
+                      setCustomPackageName('');
                       if (errors.packageType) {
                         setErrors(prev => ({ ...prev, packageType: '' }));
                       }
@@ -855,8 +854,6 @@ export default function EditDeliveryOrder() {
                     <option value="Small Box">Small Box</option>
                     <option value="Medium Box">Medium Box</option>
                     <option value="Large Box">Large Box</option>
-                    <option value="Document / Pouch">Document / Pouch</option>
-                    <option value="Custom">Custom / Other</option>
                   </select>
                   {errors.packageType && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.packageType}</span>}
                 </div>
@@ -939,11 +936,32 @@ export default function EditDeliveryOrder() {
 
             <div className="card">
               <h4>Sender Information</h4>
-              <div className="form-row two-col">
+              <div className="form-row three-col">
                 <div className="form-group">
                   <label className="form-label">CLIENT NAME <span style={{ color: 'var(--status-failed)' }}>*</span></label>
                   <input name="clientName" className="form-input" value={formData.clientName} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('clientName')} />
                   {errors.clientName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.clientName}</span>}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">CLIENT TYPE</label>
+                  <select
+                    name="clientType"
+                    className="form-input"
+                    value={formData.clientType || 'Standard'}
+                    onChange={(e) => {
+                      handleChange(e);
+                      // Clear contactPerson error/value when switching away from Corporate
+                      if (e.target.value !== 'Corporate') {
+                        setFormData(prev => ({ ...prev, clientType: e.target.value, contactPerson: '' }));
+                        setErrors(prev => ({ ...prev, contactPerson: '' }));
+                      }
+                    }}
+                    disabled={isReadOnly}
+                    style={inputStyle}
+                  >
+                    <option value="Standard">Standard (Individual)</option>
+                    <option value="Corporate">Corporate (Company)</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">CONTACT NUMBER</label>
@@ -951,6 +969,28 @@ export default function EditDeliveryOrder() {
                   {errors.contactNumber && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.contactNumber}</span>}
                 </div>
               </div>
+              {formData.clientType === 'Corporate' && (
+                <div className="form-group animate-fade-in" style={{ marginTop: '12px' }}>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    CONTACT PERSON / POINT PERSON
+                    <span style={{ color: 'var(--status-failed)' }}>*</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400, background: 'var(--bg-main)', padding: '2px 8px', borderRadius: '20px', border: '1px solid var(--border)' }}>Corporate Only</span>
+                  </label>
+                  <input
+                    name="contactPerson"
+                    className="form-input"
+                    value={formData.contactPerson || ''}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (errors.contactPerson) setErrors(prev => ({ ...prev, contactPerson: '' }));
+                    }}
+                    readOnly={isReadOnly}
+                    placeholder="Full name of point-of-contact at the company"
+                    style={getInputStyle('contactPerson')}
+                  />
+                  {errors.contactPerson && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.contactPerson}</span>}
+                </div>
+              )}
               <div className="form-row four-col" style={{ marginTop: '12px' }}>
                 <div className="form-group">
                   <label className="form-label">UNIT / APARTMENT / FLOOR</label>

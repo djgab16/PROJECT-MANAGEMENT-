@@ -82,3 +82,18 @@
 .rate-bar { width: 60px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .rate-bar-fill { height: 100%; background: var(--status-active); border-radius: 3px; }
 .rating-badge { color: var(--status-active); font-size: 0.82rem; font-weight: 600; }
+
+#export-csv {
+  transition: all 0.2s ease;
+}
+
+#export-csv:hover {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  background: rgba(0, 169, 157, 0.06) !important;
+}
+
+html.dark #export-csv:hover {
+  background: rgba(0, 169, 157, 0.12) !important;
+}
+

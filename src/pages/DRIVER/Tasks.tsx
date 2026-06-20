@@ -87,7 +87,7 @@ export default function Tasks() {
   const navigate = useNavigate();
 
   // Layout View Mode State
-  const [viewMode, setViewMode] = useState<'board' | 'table'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'table'>('table');
 
   // Enterprise Advanced Filters State for Table View
   const [filters, setFilters] = useState<EnterpriseFilterState>({
@@ -169,6 +169,9 @@ export default function Tasks() {
     return visibleOrders.filter(order => {
       // Exclude Cancelled orders from active Tasks view
       if (order.status === 'Cancelled') return false;
+
+      // Exclude archived orders unless explicitly filtering for Archived status
+      if (order.isArchived && filters.status !== 'Archived') return false;
 
       // Smart Fuzzy Search
       if (filters.searchQuery) {
@@ -252,15 +255,16 @@ export default function Tasks() {
   const totalPages = Math.ceil(filteredTableOrders.length / pageSize) || 1;
 
   // Board columns filters (kept separate from table filters for stability)
-  const pending   = visibleOrders.filter(o => (o.status === 'Pending' || o.status === 'Processing' || o.status === 'Assigned') && o.taskType !== 'Pickup');
-  const inTransit = visibleOrders.filter(o => (o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Picked Up') && o.taskType !== 'Pickup');
-  const failed    = visibleOrders.filter(o => (o.status === 'Failed' || o.status === 'Returning' || o.status === 'Returned') && o.taskType !== 'Pickup');
-  const completed = visibleOrders.filter(o => (o.status === 'Delivered' || o.status === 'Completed') && o.taskType !== 'Pickup');
-  const pickups   = visibleOrders.filter(o => o.taskType === 'Pickup' && o.status !== 'Completed' && o.status !== 'Picked Up' && o.status !== 'Cancelled');
+  const pending   = visibleOrders.filter(o => !o.isArchived && (o.status === 'Pending' || o.status === 'Processing' || o.status === 'Assigned') && o.taskType !== 'Pickup');
+  const inTransit = visibleOrders.filter(o => !o.isArchived && (o.status === 'In Transit' || o.status === 'Out for Delivery' || o.status === 'Picked Up') && o.taskType !== 'Pickup');
+  const failed    = visibleOrders.filter(o => !o.isArchived && (o.status === 'Failed' || o.status === 'Returning' || o.status === 'Returned') && o.taskType !== 'Pickup');
+  const completed = visibleOrders.filter(o => !o.isArchived && (o.status === 'Delivered' || o.status === 'Completed') && o.taskType !== 'Pickup');
+  const pickups   = visibleOrders.filter(o => !o.isArchived && o.taskType === 'Pickup' && o.status !== 'Completed' && o.status !== 'Picked Up' && o.status !== 'Cancelled');
 
   // Checkbox Selection Handlers
   const handleToggleSelectAll = () => {
-    const currentPageIds = paginatedOrders.map(o => o.id);
+    const currentPageIds = paginatedOrders.filter(o => o.taskType !== 'Pickup').map(o => o.id);
+    if (currentPageIds.length === 0) return;
     const allSelected = currentPageIds.every(id => selectedOrderIds.includes(id));
     if (allSelected) {
       setSelectedOrderIds(prev => prev.filter(id => !currentPageIds.includes(id)));
@@ -322,7 +326,12 @@ export default function Tasks() {
       <Header 
         title="Tasks Board" 
         subtitle={isDriver ? "My Tasks" : "Operations"}
-        actions={
+      />
+      <div className="page-content">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
+            {isDriver ? "Manage and monitor your assigned delivery tasks." : "Manage and monitor delivery tasks across different stages."}
+          </p>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div className="view-mode-toggle" style={{ display: 'flex', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '2px' }}>
               <button 
@@ -346,21 +355,16 @@ export default function Tasks() {
               </button>
             )}
           </div>
-        }
-      />
-      <div className="page-content">
-        <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
-          {isDriver ? "Manage and monitor your assigned delivery tasks." : "Manage and monitor delivery tasks across different stages."}
-        </p>
+        </div>
 
         {viewMode === 'table' ? (
           <div className="table-view-container animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            {/* Enterprise Advanced Filter Component */}
             <EnterpriseFilters 
               filters={filters} 
               onChange={setFilters} 
               onReset={() => setFilters({ ...initialFilterState, dateType: 'Last 30 Days' })} 
+              showReset={false}
             />
 
             {/* Bulk Actions Panel (Floating Action Bar) */}
@@ -406,7 +410,7 @@ export default function Tasks() {
                         <th style={{ width: '40px', textAlign: 'center' }}>
                           <input 
                             type="checkbox" 
-                            checked={paginatedOrders.length > 0 && paginatedOrders.every(o => selectedOrderIds.includes(o.id))}
+                            checked={paginatedOrders.filter(o => o.taskType !== 'Pickup').length > 0 && paginatedOrders.filter(o => o.taskType !== 'Pickup').every(o => selectedOrderIds.includes(o.id))}
                             onChange={handleToggleSelectAll}
                             style={{ cursor: 'pointer' }}
                           />
@@ -435,12 +439,14 @@ export default function Tasks() {
                         <tr key={order.id} style={{ opacity: order.status === 'Cancelled' ? 0.6 : 1 }}>
                           {!isDriver && (
                             <td style={{ textAlign: 'center' }}>
-                              <input 
-                                type="checkbox" 
-                                checked={selectedOrderIds.includes(order.id)}
-                                onChange={() => handleToggleSelectOne(order.id)}
-                                style={{ cursor: 'pointer' }}
-                              />
+                              {order.taskType !== 'Pickup' && (
+                                <input 
+                                  type="checkbox" 
+                                  checked={selectedOrderIds.includes(order.id)}
+                                  onChange={() => handleToggleSelectOne(order.id)}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                              )}
                             </td>
                           )}
                           <td>

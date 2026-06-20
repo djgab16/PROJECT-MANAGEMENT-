@@ -60,7 +60,7 @@ export default function Login() {
           <div className="login-logo" style={{ background: 'transparent', padding: '0' }}>
             <img src={logo} alt="Speedex Logo" style={{ height: '48px', objectFit: 'contain' }} />
           </div>
-          <p className="login-tagline">30SPEEDEX DELIVERY TRACKING SYSTEM</p>
+          <p className="login-tagline">SPEEDEX DELIVERY TRACKING SYSTEM</p>
           <div className="login-steps">
             <div className="login-step">
               <div className="login-step-number">1</div>
