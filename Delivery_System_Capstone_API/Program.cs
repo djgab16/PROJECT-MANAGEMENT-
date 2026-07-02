@@ -55,8 +55,11 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("OpTeamAndAbove",
         p => p.RequireRole("SUPER ADMIN", "ADMIN", "OP. TEAM"));
 
+    options.AddPolicy("ClientOrOpTeamAndAbove",
+        p => p.RequireRole("SUPER ADMIN", "ADMIN", "OP. TEAM", "CLIENT"));
+
     options.AddPolicy("AnyRole",
-        p => p.RequireRole("SUPER ADMIN", "ADMIN", "OP. TEAM", "DRIVER"));
+        p => p.RequireRole("SUPER ADMIN", "ADMIN", "OP. TEAM", "DRIVER", "CLIENT"));
 });
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -110,7 +113,12 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new SPXDeliveryAPI.Utils.SafeDateTimeConverter());
+        options.JsonSerializerOptions.Converters.Add(new SPXDeliveryAPI.Utils.SafeNullableDateTimeConverter());
+    });
 
 // ─── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

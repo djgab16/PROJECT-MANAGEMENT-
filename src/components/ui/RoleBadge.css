@@ -29,3 +29,8 @@
   background: var(--bg-main);
   color: var(--text-primary);
 }
+
+.role-client {
+  background: var(--status-pending);
+  color: white;
+}

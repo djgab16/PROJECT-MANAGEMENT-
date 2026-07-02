@@ -23,12 +23,15 @@ export default function DeliveryOrders() {
 
   const { user } = useAuth();
   const isOpTeam = user?.role === 'OP. TEAM';
+  const isClient = user?.role === 'CLIENT';
 
   const uniqueAreas = Array.from(new Set(deliveryOrders.map(o => o.area).filter(Boolean)));
 
-  const baseOrders = isOpTeam
-    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
-    : deliveryOrders;
+  const baseOrders = isClient
+    ? deliveryOrders.filter(o => o.clientName === user?.name || o.encodedBy === user?.name)
+    : isOpTeam
+      ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
+      : deliveryOrders;
 
   // Only show active (non-archived) orders — cancelled orders go straight to Archive
   const visibleOrders = baseOrders.filter(order => !order.isArchived);
@@ -110,7 +113,7 @@ export default function DeliveryOrders() {
             <Search size={16} className="filter-search-icon" />
             <input
               type="text"
-              placeholder="Search by waybill, client..."
+              placeholder={isClient ? "Search by product number..." : "Search by waybill, client..."}
               className="filter-search-input"
               id="order-search"
               value={searchTerm}
@@ -192,7 +195,7 @@ export default function DeliveryOrders() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>WAYBILL NO.</th>
+                  <th>{isClient ? 'PRODUCT NO.' : 'WAYBILL NO.'}</th>
                   <th>CLIENT / SENDER</th>
                   <th>RECIPIENT</th>
                   <th>AREA / ROUTE</th>
@@ -298,6 +301,20 @@ export default function DeliveryOrders() {
                           <span
                             className="action-icon-btn disabled"
                             title="Order is in transit (Locked)"
+                            style={{
+                              opacity: 0.6,
+                              cursor: 'not-allowed',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span>🔒</span>
+                          </span>
+                        ) : isClient && order.status !== 'Pending Approval' ? (
+                          <span
+                            className="action-icon-btn disabled"
+                            title="Approved orders cannot be modified by clients"
                             style={{
                               opacity: 0.6,
                               cursor: 'not-allowed',

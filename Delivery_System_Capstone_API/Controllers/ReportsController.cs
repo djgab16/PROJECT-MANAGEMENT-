@@ -56,20 +56,16 @@ namespace SPXDeliveryAPI.Controllers
                 {
                     if (order.Status == "Pending") continue;
 
-                    var dateStr = order.DateCompleted ?? order.LastUpdated ?? order.OrderDate;
-                    if (DateTime.TryParse(dateStr, out var date))
+                    DateTime date = order.DateCompleted ?? order.LastUpdated;
+                    if ((int)date.DayOfWeek == i)
                     {
-                        if ((int)date.DayOfWeek == i)
-                        {
-                            bool isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
-                            bool hasTime = !string.IsNullOrEmpty(dateStr) && (dateStr.Contains(":") || dateStr.Contains("am", StringComparison.OrdinalIgnoreCase) || dateStr.Contains("pm", StringComparison.OrdinalIgnoreCase));
-                            bool isPeak = hasTime && (date.Hour >= 16 || date.Hour <= 8);
+                        bool isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
+                        bool isPeak = date.Hour >= 16 || date.Hour <= 8;
 
-                            if (isWeekend) countWeekend++;
-                            else countWeekday++;
-                            
-                            if (isPeak) countPeak++;
-                        }
+                        if (isWeekend) countWeekend++;
+                        else countWeekday++;
+                        
+                        if (isPeak) countPeak++;
                     }
                 }
 

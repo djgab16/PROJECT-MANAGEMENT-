@@ -29,7 +29,7 @@ namespace SPXDeliveryAPI.Services
             var order = await _context.DeliveryOrders.Include(o => o.Driver).FirstOrDefaultAsync(o => o.Id == id);
             if (order != null && order.Status == "Ready for Pickup")
             {
-                if (DateTime.TryParse(order.LastUpdated, out var lastUpdated) && (DateTime.UtcNow - lastUpdated) > TimeSpan.FromDays(5))
+                if ((DateTime.UtcNow - order.LastUpdated) > TimeSpan.FromDays(5))
                 {
                     await AutoExpireReadyPickupsAsync();
                     // Refetch
@@ -60,7 +60,7 @@ namespace SPXDeliveryAPI.Services
                 {
                     Lat = order.LiveLatitude.Value,
                     Lng = order.LiveLongitude.Value,
-                    LastUpdated = order.LastLiveUpdate ?? order.LastUpdated
+                    LastUpdated = (order.LastLiveUpdate ?? order.LastUpdated).ToString("O")
                 };
             }
         }
@@ -228,31 +228,20 @@ namespace SPXDeliveryAPI.Services
                 }
             }
 
-            DateTime orderDate;
-            if (!DateTime.TryParse(order.OrderDate, out orderDate))
-            {
-                orderDate = DateTime.UtcNow;
-            }
-
-            if (!DateTime.TryParse(order.ExpectedDelivery, out var expectedDate))
-            {
-                throw new ArgumentException("Expected Delivery must be a valid date.");
-            }
-
-            if (expectedDate.Date < orderDate.Date)
+            if (order.ExpectedDelivery.Date < order.OrderDate.Date)
             {
                 throw new ArgumentException("Expected Delivery Date cannot be before the Order Date.");
             }
 
             int currentYear = DateTime.UtcNow.Year;
-            if (orderDate.Year > currentYear)
+            if (order.OrderDate.Year > currentYear)
             {
-                throw new ArgumentException($"Order Date Year ({orderDate.Year}) cannot be in the future (current year is {currentYear}).");
+                throw new ArgumentException($"Order Date Year ({order.OrderDate.Year}) cannot be in the future (current year is {currentYear}).");
             }
 
-            if (expectedDate.Year > currentYear + 1)
+            if (order.ExpectedDelivery.Year > currentYear + 1)
             {
-                throw new ArgumentException($"Expected Delivery Year ({expectedDate.Year}) cannot be further than 1 year in the future.");
+                throw new ArgumentException($"Expected Delivery Year ({order.ExpectedDelivery.Year}) cannot be further than 1 year in the future.");
             }
         }
 
@@ -260,64 +249,61 @@ namespace SPXDeliveryAPI.Services
         {
             var threshold = DateTime.UtcNow.AddDays(-5);
             var ordersToExpire = await _context.DeliveryOrders
-                .Where(o => o.Status == "Ready for Pickup")
+                .Where(o => o.Status == "Ready for Pickup" && o.LastUpdated < threshold)
                 .ToListAsync();
 
             var expiredCount = 0;
             foreach (var order in ordersToExpire)
             {
-                if (DateTime.TryParse(order.LastUpdated, out var lastUpdated) && lastUpdated < threshold)
+                order.Status = "Failed";
+                order.IsArchived = true;
+                order.CompletedAt = DateTime.UtcNow;
+                order.DateCompleted = DateTime.UtcNow;
+                order.ArchivedReason = "Holding Period Expired";
+                order.FailureReason = "Holding Period Expired";
+                order.FailureRemarks = "Package not claimed within 5 days holding period. Sent to return processing.";
+                order.LastUpdated = DateTime.UtcNow;
+                order.UpdatedBy = "System Scheduler";
+
+                var historyLog = new DeliveryHistoryLog
                 {
-                    order.Status = "Failed";
-                    order.IsArchived = true;
-                    order.CompletedAt = DateTime.UtcNow.ToString("O");
-                    order.DateCompleted = DateTime.UtcNow.ToString("O");
-                    order.ArchivedReason = "Holding Period Expired";
-                    order.FailureReason = "Holding Period Expired";
-                    order.FailureRemarks = "Package not claimed within 5 days holding period. Sent to return processing.";
-                    order.LastUpdated = DateTime.UtcNow.ToString("O");
-                    order.UpdatedBy = "System Scheduler";
+                    DeliveryOrderId = order.Id,
+                    FromStatus = "Ready for Pickup",
+                    ToStatus = "Failed",
+                    Notes = "Holding period expired. Auto-failed.",
+                    ChangedBy = "System Scheduler",
+                    ChangedAt = DateTime.UtcNow
+                };
+                await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
-                    var historyLog = new DeliveryHistoryLog
-                    {
-                        DeliveryOrderId = order.Id,
-                        FromStatus = "Ready for Pickup",
-                        ToStatus = "Failed",
-                        Notes = "Holding period expired. Auto-failed.",
-                        ChangedBy = "System Scheduler",
-                        ChangedAt = DateTime.UtcNow.ToString("O")
-                    };
-                    await _context.DeliveryHistoryLogs.AddAsync(historyLog);
+                var activityLog = new ActivityLog
+                {
+                    Timestamp = DateTime.UtcNow,
+                    UserName = "System Scheduler",
+                    UserRole = "ADMIN",
+                    UserInitials = "SS",
+                    UserColor = "#EF4444",
+                    Action = "Update",
+                    Description = $"Auto-expired unclaimed pickup order {order.WaybillNo} after 5 days",
+                    Reference = order.WaybillNo
+                };
+                await _context.ActivityLogs.AddAsync(activityLog);
 
-                    var activityLog = new ActivityLog
-                    {
-                        Timestamp = DateTime.UtcNow.ToString("O"),
-                        UserName = "System Scheduler",
-                        UserRole = "ADMIN",
-                        UserInitials = "SS",
-                        UserColor = "#EF4444",
-                        Action = "Update",
-                        Description = $"Auto-expired unclaimed pickup order {order.WaybillNo} after 5 days",
-                        Reference = order.WaybillNo
-                    };
-                    await _context.ActivityLogs.AddAsync(activityLog);
+                var notification = new Notification
+                {
+                    Type = "alert",
+                    Title = "Pickup Order Expired",
+                    WaybillNo = order.WaybillNo,
+                    Description = $"Pickup order {order.WaybillNo} was not claimed within 5 days. Transitioned to Failed for return processing.",
+                    Timestamp = DateTime.UtcNow.ToString("t"),
+                    Date = DateTime.UtcNow,
+                    Source = "System Scheduler",
+                    Read = false,
+                    StatusBadge = "Expired"
+                };
+                await _context.Notifications.AddAsync(notification);
 
-                    var notification = new Notification
-                    {
-                        Type = "alert",
-                        Title = "Pickup Order Expired",
-                        WaybillNo = order.WaybillNo,
-                        Description = $"Pickup order {order.WaybillNo} was not claimed within 5 days. Transitioned to Failed for return processing.",
-                        Timestamp = DateTime.UtcNow.ToString("t"),
-                        Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
-                        Source = "System Scheduler",
-                        Read = false,
-                        StatusBadge = "Expired"
-                    };
-                    await _context.Notifications.AddAsync(notification);
-
-                    expiredCount++;
-                }
+                expiredCount++;
             }
 
             if (expiredCount > 0)
@@ -351,20 +337,23 @@ namespace SPXDeliveryAPI.Services
             order.PotStatus = order.PotStatus ?? "Not Submitted";
             order.PodStatus = "Not Submitted";
             order.IsArchived = false;
-            order.DateEncoded = DateTime.UtcNow.ToString("O");
-            order.LastUpdated = DateTime.UtcNow.ToString("O");
+            order.DateEncoded = DateTime.UtcNow;
+            order.LastUpdated = DateTime.UtcNow;
             // Auto-populate Route from Area if not provided
             if (string.IsNullOrWhiteSpace(order.Route))
                 order.Route = order.Area;
 
-            // Generate a unique waybill number or validate the client-supplied one.
+            // Generate a unique waybill/product number or validate the client-supplied one.
             // This prevents duplicate keys and ensures clean validation feedback.
             var year = DateTime.UtcNow.Year;
-            if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"WB-{year}"))
+            bool isClient = order.Status == "Pending Approval" || (order.WaybillNo != null && order.WaybillNo.StartsWith("PN-"));
+            string prefix = isClient ? "PN" : "WB";
+
+            if (string.IsNullOrWhiteSpace(order.WaybillNo) || !order.WaybillNo.StartsWith($"{prefix}-{year}"))
             {
                 int seq = 1;
                 var lastOrder = await _context.DeliveryOrders
-                    .Where(o => o.WaybillNo.StartsWith($"WB-{year}-"))
+                    .Where(o => o.WaybillNo.StartsWith($"{prefix}-{year}-"))
                     .OrderByDescending(o => o.WaybillNo)
                     .FirstOrDefaultAsync();
 
@@ -381,7 +370,7 @@ namespace SPXDeliveryAPI.Services
                 string generatedWaybill;
                 do
                 {
-                    generatedWaybill = $"WB-{year}-{seq:D6}";
+                    generatedWaybill = $"{prefix}-{year}-{seq:D6}";
                     seq++;
                 } while (await _context.DeliveryOrders.AnyAsync(o => o.WaybillNo == generatedWaybill));
 
@@ -407,7 +396,7 @@ namespace SPXDeliveryAPI.Services
                 ToStatus = "Pending",
                 Notes = "Order created in system",
                 ChangedBy = order.EncodedBy ?? "Operations Admin",
-                ChangedAt = DateTime.UtcNow.ToString("O")
+                ChangedAt = DateTime.UtcNow
             };
             await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
@@ -423,7 +412,7 @@ namespace SPXDeliveryAPI.Services
             
             var activityLog = new ActivityLog
             {
-                Timestamp = DateTime.UtcNow.ToString("O"),
+                Timestamp = DateTime.UtcNow,
                 UserName = order.EncodedBy ?? "Operations Admin",
                 UserRole = creator?.Role ?? "ADMIN",
                 UserInitials = initials,
@@ -550,7 +539,7 @@ namespace SPXDeliveryAPI.Services
                 if (!string.IsNullOrEmpty(updatedOrder.DeclaredValue)) order.DeclaredValue = updatedOrder.DeclaredValue;
                 if (!string.IsNullOrEmpty(updatedOrder.Priority)) order.Priority = updatedOrder.Priority;
                 if (updatedOrder.SpecialInstructions != null) order.SpecialInstructions = updatedOrder.SpecialInstructions;
-                if (!string.IsNullOrEmpty(updatedOrder.ExpectedDelivery)) order.ExpectedDelivery = updatedOrder.ExpectedDelivery;
+                if (updatedOrder.ExpectedDelivery != default) order.ExpectedDelivery = updatedOrder.ExpectedDelivery;
 
                 // Map incoming virtual coordinates to DB columns
                 if (updatedOrder.RecipientCoordinates != null)
@@ -568,19 +557,26 @@ namespace SPXDeliveryAPI.Services
                 {
                     order.LiveLatitude = updatedOrder.GpsCoordinates.Lat;
                     order.LiveLongitude = updatedOrder.GpsCoordinates.Lng;
-                    order.LastLiveUpdate = DateTime.UtcNow.ToString("O");
+                    order.LastLiveUpdate = DateTime.UtcNow;
                 }
                 else if (updatedOrder.LiveCoordinates != null)
                 {
                     order.LiveLatitude = updatedOrder.LiveCoordinates.Lat;
                     order.LiveLongitude = updatedOrder.LiveCoordinates.Lng;
-                    order.LastLiveUpdate = updatedOrder.LiveCoordinates.LastUpdated;
+                    if (DateTime.TryParse(updatedOrder.LiveCoordinates.LastUpdated, out var parsedLiveUpdate))
+                    {
+                        order.LastLiveUpdate = parsedLiveUpdate;
+                    }
+                    else
+                    {
+                        order.LastLiveUpdate = DateTime.UtcNow;
+                    }
                 }
                 else
                 {
                     if (updatedOrder.LiveLatitude.HasValue) order.LiveLatitude = updatedOrder.LiveLatitude;
                     if (updatedOrder.LiveLongitude.HasValue) order.LiveLongitude = updatedOrder.LiveLongitude;
-                    if (!string.IsNullOrEmpty(updatedOrder.LastLiveUpdate)) order.LastLiveUpdate = updatedOrder.LastLiveUpdate;
+                    if (updatedOrder.LastLiveUpdate.HasValue) order.LastLiveUpdate = updatedOrder.LastLiveUpdate;
                 }
 
                 // POD / POT Updates
@@ -604,7 +600,7 @@ namespace SPXDeliveryAPI.Services
                 }
 
                 // Redelivery
-                if (!string.IsNullOrEmpty(updatedOrder.RedeliveryScheduledDate)) order.RedeliveryScheduledDate = updatedOrder.RedeliveryScheduledDate;
+                if (updatedOrder.RedeliveryScheduledDate.HasValue) order.RedeliveryScheduledDate = updatedOrder.RedeliveryScheduledDate;
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryRemarks)) order.RedeliveryRemarks = updatedOrder.RedeliveryRemarks;
                 if (updatedOrder.RedeliveryAttemptCount > 0)
                 {
@@ -616,7 +612,7 @@ namespace SPXDeliveryAPI.Services
                 }
                 if (updatedOrder.RedeliveryDriverId.HasValue && updatedOrder.RedeliveryDriverId.Value > 0) order.RedeliveryDriverId = updatedOrder.RedeliveryDriverId;
                 if (!string.IsNullOrEmpty(updatedOrder.RedeliveryStatus)) order.RedeliveryStatus = updatedOrder.RedeliveryStatus;
-                if (!string.IsNullOrEmpty(updatedOrder.RedeliveryRequestedDate)) order.RedeliveryRequestedDate = updatedOrder.RedeliveryRequestedDate;
+                if (updatedOrder.RedeliveryRequestedDate.HasValue) order.RedeliveryRequestedDate = updatedOrder.RedeliveryRequestedDate;
             }
             else
             {
@@ -639,26 +635,28 @@ namespace SPXDeliveryAPI.Services
                 // Set completion timestamp and auto-archive if status is terminal
                 bool isTerminal = newStatus == "Completed" || 
                                   (newStatus == "Picked Up" && order.TaskType == "Pickup") || 
-                                  newStatus == "Failed" || 
                                   newStatus == "Cancelled" ||
                                   newStatus == "Returned";
                 if (isTerminal)
                 {
                     order.IsArchived = true;
-                    order.CompletedAt = DateTime.UtcNow.ToString("O");
-                    order.DateCompleted = DateTime.UtcNow.ToString("O");
+                    order.CompletedAt = DateTime.UtcNow;
+                    order.DateCompleted = DateTime.UtcNow;
                     order.ArchivedReason = newStatus == "Delivered" || newStatus == "Completed" || newStatus == "Picked Up" 
                         ? "Completed Transaction" 
-                        : (newStatus == "Returned" ? "Returned to Sender" : (newStatus == "Failed" ? $"Failed Delivery: {order.FailureReason}" : "Cancelled Order"));
-                    order.ArchivedAt = DateTime.UtcNow.ToString("O");
+                        : (newStatus == "Returned" ? "Returned to Sender" : "Cancelled Order");
+                    order.ArchivedAt = DateTime.UtcNow;
                     order.ArchivedBy = updatedOrder.UpdatedBy ?? "Operations Admin";
                 }
                 else
                 {
-                    // If moving back out of terminal (e.g. reschedule)
+                    // If moving back out of terminal (e.g. reschedule) or exception state (like Failed/Returning)
                     order.IsArchived = false;
                     order.CompletedAt = null;
+                    order.DateCompleted = null;
                     order.ArchivedReason = null;
+                    order.ArchivedAt = null;
+                    order.ArchivedBy = null;
                 }
 
                 // Save transition history
@@ -669,7 +667,7 @@ namespace SPXDeliveryAPI.Services
                     ToStatus = newStatus,
                     Notes = updatedOrder.FailureRemarks ?? updatedOrder.RedeliveryRemarks ?? "Status updated",
                     ChangedBy = updatedOrder.UpdatedBy ?? "Operations Admin",
-                    ChangedAt = DateTime.UtcNow.ToString("O")
+                    ChangedAt = DateTime.UtcNow
                 };
                 await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
@@ -686,7 +684,7 @@ namespace SPXDeliveryAPI.Services
                 // Save activity log
                 var activityLog = new ActivityLog
                 {
-                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    Timestamp = DateTime.UtcNow,
                     UserName = updatedOrder.UpdatedBy ?? "Operations Admin",
                     UserRole = editor?.Role ?? "DRIVER",
                     UserInitials = initials,
@@ -701,7 +699,7 @@ namespace SPXDeliveryAPI.Services
                 await CreateStatusNotificationAsync(order, oldStatus, newStatus, editor);
             }
 
-            order.LastUpdated = DateTime.UtcNow.ToString("O");
+            order.LastUpdated = DateTime.UtcNow;
             order.UpdatedBy = updatedOrder.UpdatedBy ?? "Operations Admin";
 
             await _context.SaveChangesAsync();
@@ -718,11 +716,11 @@ namespace SPXDeliveryAPI.Services
             string oldStatus = order.Status;
             order.Status = "Cancelled";
             order.IsArchived = true;
-            order.CompletedAt = DateTime.UtcNow.ToString("O");
+            order.CompletedAt = DateTime.UtcNow;
             order.ArchivedReason = "Cancelled Order";
-            order.ArchivedAt = DateTime.UtcNow.ToString("O");
+            order.ArchivedAt = DateTime.UtcNow;
             order.ArchivedBy = "Operations Admin";
-            order.LastUpdated = DateTime.UtcNow.ToString("O");
+            order.LastUpdated = DateTime.UtcNow;
             order.UpdatedBy = "Operations Admin";
 
             var historyLog = new DeliveryHistoryLog
@@ -732,13 +730,13 @@ namespace SPXDeliveryAPI.Services
                 ToStatus = "Cancelled",
                 Notes = "Order cancelled by Admin/Ops",
                 ChangedBy = "Operations Admin",
-                ChangedAt = DateTime.UtcNow.ToString("O")
+                ChangedAt = DateTime.UtcNow
             };
             await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
             var activityLog = new ActivityLog
             {
-                Timestamp = DateTime.UtcNow.ToString("O"),
+                Timestamp = DateTime.UtcNow,
                 UserName = "Operations Admin",
                 UserRole = "ADMIN",
                 UserInitials = "OA",
@@ -920,7 +918,7 @@ namespace SPXDeliveryAPI.Services
                 WaybillNo = order.WaybillNo,
                 Description = description,
                 Timestamp = DateTime.UtcNow.ToString("t"), // e.g. "10:15 AM"
-                Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                Date = DateTime.UtcNow,
                 Source = editor?.Name ?? "System",
                 Read = false,
                 StatusBadge = badge

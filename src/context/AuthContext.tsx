@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const loginRes = await apiClient.post('/api/auth/login', { employeeId, password });
       const token = loginRes.data.token;
+      const serverRefreshToken = loginRes.data.refreshToken;
       localStorage.setItem('dts_token', token);
       
       const profileRes = await apiClient.get('/api/auth/profile');
@@ -52,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('dts_user_profile', JSON.stringify(employeeData));
       localStorage.setItem('dts_user', JSON.stringify({
         accessToken: token,
-        refreshToken: 'api_refresh_token',
+        refreshToken: serverRefreshToken,
         ...employeeData
       }));
       
@@ -65,6 +66,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    const savedUser = localStorage.getItem('dts_user');
+    if (savedUser) {
+      try {
+        const authData = JSON.parse(savedUser);
+        if (authData && authData.refreshToken && authData.refreshToken !== 'api_refresh_token') {
+          apiClient.post('/api/auth/logout', { refreshToken: authData.refreshToken })
+            .catch(err => console.error("API logout token revocation failed:", err));
+        }
+      } catch (e) {
+        console.error("Failed to parse user for logout revocation:", e);
+      }
+    }
     setUser(null);
     localStorage.removeItem('dts_token');
     localStorage.removeItem('dts_user');

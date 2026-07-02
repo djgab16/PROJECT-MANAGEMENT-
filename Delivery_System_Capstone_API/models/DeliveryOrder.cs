@@ -108,17 +108,17 @@ namespace SPXDeliveryAPI.Models
         public string? PodImage { get; set; } // base64 payload or URL path
 
         // Redelivery fields
-        public string? RedeliveryScheduledDate { get; set; }
+        public DateTime? RedeliveryScheduledDate { get; set; }
         public string? RedeliveryRemarks { get; set; }
         public int RedeliveryAttemptCount { get; set; } = 0;
         public int? RedeliveryDriverId { get; set; }
         public string? RedeliveryStatus { get; set; } = "None"; // "None", "Pending Approval", "Approved", "Rejected"
-        public string? RedeliveryRequestedDate { get; set; }
+        public DateTime? RedeliveryRequestedDate { get; set; }
 
         // GPS coordinates
         public double? LiveLatitude { get; set; }
         public double? LiveLongitude { get; set; }
-        public string? LastLiveUpdate { get; set; }
+        public DateTime? LastLiveUpdate { get; set; }
 
         public double? RecipientLatitude { get; set; }
         public double? RecipientLongitude { get; set; }
@@ -135,18 +135,17 @@ namespace SPXDeliveryAPI.Models
 
         // Dates and Audits
         [Required]
-        public string OrderDate { get; set; } = string.Empty;
+        public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
         [Required]
-        public string ExpectedDelivery { get; set; } = string.Empty;
+        public DateTime ExpectedDelivery { get; set; } = DateTime.UtcNow;
 
-        public string? DateCompleted { get; set; }
+        public DateTime? DateCompleted { get; set; }
 
         public bool IsArchived { get; set; } = false;
-        public string? CompletedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
         public string? ArchivedReason { get; set; }
-        [MaxLength(100)]
-        public string? ArchivedAt { get; set; }
+        public DateTime? ArchivedAt { get; set; }
         public string? ArchivedBy { get; set; }
 
         [Required]
@@ -154,12 +153,10 @@ namespace SPXDeliveryAPI.Models
         public string EncodedBy { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(100)]
-        public string DateEncoded { get; set; } = string.Empty;
+        public DateTime DateEncoded { get; set; } = DateTime.UtcNow;
 
         [Required]
-        [MaxLength(100)]
-        public string LastUpdated { get; set; } = string.Empty;
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
         [Required]
         [MaxLength(100)]

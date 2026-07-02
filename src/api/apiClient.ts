@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
           const authData = JSON.parse(savedUser);
           const refreshToken = authData.refreshToken;
 
-          if (refreshToken) {
+          if (refreshToken && refreshToken !== 'api_refresh_token') {
             // Call the refresh endpoint
             const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
               refreshToken,
@@ -55,6 +55,7 @@ apiClient.interceptors.response.use(
               const newAuthData = response.data;
               
               // Save updated tokens
+              localStorage.setItem('dts_token', newAuthData.accessToken);
               localStorage.setItem('dts_user', JSON.stringify({
                 ...authData,
                 accessToken: newAuthData.accessToken,
@@ -62,13 +63,17 @@ apiClient.interceptors.response.use(
               }));
 
               // Retry the original request with new token
-              originalRequest.headers.Authorization = `Bearer ${newAuthData.accessToken}`;
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${newAuthData.accessToken}`;
+              }
               return apiClient(originalRequest);
             }
           }
         } catch (refreshError) {
           console.error('Session expired. Logging out...', refreshError);
+          localStorage.removeItem('dts_token');
           localStorage.removeItem('dts_user');
+          localStorage.removeItem('dts_user_profile');
           window.location.href = '/login'; // Redirect to login page
         }
       }

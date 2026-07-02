@@ -20,9 +20,12 @@ export default function Dashboard() {
   }, []);
 
   const isOpTeam = user?.role === 'OP. TEAM';
-  const visibleOrders = isOpTeam 
-    ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
-    : deliveryOrders;
+  const isClient = user?.role === 'CLIENT';
+  const visibleOrders = isClient
+    ? deliveryOrders.filter(o => o.clientName === user?.name || o.encodedBy === user?.name)
+    : isOpTeam 
+      ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
+      : deliveryOrders;
 
   const activeTasks = visibleOrders.filter(o => !o.isArchived).length;
   const completedTasks = visibleOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered' || (o.taskType === 'Pickup' && o.status === 'Picked Up')).length;

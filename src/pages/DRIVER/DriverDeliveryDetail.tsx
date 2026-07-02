@@ -23,7 +23,7 @@ export default function DriverDeliveryDetail() {
   const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [simulatedCoords, setSimulatedCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {

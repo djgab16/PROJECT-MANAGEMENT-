@@ -135,7 +135,7 @@ export default function Login() {
               />
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-              Try: EMP-001 (Admin), EMP-002 (Ops), or EMP-003 (Driver)
+              Try: EMP-001 (Admin), EMP-002 (Ops), EMP-003 (Driver), or LZP-001 (Client)
             </small>
           </div>
 

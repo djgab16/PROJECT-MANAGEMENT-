@@ -29,6 +29,6 @@ namespace SPXDeliveryAPI.Models
         public string ChangedBy { get; set; } = string.Empty;
 
         [Required]
-        public string ChangedAt { get; set; } = string.Empty;
+        public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
     }
 }

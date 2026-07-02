@@ -20,7 +20,7 @@ namespace SPXDeliveryAPI.Services
             _configuration = configuration;
         }
 
-        public async Task<string?> LoginAsync(string employeeId, string password)
+        public async Task<LoginResult?> LoginAsync(string employeeId, string password, string ipAddress)
         {
             var employee = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == employeeId);
             if (employee == null) return null;
@@ -65,12 +65,92 @@ namespace SPXDeliveryAPI.Services
             await _context.SaveChangesAsync();
 
             // Generate JWT Token
-            return GenerateJwtToken(employee);
+            var accessToken = GenerateJwtToken(employee);
+
+            // Generate Refresh Token
+            var refreshToken = new RefreshToken
+            {
+                Token = GenerateRefreshToken(),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow,
+                CreatedByIp = ipAddress,
+                EmployeeId = employee.Id
+            };
+
+            await _context.RefreshTokens.AddAsync(refreshToken);
+            await _context.SaveChangesAsync();
+
+            return new LoginResult
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken.Token
+            };
         }
 
         public async Task<Employee?> GetProfileAsync(string employeeId)
         {
             return await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == employeeId);
+        }
+
+        public async Task<LoginResult?> RefreshTokenAsync(string token, string ipAddress)
+        {
+            var refreshToken = await _context.RefreshTokens
+                .Include(t => t.Employee)
+                .FirstOrDefaultAsync(t => t.Token == token);
+
+            if (refreshToken == null || !refreshToken.IsActive)
+            {
+                return null; // Token not found or already inactive (expired/revoked)
+            }
+
+            // Token Rotation: Revoke old refresh token and replace it with a new one
+            var newRefreshToken = new RefreshToken
+            {
+                Token = GenerateRefreshToken(),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow,
+                CreatedByIp = ipAddress,
+                EmployeeId = refreshToken.EmployeeId
+            };
+
+            refreshToken.Revoked = DateTime.UtcNow;
+            refreshToken.RevokedByIp = ipAddress;
+            refreshToken.ReplacedByToken = newRefreshToken.Token;
+
+            await _context.RefreshTokens.AddAsync(newRefreshToken);
+            await _context.SaveChangesAsync();
+
+            // Generate new Access Token
+            var accessToken = GenerateJwtToken(refreshToken.Employee);
+
+            return new LoginResult
+            {
+                AccessToken = accessToken,
+                RefreshToken = newRefreshToken.Token
+            };
+        }
+
+        public async Task<bool> RevokeTokenAsync(string token, string ipAddress)
+        {
+            var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == token);
+            if (refreshToken == null || !refreshToken.IsActive)
+            {
+                return false;
+            }
+
+            refreshToken.Revoked = DateTime.UtcNow;
+            refreshToken.RevokedByIp = ipAddress;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
         }
 
         private string GenerateJwtToken(Employee employee)
@@ -90,7 +170,7 @@ namespace SPXDeliveryAPI.Services
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(8),
+                expires: DateTime.UtcNow.AddMinutes(15), // Short access token lifespan
                 signingCredentials: creds
             );
 

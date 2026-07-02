@@ -8,8 +8,7 @@ namespace SPXDeliveryAPI.Models
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(100)]
-        public string Timestamp { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
         [MaxLength(100)]
         public string UserName { get; set; } = string.Empty;

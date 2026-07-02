@@ -24,20 +24,59 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Intercept responses to handle 401 Unauthorized globally
+// Intercept responses to handle 401 Unauthorized globally and refresh token
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
+  async (error) => {
+    const originalRequest = error.config;
+    const isProfileCheck = originalRequest?.url?.includes('/api/auth/profile');
+
+    // Check if error is 401, we haven't retried yet, and this isn't a direct login request
+    if (error.response && error.response.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/api/auth/login')) {
+      originalRequest._retry = true;
+
+      const savedUser = localStorage.getItem('dts_user');
+      if (savedUser) {
+        try {
+          const authData = JSON.parse(savedUser);
+          const refreshToken = authData.refreshToken;
+
+          // Make sure we have a real refresh token (not the mock 'api_refresh_token')
+          if (refreshToken && refreshToken !== 'api_refresh_token') {
+            // Call the refresh endpoint using a fresh axios instance to avoid infinite interceptor loops
+            const response = await axios.post(`${API_URL}/api/auth/refresh`, {
+              refreshToken,
+            });
+
+            if (response.status === 200) {
+              const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+              // Save updated tokens
+              localStorage.setItem('dts_token', accessToken);
+              localStorage.setItem('dts_user', JSON.stringify({
+                ...authData,
+                accessToken,
+                refreshToken: newRefreshToken,
+              }));
+
+              // Retry the original request with new token
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              }
+              return apiClient(originalRequest);
+            }
+          }
+        } catch (refreshError) {
+          console.error('Session expired. Logging out...', refreshError);
+        }
+      }
+
+      // If refresh failed or was not possible, perform logout
       const token = localStorage.getItem('dts_token');
-      // Only redirect to login if there was actually a token stored (i.e. this is an
-      // expired-session case, not the initial auth-check on a fresh load without a token).
-      // Also skip the redirect for the profile-check route itself so AuthContext can handle
-      // the failure gracefully without a hard reload loop.
-      const isProfileCheck = error.config?.url?.includes('/api/auth/profile');
       if (token && !isProfileCheck) {
         localStorage.removeItem('dts_token');
         localStorage.removeItem('dts_user');
+        localStorage.removeItem('dts_user_profile');
         window.location.href = '/login';
       }
     }

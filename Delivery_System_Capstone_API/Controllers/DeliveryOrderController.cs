@@ -51,6 +51,10 @@ namespace SPXDeliveryAPI.Controllers
                 // Allow OP. TEAM to see their own orders OR orders that need re-delivery approval
                 query = query.Where(o => o.EncodedBy == userName || o.UpdatedBy == userName || o.RedeliveryStatus == "Pending Approval");
             }
+            if (userRole == "CLIENT")
+            {
+                query = query.Where(o => o.ClientName == userName || o.EncodedBy == userName);
+            }
 
             if (isArchived.HasValue)
             {
@@ -127,18 +131,34 @@ namespace SPXDeliveryAPI.Controllers
                     return Forbid();
                 }
             }
+            else if (userRole == "CLIENT")
+            {
+                if (order.ClientName != userName && order.EncodedBy != userName)
+                {
+                    return Forbid();
+                }
+            }
 
             return Ok(order);
         }
 
         [HttpPost]
-        [Authorize(Policy = "OpTeamAndAbove")]
+        [Authorize(Policy = "ClientOrOpTeamAndAbove")]
         public async Task<IActionResult> Create([FromBody] DeliveryOrder order)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             
             try
             {
+                var userRole = User.FindFirstValue(ClaimTypes.Role);
+                var userName = User.Identity?.Name;
+
+                if (userRole == "CLIENT")
+                {
+                    order.ClientName = userName ?? order.ClientName;
+                    order.Status = "Pending Approval";
+                }
+
                 order.EncodedBy = User.Identity?.Name ?? order.EncodedBy ?? "Operations Team";
                 var createdOrder = await _service.CreateOrderAsync(order);
                 return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
@@ -154,7 +174,7 @@ namespace SPXDeliveryAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Policy = "OpTeamAndAbove")]
+        [Authorize(Policy = "ClientOrOpTeamAndAbove")]
         public async Task<IActionResult> Update(int id, [FromBody] DeliveryOrder order)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -165,7 +185,21 @@ namespace SPXDeliveryAPI.Controllers
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var userName = User.Identity?.Name;
 
-            if (userRole == "OP. TEAM")
+            if (userRole == "CLIENT")
+            {
+                if (existingOrder.ClientName != userName && existingOrder.EncodedBy != userName)
+                {
+                    return Forbid();
+                }
+                if (existingOrder.Status != "Pending Approval")
+                {
+                    return BadRequest(new { message = "Only orders pending approval can be modified by the client." });
+                }
+                // Lock fields from tampering on Client update
+                order.ClientName = existingOrder.ClientName;
+                order.Status = "Pending Approval";
+            }
+            else if (userRole == "OP. TEAM")
             {
                 if (existingOrder.EncodedBy != userName && existingOrder.UpdatedBy != userName && existingOrder.RedeliveryStatus != "Pending Approval")
                 {
@@ -194,7 +228,7 @@ namespace SPXDeliveryAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Policy = "OpTeamAndAbove")]
+        [Authorize(Policy = "ClientOrOpTeamAndAbove")]
         public async Task<IActionResult> Delete(int id)
         {
             var order = await _service.GetOrderByIdAsync(id);
@@ -203,7 +237,18 @@ namespace SPXDeliveryAPI.Controllers
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var userName = User.Identity?.Name;
 
-            if (userRole == "OP. TEAM")
+            if (userRole == "CLIENT")
+            {
+                if (order.ClientName != userName && order.EncodedBy != userName)
+                {
+                    return Forbid();
+                }
+                if (order.Status != "Pending Approval")
+                {
+                    return BadRequest(new { message = "Only orders pending approval can be cancelled/deleted by the client." });
+                }
+            }
+            else if (userRole == "OP. TEAM")
             {
                 if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
                 {
@@ -244,6 +289,13 @@ namespace SPXDeliveryAPI.Controllers
             else if (userRole == "OP. TEAM")
             {
                 if (order.EncodedBy != userName && order.UpdatedBy != userName && order.RedeliveryStatus != "Pending Approval")
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "CLIENT")
+            {
+                if (order.ClientName != userName && order.EncodedBy != userName)
                 {
                     return Forbid();
                 }
@@ -290,6 +342,10 @@ namespace SPXDeliveryAPI.Controllers
                     return Forbid();
                 }
             }
+            else if (userRole == "CLIENT")
+            {
+                return Forbid();
+            }
 
             try
             {
@@ -314,7 +370,7 @@ namespace SPXDeliveryAPI.Controllers
                 {
                     order.LiveLatitude = model.Latitude.Value;
                     order.LiveLongitude = model.Longitude.Value;
-                    order.LastLiveUpdate = DateTime.UtcNow.ToString("O");
+                    order.LastLiveUpdate = DateTime.UtcNow;
                     
                     if (model.Status == "Delivered" || order.Status == "Delivered")
                     {
@@ -411,7 +467,14 @@ namespace SPXDeliveryAPI.Controllers
 
             try
             {
-                order.RedeliveryScheduledDate = model.RedeliveryDate;
+                if (DateTime.TryParse(model.RedeliveryDate, out var scheduledDate))
+                {
+                    order.RedeliveryScheduledDate = scheduledDate;
+                }
+                else
+                {
+                    order.RedeliveryScheduledDate = DateTime.UtcNow.AddDays(1);
+                }
                 order.RedeliveryRemarks = model.Remarks;
                 order.RedeliveryDriverId = model.DriverId;
                 order.RedeliveryStatus = "Approved";
@@ -652,11 +715,11 @@ namespace SPXDeliveryAPI.Controllers
             try
             {
                 order.RedeliveryStatus = "Pending Approval";
-                order.RedeliveryRequestedDate = requestedDate.ToString("MMMM dd, yyyy");
+                order.RedeliveryRequestedDate = requestedDate;
                 order.RedeliveryRemarks = model.Remarks;
                 order.UpdatedBy = "Client Portal";
                 order.IsArchived = false;
-                order.LastUpdated = DateTime.UtcNow.ToString("O");
+                order.LastUpdated = DateTime.UtcNow;
 
                 // Save history log
                 var historyLog = new DeliveryHistoryLog
@@ -664,22 +727,22 @@ namespace SPXDeliveryAPI.Controllers
                     DeliveryOrderId = order.Id,
                     FromStatus = order.Status,
                     ToStatus = order.Status,
-                    Notes = $"Reschedule requested for {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
+                    Notes = $"Reschedule requested for {order.RedeliveryRequestedDate:MMMM dd, yyyy}. Remarks: {model.Remarks}",
                     ChangedBy = "Client Portal",
-                    ChangedAt = DateTime.UtcNow.ToString("O")
+                    ChangedAt = DateTime.UtcNow
                 };
                 await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
                 // Save activity log
                 var activityLog = new ActivityLog
                 {
-                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    Timestamp = DateTime.UtcNow,
                     UserName = "Client Portal",
                     UserRole = "CLIENT",
                     UserInitials = "CL",
                     UserColor = "#7C3AED",
                     Action = "Update",
-                    Description = $"Client requested re-delivery reschedule for {order.WaybillNo} on {order.RedeliveryRequestedDate}",
+                    Description = $"Client requested re-delivery reschedule for {order.WaybillNo} on {order.RedeliveryRequestedDate:MMMM dd, yyyy}",
                     Reference = order.WaybillNo
                 };
                 await _context.ActivityLogs.AddAsync(activityLog);
@@ -690,9 +753,9 @@ namespace SPXDeliveryAPI.Controllers
                     Type = "alert",
                     Title = "Reschedule Request Received",
                     WaybillNo = order.WaybillNo,
-                    Description = $"Client requested a re-delivery attempt for waybill {order.WaybillNo} on {order.RedeliveryRequestedDate}. Remarks: {model.Remarks}",
+                    Description = $"Client requested a re-delivery attempt for waybill {order.WaybillNo} on {order.RedeliveryRequestedDate:MMMM dd, yyyy}. Remarks: {model.Remarks}",
                     Timestamp = DateTime.UtcNow.ToString("t"),
-                    Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                    Date = DateTime.UtcNow,
                     Source = "Client Portal",
                     Read = false,
                     StatusBadge = "New Request"
@@ -750,15 +813,17 @@ namespace SPXDeliveryAPI.Controllers
                                     ItemCount = row.Cell(14).GetValue<int>() > 0 ? row.Cell(14).GetValue<int>() : 1,
                                     Weight = row.Cell(15).GetValue<string>() ?? "1.0 kg",
                                     DeclaredValue = row.Cell(16).GetValue<string>() ?? "₱ 0.00",
-                                    ExpectedDelivery = row.Cell(17).GetValue<string>(),
-                                    OrderDate = DateTime.UtcNow.ToString("MMMM dd, yyyy"),
+                                    OrderDate = DateTime.UtcNow,
                                     EncodedBy = User.Identity?.Name ?? "Operations Team"
                                 };
 
-                                if (string.IsNullOrEmpty(order.ExpectedDelivery))
+                                DateTime? parsedExpected = null;
+                                var cellValue = row.Cell(17).GetValue<string>();
+                                if (!string.IsNullOrWhiteSpace(cellValue) && DateTime.TryParse(cellValue, out var dateVal))
                                 {
-                                    order.ExpectedDelivery = DateTime.UtcNow.AddDays(2).ToString("MMMM dd, yyyy");
+                                    parsedExpected = dateVal;
                                 }
+                                order.ExpectedDelivery = parsedExpected ?? DateTime.UtcNow.AddDays(2);
 
                                 await _service.CreateOrderAsync(order);
                                 importedCount++;
@@ -942,11 +1007,11 @@ namespace SPXDeliveryAPI.Controllers
                 string oldStatus = order.Status;
                 order.Status = "Completed";
                 order.IsArchived = true;
-                order.CompletedAt = DateTime.UtcNow.ToString("O");
-                order.DateCompleted = DateTime.UtcNow.ToString("O");
+                order.CompletedAt = DateTime.UtcNow;
+                order.DateCompleted = DateTime.UtcNow;
                 order.ArchivedReason = "Completed Transaction (Confirmed by Client)";
                 order.UpdatedBy = "Client Portal";
-                order.LastUpdated = DateTime.UtcNow.ToString("O");
+                order.LastUpdated = DateTime.UtcNow;
 
                 // Save history log
                 var historyLog = new DeliveryHistoryLog
@@ -956,14 +1021,14 @@ namespace SPXDeliveryAPI.Controllers
                     ToStatus = "Completed",
                     Notes = "Delivery confirmed by client via tracking portal.",
                     ChangedBy = "Client Portal",
-                    ChangedAt = DateTime.UtcNow.ToString("O")
+                    ChangedAt = DateTime.UtcNow
                 };
                 await _context.DeliveryHistoryLogs.AddAsync(historyLog);
 
                 // Save activity log
                 var activityLog = new ActivityLog
                 {
-                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    Timestamp = DateTime.UtcNow,
                     UserName = "Client Portal",
                     UserRole = "CLIENT",
                     UserInitials = "CL",
@@ -982,7 +1047,7 @@ namespace SPXDeliveryAPI.Controllers
                     WaybillNo = order.WaybillNo,
                     Description = $"Client has confirmed receipt of package {order.WaybillNo}. Order status auto-updated to Completed.",
                     Timestamp = DateTime.UtcNow.ToString("t"),
-                    Date = DateTime.UtcNow.ToString("MM/dd/yyyy"),
+                    Date = DateTime.UtcNow,
                     Source = "Client Portal",
                     Read = false,
                     StatusBadge = "Confirmed"

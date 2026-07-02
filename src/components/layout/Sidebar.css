@@ -199,6 +199,20 @@
   color: white;
 }
 
+/* Client Badge */
+.sidebar-role-badge.client {
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.05);
+}
+.sidebar-role-badge.client::before {
+  background: #F59E0B;
+}
+.sidebar-collapsed .sidebar-role-badge.client {
+  background: #F59E0B;
+  color: white;
+}
+
 /* Employee Badge */
 .sidebar-role-badge.employee {
   color: #94A3B8;

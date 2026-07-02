@@ -27,13 +27,14 @@ namespace SPXDeliveryAPI.Controllers
         {
             try
             {
-                var token = await _authService.LoginAsync(request.EmployeeId, request.Password);
-                if (token == null)
+                var ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                var result = await _authService.LoginAsync(request.EmployeeId, request.Password, ipAddress);
+                if (result == null)
                 {
                     return Unauthorized(new { message = "Invalid credentials or account is locked." });
                 }
 
-                return Ok(new { token });
+                return Ok(new { token = result.AccessToken, refreshToken = result.RefreshToken });
             }
             catch (Exception ex)
             {
@@ -43,6 +44,54 @@ namespace SPXDeliveryAPI.Controllers
                 }
                 return Unauthorized(new { message = "Invalid credentials." });
             }
+        }
+
+        public class RefreshRequest
+        {
+            public string RefreshToken { get; set; } = string.Empty;
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new { message = "Refresh token is required." });
+            }
+
+            var ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            var result = await _authService.RefreshTokenAsync(request.RefreshToken, ipAddress);
+            if (result == null)
+            {
+                return Unauthorized(new { message = "Invalid or expired refresh token." });
+            }
+
+            return Ok(new { accessToken = result.AccessToken, refreshToken = result.RefreshToken });
+        }
+
+        public class RevokeTokenRequest
+        {
+            public string RefreshToken { get; set; } = string.Empty;
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RevokeTokenRequest request)
+        {
+            var ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            var token = request.RefreshToken;
+
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new { message = "Token is required." });
+            }
+
+            var result = await _authService.RevokeTokenAsync(token, ipAddress);
+            if (!result)
+            {
+                return NotFound(new { message = "Token not found or already inactive." });
+            }
+
+            return Ok(new { message = "Token revoked successfully." });
         }
 
         [HttpGet("profile")]

@@ -119,14 +119,17 @@ export default function Tasks() {
 
   const isDriver = user?.role === 'DRIVER';
   const isOpTeam = user?.role === 'OP. TEAM';
+  const isClient = user?.role === 'CLIENT';
 
   const visibleOrders = useMemo(() => {
     return isDriver 
       ? deliveryOrders.filter(o => o.driverName === user?.name && o.taskType !== 'Pickup')
+      : isClient
+      ? deliveryOrders.filter(o => o.clientName === user?.name || o.encodedBy === user?.name)
       : isOpTeam
       ? deliveryOrders.filter(o => o.encodedBy === user?.name || o.updatedBy === user?.name || o.redeliveryStatus === 'Pending Approval')
       : deliveryOrders;
-  }, [deliveryOrders, isDriver, isOpTeam, user?.name]);
+  }, [deliveryOrders, isDriver, isClient, isOpTeam, user?.name]);
 
   const drivers = useMemo(() => {
     return employees ? employees.filter(e => e.role === 'DRIVER') : [];

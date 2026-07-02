@@ -58,9 +58,9 @@ namespace SPXDeliveryAPI.Controllers
             log.UserInitials = initials;
             log.UserColor = color;
 
-            if (string.IsNullOrEmpty(log.Timestamp))
+            if (log.Timestamp == default)
             {
-                log.Timestamp = DateTime.UtcNow.ToString("O");
+                log.Timestamp = DateTime.UtcNow;
             }
 
             await _context.ActivityLogs.AddAsync(log);

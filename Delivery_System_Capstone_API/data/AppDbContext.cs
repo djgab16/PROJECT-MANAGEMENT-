@@ -45,7 +45,7 @@ namespace SPXDeliveryAPI.Data
                 // 1. Validation for Delivered / Completed states
                 if (order.Status == "Delivered" || order.Status == "Completed")
                 {
-                    if (string.IsNullOrWhiteSpace(order.DateCompleted))
+                    if (!order.DateCompleted.HasValue)
                     {
                         throw new InvalidOperationException($"Delivered/Completed order {order.WaybillNo} must have a delivery timestamp (DateCompleted).");
                     }

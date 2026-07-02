@@ -227,16 +227,19 @@ export default function EditDeliveryOrder() {
         setSenderStreet('');
         setSenderBarangay('');
         setSenderCity('');
+        const isClientRole = user?.role === 'CLIENT';
         setFormData({
-          waybillNo: `WB-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+          waybillNo: `${isClientRole ? 'PN' : 'WB'}-2026-${Math.floor(100000 + Math.random() * 900000)}`,
           orderDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           expectedDelivery: new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          status: 'Pending',
+          status: isClientRole ? 'Pending Approval' : 'Pending',
           taskType: 'Delivery',
           potStatus: 'Not Submitted',
           itemCount: 1,
           weight: '0.0',
           declaredValue: '0.00',
+          clientName: isClientRole ? user?.name : '',
+          clientType: isClientRole ? 'Corporate' : 'Standard',
           encodedBy: user?.name || 'Unknown',
           dateEncoded: new Date().toLocaleString(),
           lastUpdated: new Date().toLocaleString(),
@@ -342,15 +345,17 @@ export default function EditDeliveryOrder() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.waybillNo) {
-      newErrors.waybillNo = 'Waybill number is required';
+      newErrors.waybillNo = `${user?.role === 'CLIENT' ? 'Product' : 'Waybill'} number is required`;
     } else {
-      const startsWithWB = formData.waybillNo.startsWith('WB-2026-');
+      const isClientRole = user?.role === 'CLIENT';
+      const expectedPrefix = isClientRole ? 'PN-2026-' : 'WB-2026-';
+      const startsWithPrefix = formData.waybillNo.startsWith(expectedPrefix);
       const waybillPartAfterPrefix = formData.waybillNo.substring(8);
       const hasLettersAfterPrefix = /[a-zA-Z]/.test(waybillPartAfterPrefix);
-      if (!startsWithWB) {
-        newErrors.waybillNo = 'Waybill number must start with "WB-2026-"';
+      if (!startsWithPrefix) {
+        newErrors.waybillNo = `${isClientRole ? 'Product' : 'Waybill'} number must start with "${expectedPrefix}"`;
       } else if (hasLettersAfterPrefix) {
-        newErrors.waybillNo = 'Waybill number cannot contain letters after "WB-2026-"';
+        newErrors.waybillNo = `${isClientRole ? 'Product' : 'Waybill'} number cannot contain letters after "${expectedPrefix}"`;
       }
     }
 
@@ -569,7 +574,7 @@ export default function EditDeliveryOrder() {
         ) : !isDriver ? (
           <div className="edit-warning">
             <AlertTriangle size={18} />
-            <p><strong>Notice:</strong> Please ensure all required information (*) is filled correctly. Waybill numbers are system-generated but can be modified before first save.</p>
+            <p><strong>Notice:</strong> Please ensure all required information (*) is filled correctly. {user?.role === 'CLIENT' ? 'Product numbers are system-generated.' : 'Waybill numbers are system-generated but can be modified before first save.'}</p>
           </div>
         ) : null}
 
@@ -578,11 +583,11 @@ export default function EditDeliveryOrder() {
             <div className="card">
               <div className="card-header">
                 <h4>Order Information</h4>
-                {!isNew && !isDriver && <span className="locked-tag">🔒 Waybill Locked</span>}
+                {!isNew && !isDriver && <span className="locked-tag">🔒 {user?.role === 'CLIENT' ? 'Product Locked' : 'Waybill Locked'}</span>}
               </div>
               <div className="form-row three-col">
                 <div className="form-group">
-                  <label className="form-label">WAYBILL NUMBER</label>
+                  <label className="form-label">{user?.role === 'CLIENT' ? 'PRODUCT NUMBER' : 'WAYBILL NUMBER'}</label>
                   <input
                     name="waybillNo"
                     className="form-input"
@@ -939,7 +944,7 @@ export default function EditDeliveryOrder() {
               <div className="form-row three-col">
                 <div className="form-group">
                   <label className="form-label">CLIENT NAME <span style={{ color: 'var(--status-failed)' }}>*</span></label>
-                  <input name="clientName" className="form-input" value={formData.clientName} onChange={handleChange} readOnly={isReadOnly} style={getInputStyle('clientName')} />
+                  <input name="clientName" className="form-input" value={formData.clientName} onChange={handleChange} readOnly={isReadOnly || user?.role === 'CLIENT'} style={getInputStyle('clientName', user?.role === 'CLIENT' ? { background: 'var(--bg-main)', cursor: 'not-allowed' } : {})} />
                   {errors.clientName && <span className="validation-error" style={{ color: 'var(--status-failed)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.clientName}</span>}
                 </div>
                 <div className="form-group">
@@ -956,8 +961,8 @@ export default function EditDeliveryOrder() {
                         setErrors(prev => ({ ...prev, contactPerson: '' }));
                       }
                     }}
-                    disabled={isReadOnly}
-                    style={inputStyle}
+                    disabled={isReadOnly || user?.role === 'CLIENT'}
+                    style={user?.role === 'CLIENT' ? { ...inputStyle, background: 'var(--bg-main)', cursor: 'not-allowed' } : inputStyle}
                   >
                     <option value="Standard">Standard (Individual)</option>
                     <option value="Corporate">Corporate (Company)</option>
@@ -1159,7 +1164,7 @@ export default function EditDeliveryOrder() {
                 <StatusBadge status={formData.status as DeliveryOrder['status']} size="sm" />
               </div>
               <div className="summary-fields">
-                <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{formData.waybillNo}</span></div>
+                <div className="summary-field"><span>{user?.role === 'CLIENT' ? 'Product No.' : 'Waybill No.'}</span><span className="summary-val teal">{formData.waybillNo}</span></div>
                 <div className="summary-field"><span>Encoded By</span><span>{formData.encodedBy}</span></div>
                 <div className="summary-field"><span>Last Updated</span><span>{new Date().toLocaleTimeString()}</span></div>
                 <div className="summary-field"><span>Status</span><span>{formData.status}</span></div>

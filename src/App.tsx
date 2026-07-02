@@ -50,7 +50,7 @@ export default function App() {
         <Route path="/tracking" element={<PublicTracking />} />
 
         {/* Protected Dashboard Pages (with sidebar) */}
-        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'OP. TEAM']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'OP. TEAM', 'CLIENT']} />}>
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<Dashboard />} />

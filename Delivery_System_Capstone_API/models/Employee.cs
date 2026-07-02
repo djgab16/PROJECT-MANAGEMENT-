@@ -21,7 +21,7 @@ namespace SPXDeliveryAPI.Models
 
         [Required]
         [MaxLength(20)]
-        public string Role { get; set; } = string.Empty; // "SUPER ADMIN", "ADMIN", "OP. TEAM", "DRIVER"
+        public string Role { get; set; } = string.Empty; // "SUPER ADMIN", "ADMIN", "OP. TEAM", "DRIVER", "CLIENT"
 
         [Required]
         [MaxLength(100)]

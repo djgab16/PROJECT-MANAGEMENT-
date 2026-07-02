@@ -1,7 +1,7 @@
-export type DeliveryStatus = 'Pending' | 'Processing' | 'Assigned' | 'Picked Up' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Completed' | 'Failed' | 'Returning' | 'Returned' | 'Cancelled' | 'Preparing' | 'Ready for Pickup';
+export type DeliveryStatus = 'Pending' | 'Processing' | 'Assigned' | 'Picked Up' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Completed' | 'Failed' | 'Returning' | 'Returned' | 'Cancelled' | 'Preparing' | 'Ready for Pickup' | 'Pending Approval';
 export type POTStatus = 'Submitted' | 'No POT' | 'Not Submitted';
 export type PODStatus = 'Submitted' | 'No POD' | 'Not Submitted';
-export type UserRole = 'ADMIN' | 'OP. TEAM' | 'DRIVER';
+export type UserRole = 'ADMIN' | 'OP. TEAM' | 'DRIVER' | 'CLIENT';
 export type AccountStatus = 'Active' | 'Pending' | 'Locked';
 export type NotificationType = 'alert' | 'success' | 'system' | 'info';
 export type ActionType = 'Create' | 'Update' | 'Assign' | 'POT Upload' | 'POD Upload' | 'Login' | 'Archive' | 'Delete';
@@ -11,6 +11,7 @@ export const ROLE_DISPLAY: Record<UserRole, string> = {
   'ADMIN': 'ADMIN',
   'OP. TEAM': 'ENCODER',
   'DRIVER': 'DRIVER',
+  'CLIENT': 'CLIENT',
 };
 
 export interface Employee {

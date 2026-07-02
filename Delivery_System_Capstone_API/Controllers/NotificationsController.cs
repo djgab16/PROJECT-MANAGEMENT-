@@ -38,6 +38,16 @@ namespace SPXDeliveryAPI.Controllers
 
                 query = query.Where(n => (n.WaybillNo != null && driverWaybills.Contains(n.WaybillNo)) || n.WaybillNo == null);
             }
+            else if (userRole == "CLIENT")
+            {
+                var userName = User.Identity?.Name;
+                var clientWaybills = await _context.DeliveryOrders
+                    .Where(o => o.ClientName == userName || o.EncodedBy == userName)
+                    .Select(o => o.WaybillNo)
+                    .ToListAsync();
+
+                query = query.Where(n => n.WaybillNo != null && clientWaybills.Contains(n.WaybillNo));
+            }
 
             var notifications = await query
                 .OrderByDescending(n => n.Id)
@@ -54,11 +64,22 @@ namespace SPXDeliveryAPI.Controllers
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var employeeId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+            var userName = User.Identity?.Name;
+
             if (userRole == "DRIVER" && !string.IsNullOrEmpty(notification.WaybillNo))
             {
                 var isAssigned = await _context.DeliveryOrders
                     .AnyAsync(o => o.WaybillNo == notification.WaybillNo && o.Driver != null && o.Driver.EmployeeId == employeeId);
                 if (!isAssigned)
+                {
+                    return Forbid();
+                }
+            }
+            else if (userRole == "CLIENT" && !string.IsNullOrEmpty(notification.WaybillNo))
+            {
+                var isOwned = await _context.DeliveryOrders
+                    .AnyAsync(o => o.WaybillNo == notification.WaybillNo && (o.ClientName == userName || o.EncodedBy == userName));
+                if (!isOwned)
                 {
                     return Forbid();
                 }
@@ -85,6 +106,18 @@ namespace SPXDeliveryAPI.Controllers
 
                 notifications = await _context.Notifications
                     .Where(n => !n.Read && ((n.WaybillNo != null && driverWaybills.Contains(n.WaybillNo)) || n.WaybillNo == null))
+                    .ToListAsync();
+            }
+            else if (userRole == "CLIENT")
+            {
+                var userName = User.Identity?.Name;
+                var clientWaybills = await _context.DeliveryOrders
+                    .Where(o => o.ClientName == userName || o.EncodedBy == userName)
+                    .Select(o => o.WaybillNo)
+                    .ToListAsync();
+
+                notifications = await _context.Notifications
+                    .Where(n => !n.Read && n.WaybillNo != null && clientWaybills.Contains(n.WaybillNo))
                     .ToListAsync();
             }
             else

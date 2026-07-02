@@ -17,25 +17,29 @@ export default function DeliveryOrderDetail() {
   const { employees, deliveryOrders, updateDeliveryOrder, deleteDeliveryOrder, refreshOrders, addActivityLog } = useData();
   const { user } = useAuth();
 
+  const isAdmin = user?.role === 'ADMIN';
+  const isOpTeam = user?.role === 'OP. TEAM';
+  const isClient = user?.role === 'CLIENT';
+
   const order = deliveryOrders.find(o => o.id === id);
 
   const isPickup = order?.taskType === 'Pickup';
   const steps: string[] = isPickup
-    ? ['Pending', 'Processing', 'Preparing', 'Ready for Pickup', 'Picked Up']
-    : ['Pending', 'Processing', 'Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
+    ? (order?.status === 'Pending Approval' ? ['Pending Approval', 'Pending', 'Processing', 'Preparing', 'Ready for Pickup', 'Picked Up'] : ['Pending', 'Processing', 'Preparing', 'Ready for Pickup', 'Picked Up'])
+    : (order?.status === 'Pending Approval' ? ['Pending Approval', 'Pending', 'Processing', 'Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'] : ['Pending', 'Processing', 'Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered']);
 
   const getStepIndex = (status: string) => {
     if (status === 'Failed') {
-      return isPickup ? 2 : 4; // Preparing or In Transit
+      return isPickup ? (order?.status === 'Pending Approval' ? 3 : 2) : (order?.status === 'Pending Approval' ? 5 : 4);
     }
     if (status === 'Cancelled') {
       return -1;
     }
     if (isPickup) {
-      if (status === 'Completed' || status === 'Picked Up') return 4;
+      if (status === 'Completed' || status === 'Picked Up') return steps.length - 1;
       return steps.indexOf(status);
     } else {
-      if (status === 'Completed' || status === 'Delivered') return 6;
+      if (status === 'Completed' || status === 'Delivered') return steps.length - 1;
       return steps.indexOf(status);
     }
   };
@@ -248,15 +252,15 @@ export default function DeliveryOrderDetail() {
     <>
       <Header
         showBack
-        title={`${order.waybillNo} — Order Detail`}
-        subtitle="Delivery Orders"
+        title={`${isClient ? 'Product No. ' : ''}${order.waybillNo} — ${isClient ? 'Product Detail' : 'Order Detail'}`}
+        subtitle={isClient ? "Products" : "Delivery Orders"}
         date={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       />
       <div className="page-content">
         {/* Header Banner */}
         <div className="detail-banner">
           <div className="banner-left">
-            <span className="banner-label">WAYBILL NUMBER</span>
+            <span className="banner-label">{isClient ? 'PRODUCT NUMBER' : 'WAYBILL NUMBER'}</span>
             <h2 className="banner-waybill">{order.waybillNo}</h2>
             <span className="banner-date">{order.dateEncoded}</span>
           </div>
@@ -283,6 +287,79 @@ export default function DeliveryOrderDetail() {
         <div className="detail-grid">
           {/* Left Column - Info Cards */}
           <div className="detail-left">
+            {/* Pending Admin/Encoder Review & Approval */}
+            {order.status === 'Pending Approval' && (isAdmin || isOpTeam) && (
+              <div className="card info-card animate-fade-in" style={{ borderLeft: '4px solid var(--status-pending)', background: 'var(--status-pending-bg)', padding: '20px', marginBottom: '20px' }}>
+                <div className="info-card-header" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={18} className="info-icon" style={{ color: 'var(--status-pending)' }} />
+                  <h4 style={{ color: 'var(--text-main)', fontWeight: 600, margin: 0 }}>Pending Waybill Review & Approval</h4>
+                </div>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '0 0 16px 0' }}>
+                  This order was submitted by client <strong>{order.clientName}</strong> on {order.orderDate} and is currently waiting for validation. Review the parcel and routing details below before approving.
+                </p>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      if (isSubmitting) return;
+                      setIsSubmitting(true);
+                      try {
+                        await updateDeliveryOrder(order.id, {
+                          status: 'Pending',
+                          lastUpdated: new Date().toLocaleString(),
+                          updatedBy: user?.name || 'System'
+                        });
+                        await addActivityLog({
+                          action: 'Update',
+                          description: `Approved client waybill order ${order.waybillNo}`,
+                          reference: order.waybillNo
+                        });
+                        await refreshOrders();
+                      } catch (err: any) {
+                        console.error(err);
+                        alert(err.response?.data?.message || 'Failed to approve waybill order.');
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    {isSubmitting ? 'Approving...' : 'Approve Waybill'}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm btn-danger"
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      if (isSubmitting) return;
+                      if (window.confirm("Are you sure you want to reject and cancel this client order?")) {
+                        setIsSubmitting(true);
+                        try {
+                          await updateDeliveryOrder(order.id, {
+                            status: 'Cancelled',
+                            lastUpdated: new Date().toLocaleString(),
+                            updatedBy: user?.name || 'System'
+                          });
+                          await addActivityLog({
+                            action: 'Update',
+                            description: `Rejected/Cancelled client waybill order ${order.waybillNo}`,
+                            reference: order.waybillNo
+                          });
+                          await refreshOrders();
+                        } catch (err: any) {
+                          console.error(err);
+                          alert(err.response?.data?.message || 'Failed to cancel waybill order.');
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }
+                    }}
+                  >
+                    Reject & Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Pending Re-delivery Reschedule Request Review */}
             {order.redeliveryStatus === 'Pending Approval' && (
               <div className="card info-card animate-fade-in" style={{ borderLeft: '4px solid var(--primary)', background: 'var(--status-transit-bg)', padding: '20px' }}>
@@ -489,7 +566,39 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <span className="label">QUICK ACTIONS</span>
               <div className="detail-actions">
-                {order.isArchived ? (
+                {isClient ? (
+                  <>
+                    {order.status === 'Pending Approval' && (
+                      <>
+                        <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={16} /> EDIT ORDER</Link>
+                        <button className="btn btn-danger" disabled={isSubmitting} onClick={() => setShowDeleteConfirm(true)}><Trash2 size={16} /> CANCEL ORDER</button>
+                      </>
+                    )}
+                    <button
+                      className="btn btn-outline"
+                      disabled={isSubmitting}
+                      onClick={async () => {
+                        try {
+                          const blob = await downloadWaybillPdfBlob(Number(order.id));
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `Waybill-${order.waybillNo}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error("Failed to download waybill PDF", err);
+                          alert("Failed to download waybill PDF.");
+                        }
+                      }}
+                    >
+                      <Download size={16} /> EXPORT AS PDF
+                    </button>
+                    <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline"><Clock size={16} /> VIEW HISTORY LOG</Link>
+                  </>
+                ) : order.isArchived ? (
                   <button
                     className="btn btn-primary"
                     disabled={isSubmitting}
@@ -513,33 +622,33 @@ export default function DeliveryOrderDetail() {
                     {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
                       <Link to={`/delivery-orders/${order.id}/edit`} className="btn btn-outline" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}><Pencil size={16} /> EDIT ORDER</Link>
                     )}
+                    <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline"><Clock size={16} /> VIEW HISTORY LOG</Link>
+                    <button
+                      className="btn btn-outline"
+                      disabled={isSubmitting}
+                      onClick={async () => {
+                        try {
+                          const blob = await downloadWaybillPdfBlob(Number(order.id));
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `Waybill-${order.waybillNo}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error("Failed to download waybill PDF", err);
+                          alert("Failed to download waybill PDF.");
+                        }
+                      }}
+                    >
+                      <Download size={16} /> EXPORT AS PDF
+                    </button>
+                    {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
+                      <button className="btn btn-danger" disabled={isSubmitting} onClick={() => setShowDeleteConfirm(true)}><Trash2 size={16} /> CANCEL ORDER</button>
+                    )}
                   </>
-                )}
-                <Link to={`/delivery-orders/${order.id}/history`} className="btn btn-outline"><Clock size={16} /> VIEW HISTORY LOG</Link>
-                <button
-                  className="btn btn-outline"
-                  disabled={isSubmitting}
-                  onClick={async () => {
-                    try {
-                      const blob = await downloadWaybillPdfBlob(Number(order.id));
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `Waybill-${order.waybillNo}.pdf`;
-                      document.body.appendChild(a);
-                      a.click();
-                      a.remove();
-                      window.URL.revokeObjectURL(url);
-                    } catch (err) {
-                      console.error("Failed to download waybill PDF", err);
-                      alert("Failed to download waybill PDF.");
-                    }
-                  }}
-                >
-                  <Download size={16} /> EXPORT AS PDF
-                </button>
-                {!(order.status === 'In Transit' || order.status === 'Out for Delivery') && (
-                  <button className="btn btn-danger" disabled={isSubmitting} onClick={() => setShowDeleteConfirm(true)}><Trash2 size={16} /> CANCEL ORDER</button>
                 )}
               </div>
             </div>
@@ -548,7 +657,7 @@ export default function DeliveryOrderDetail() {
             <div className="card">
               <h4>Order Summary</h4>
               <div className="summary-fields">
-                <div className="summary-field"><span>Waybill No.</span><span className="summary-val teal">{order.waybillNo}</span></div>
+                <div className="summary-field"><span>{isClient ? 'Product No.' : 'Waybill No.'}</span><span className="summary-val teal">{order.waybillNo}</span></div>
                 <div className="summary-field"><span>Current Status</span><StatusBadge status={order.status} size="sm" /></div>
                 <div className="summary-field"><span>Expected Delivery</span><span>{order.expectedDelivery}</span></div>
                 {order.dateCompleted && (
