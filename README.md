@@ -1,6 +1,6 @@
-# 🚚 Delivery Tracker and Proof of Delivery (POD) System
+# 🚚 Delivery Management System
 
-The Delivery Tracker and Proof of Delivery (POD) System is a web-based application designed to streamline delivery operations by replacing manual processes with a centralized digital system.
+The Delivery Management System is a web-based application designed to streamline delivery operations by replacing manual processes with a centralized digital system.
 
 It enables authorized users to create and manage delivery orders, monitor shipment status in real-time, upload proof of delivery (POD), and generate reports. The system improves efficiency, accountability, and data accuracy across logistics operations.
 
