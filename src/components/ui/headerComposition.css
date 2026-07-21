@@ -1,0 +1,52 @@
+.ui-staff-header {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-staff-header .header-right > :where(button, a, [role='button']) {
+  flex: 0 0 auto;
+}
+
+.ui-staff-header .search-item {
+  inline-size: 100%;
+  border: 0;
+  text-align: start;
+  background: transparent;
+}
+
+.ui-staff-header .notification-dropdown-see-more {
+  min-block-size: var(--size-touch-target);
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .ui-staff-header .header-right {
+    gap: var(--space-3);
+  }
+}
+
+@media (min-width: 768px) {
+  .ui-staff-header .header-search-container {
+    min-inline-size: 18rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ui-staff-header .header-right {
+    flex-wrap: nowrap;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ui-staff-header .header-search-container {
+    min-inline-size: 22rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .ui-staff-header .header-search-container {
+    min-inline-size: 26rem;
+  }
+}

@@ -1,0 +1,111 @@
+.ui-route-template {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.ui-route-template__section,
+.ui-detail-page-template__grid,
+.ui-form-page-template__fields,
+.ui-analytics-template__metrics,
+.ui-analytics-template__charts {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-route-template__summary,
+.ui-analytics-template__metrics,
+.ui-analytics-template__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.ui-route-template__controls,
+.ui-route-template__actions,
+.ui-route-template__pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.ui-route-template__data,
+.ui-route-template__map,
+.ui-analytics-template__charts {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.ui-detail-page-template__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.ui-form-page-template__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (min-width: 640px) {
+  .ui-route-template {
+    padding: var(--space-5);
+  }
+
+  .ui-route-template__summary,
+  .ui-analytics-template__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ui-route-template__controls,
+  .ui-route-template__actions,
+  .ui-route-template__pagination {
+    flex-flow: row wrap;
+    align-items: center;
+  }
+}
+
+@media (min-width: 768px) {
+  .ui-route-template {
+    gap: var(--space-5);
+    padding: var(--space-6);
+  }
+
+  .ui-detail-page-template__grid,
+  .ui-analytics-template__charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .ui-route-template__summary,
+  .ui-analytics-template__metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ui-route-template__timeline,
+  .ui-route-template__map,
+  .ui-route-template__proof {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ui-route-template {
+    gap: var(--space-6);
+    padding-inline: var(--space-8);
+  }
+}
+
+@media (min-width: 1536px) {
+  .ui-route-template {
+    padding-inline: var(--space-10);
+  }
+}

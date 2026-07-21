@@ -14,7 +14,7 @@ export default function AccountLocked() {
     : 'US';
 
   return (
-    <div className="locked-page">
+    <div className="locked-page ui-page-boundary ui-motion">
       <div className="locked-card animate-scale-in">
         <div className="locked-icon-wrapper">
           <Lock size={32} />

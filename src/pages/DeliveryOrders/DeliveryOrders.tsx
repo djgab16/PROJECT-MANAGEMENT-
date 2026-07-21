@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Eye, Pencil, Trash2, Image, PackageX, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, Filter, Eye, Pencil, Trash2, Image, PackageX, RefreshCw, AlertTriangle } from 'lucide-react';
 import Header from '../../components/layout/Header';
+import ControlledSearch from '../../components/ui/ControlledSearch';
+import QueryToolbar from '../../components/ui/QueryToolbar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import Modal from '../../components/ui/Modal';
@@ -108,56 +110,67 @@ export default function DeliveryOrders() {
         </div>
 
         {/* Filters */}
-        <div className="orders-filter-bar">
-          <div className="filter-search">
-            <Search size={16} className="filter-search-icon" />
-            <input
-              type="text"
-              placeholder={isClient ? "Search by product number..." : "Search by waybill, client..."}
-              className="filter-search-input"
+        <QueryToolbar
+          label="Delivery order search and filters"
+          search={(
+            <ControlledSearch
               id="order-search"
+              label={isClient ? 'Search delivery orders by product number' : 'Search delivery orders by waybill or client'}
+              visuallyHideLabel
+              placeholder={isClient ? 'Search by product number...' : 'Search by waybill, client...'}
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
-          </div>
-          <select
-            className="filter-select"
-            id="status-filter"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            <option>All Status</option>
-            <option>Pending</option>
-            <option>Processing</option>
-            <option>Assigned</option>
-            <option>Picked Up</option>
-            <option>In Transit</option>
-            <option>Out for Delivery</option>
-            <option>Delivered</option>
-            <option>Failed</option>
-          </select>
-          <select
-            className="filter-select"
-            id="area-filter"
-            value={areaFilter}
-            onChange={e => setAreaFilter(e.target.value)}
-          >
-            <option>All Areas</option>
-            {uniqueAreas.map(a => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-          <button
-            className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-outline'}`}
-            id="more-filters-btn"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={14} /> More Filters
-          </button>
-        </div>
+          )}
+          filters={(
+            <>
+              <label className="ui-sr-only" htmlFor="status-filter">Filter by delivery status</label>
+              <select
+                className="filter-select"
+                id="status-filter"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option>All Status</option>
+                <option>Pending</option>
+                <option>Processing</option>
+                <option>Assigned</option>
+                <option>Picked Up</option>
+                <option>In Transit</option>
+                <option>Out for Delivery</option>
+                <option>Delivered</option>
+                <option>Failed</option>
+              </select>
+              <label className="ui-sr-only" htmlFor="area-filter">Filter by delivery area</label>
+              <select
+                className="filter-select"
+                id="area-filter"
+                value={areaFilter}
+                onChange={(event) => setAreaFilter(event.target.value)}
+              >
+                <option>All Areas</option>
+                {uniqueAreas.map((area) => (
+                  <option key={area} value={area}>{area}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-outline'}`}
+                id="more-filters-btn"
+                aria-expanded={showFilters}
+                aria-controls="delivery-order-more-filters"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter size={14} aria-hidden="true" /> More Filters
+              </button>
+            </>
+          )}
+          context={`${filteredOrders.length} matching delivery ${filteredOrders.length === 1 ? 'order' : 'orders'}`}
+        />
 
         {showFilters && (
           <div
+            id="delivery-order-more-filters"
             style={{
               background: 'white',
               padding: '16px',

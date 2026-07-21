@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCheck, Trash2, Eye, Check, Bell, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '../../components/layout/Header';
+import NotificationCollection from '../../components/ui/NotificationCollection';
+import { notifyActionFeedback, resetActionFeedback } from '../../components/ui/actionFeedback';
+import { runConfirmedNotificationMutation, type NotificationMutation } from '../../components/ui/notificationMutations';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/ui/Modal';
-import EmptyState from '../../components/ui/EmptyState';
 import './Notifications.css';
 
 export default function Notifications() {
@@ -43,52 +45,156 @@ export default function Notifications() {
   const selectedRecipient = matchedOrderForSelected ? (matchedOrderForSelected.recipientName || '—') : parsedRecipient;
   const filtered = activeTab === 'all' ? notifications : activeTab === 'read' ? notifications.filter(n => n.read) : notifications.filter(n => n.type === activeTab && !n.read);
 
-  const handleToggleCheck = (e?: React.ChangeEvent<HTMLInputElement> | React.MouseEvent, id?: string) => {
-    if (e) e.stopPropagation();
-    const targetId = id || '';
-    if (!targetId) return;
+  const handleCheckedChange = (notificationId: string, checked: boolean) => {
+    setCheckedIds((currentIds) => checked
+      ? (currentIds.includes(notificationId) ? currentIds : [...currentIds, notificationId])
+      : currentIds.filter((checkedId) => checkedId !== notificationId));
+  };
 
-    if (checkedIds.includes(targetId)) {
-      setCheckedIds(prev => prev.filter(checkedId => checkedId !== targetId));
-    } else {
-      setCheckedIds(prev => [...prev, targetId]);
+  const handleNotificationActivate = (notification: (typeof notifications)[number]) => {
+    if (isSelectionMode) {
+      handleCheckedChange(notification.id, !checkedIds.includes(notification.id));
+      return;
+    }
+    setSelectedId(notification.id);
+  };
+
+  const runOwnedMutation = async (
+    mutation: NotificationMutation,
+    execute: () => Promise<boolean>,
+    actionId: string,
+    successMessage: string,
+  ) => {
+    resetActionFeedback(actionId);
+    const result = await runConfirmedNotificationMutation(notifications, mutation, execute);
+    notifyActionFeedback({
+      actionId,
+      phase: result.confirmed ? 'success' : 'failure',
+      toast: {
+        type: result.confirmed ? 'success' : 'error',
+        message: result.confirmed ? successMessage : result.message,
+      },
+    });
+    return result.confirmed;
+  };
+
+  const handleMarkCheckedAsRead = async () => {
+    if (checkedIds.length > 0) {
+      const targetIds = [...checkedIds];
+      const actionId = 'notifications:selection:read';
+      resetActionFeedback(actionId);
+      const results = await Promise.all(targetIds.map((notificationId) =>
+        runConfirmedNotificationMutation(
+          notifications,
+          { kind: 'read', notificationId },
+          () => markNotificationRead(notificationId),
+        ),
+      ));
+      const failedIds = targetIds.filter((_, index) => !results[index]?.confirmed);
+      setCheckedIds(failedIds);
+      if (failedIds.length === 0) setIsSelectionMode(false);
+      notifyActionFeedback({
+        actionId,
+        phase: failedIds.length === 0 ? 'success' : 'failure',
+        toast: {
+          type: failedIds.length === 0 ? 'success' : 'error',
+          message: failedIds.length === 0
+            ? `${targetIds.length} notifications marked as read`
+            : `${failedIds.length} selected notifications could not be marked as read.`,
+        },
+      });
+    } else if (selectedId) {
+      const confirmed = await runOwnedMutation(
+        { kind: 'read', notificationId: selectedId },
+        () => markNotificationRead(selectedId),
+        `notification:read:${selectedId}`,
+        'Notification marked as read',
+      );
+      if (confirmed) setSelectedId('');
     }
   };
 
-  const handleMarkCheckedAsRead = () => {
+  const handleDeleteChecked = async () => {
     if (checkedIds.length > 0) {
-      checkedIds.forEach(id => markNotificationRead(id));
-      toast.success(`${checkedIds.length} notifications marked as read`);
-      setCheckedIds([]);
-      setIsSelectionMode(false);
+      const targetIds = [...checkedIds];
+      const actionId = 'notifications:selection:delete';
+      resetActionFeedback(actionId);
+      const results = await Promise.all(targetIds.map((notificationId) =>
+        runConfirmedNotificationMutation(
+          notifications,
+          { kind: 'delete', notificationId },
+          () => deleteNotification(notificationId),
+        ),
+      ));
+      const failedIds = targetIds.filter((_, index) => !results[index]?.confirmed);
+      const confirmedIds = targetIds.filter((_, index) => results[index]?.confirmed);
+      setCheckedIds(failedIds);
+      if (failedIds.length === 0) setIsSelectionMode(false);
+      if (confirmedIds.includes(selectedId)) setSelectedId('');
+      notifyActionFeedback({
+        actionId,
+        phase: failedIds.length === 0 ? 'success' : 'failure',
+        toast: {
+          type: failedIds.length === 0 ? 'success' : 'error',
+          message: failedIds.length === 0
+            ? `${targetIds.length} notifications deleted`
+            : `${failedIds.length} selected notifications could not be deleted.`,
+        },
+      });
     } else if (selectedId) {
-      markNotificationRead(selectedId);
-      toast.success('Notification marked as read');
+      const confirmed = await runOwnedMutation(
+        { kind: 'delete', notificationId: selectedId },
+        () => deleteNotification(selectedId),
+        `notification:delete:${selectedId}`,
+        'Notification deleted',
+      );
+      if (confirmed) setSelectedId('');
     }
   };
 
-  const handleDeleteChecked = () => {
-    if (checkedIds.length > 0) {
-      checkedIds.forEach(id => deleteNotification(id));
-      toast.success(`${checkedIds.length} notifications deleted`);
+  const handleMarkAllRead = async () => {
+    await runOwnedMutation(
+      { kind: 'read-all' },
+      markAllNotificationsRead,
+      'notifications:read-all',
+      'All notifications marked as read',
+    );
+  };
+
+  const handleClearAll = async () => {
+    const confirmed = await runOwnedMutation(
+      { kind: 'clear' },
+      clearAllNotifications,
+      'notifications:clear',
+      'All notifications cleared',
+    );
+    if (confirmed) {
       setCheckedIds([]);
-      setIsSelectionMode(false);
-      if (checkedIds.includes(selectedId)) setSelectedId('');
-    } else if (selectedId) {
-      deleteNotification(selectedId);
-      toast.success('Notification deleted');
       setSelectedId('');
+      setIsSelectionMode(false);
     }
   };
 
-  const handleMarkAllRead = () => {
-    markAllNotificationsRead();
-    toast.success('All notifications marked as read');
+  const handleSelectedRead = async () => {
+    if (!selectedId) return;
+    const confirmed = await runOwnedMutation(
+      { kind: 'read', notificationId: selectedId },
+      () => markNotificationRead(selectedId),
+      `notification:read:${selectedId}`,
+      'Notification marked as read',
+    );
+    if (confirmed) setSelectedId('');
   };
 
-  const handleClearAll = () => {
-    clearAllNotifications();
-    toast.success('All notifications cleared');
+  const handleSelectedDelete = async () => {
+    if (!selectedId) return;
+    const confirmed = await runOwnedMutation(
+      { kind: 'delete', notificationId: selectedId },
+      () => deleteNotification(selectedId),
+      `notification:delete:${selectedId}`,
+      'Notification deleted',
+    );
+    if (confirmed) setSelectedId('');
   };
 
   const tabs = [
@@ -98,12 +204,6 @@ export default function Notifications() {
     { key: 'system', label: 'System', count: notifications.filter(n => n.type === 'system' && !n.read).length },
     { key: 'read', label: 'Read' },
   ];
-
-  const grouped = filtered.reduce((acc, n) => {
-    if (!acc[n.date]) acc[n.date] = [];
-    acc[n.date].push(n);
-    return acc;
-  }, {} as Record<string, typeof notifications>);
 
   const isDriver = user?.role === 'DRIVER';
 
@@ -178,55 +278,27 @@ export default function Notifications() {
             <div className="notif-actions-row">
               <span className="text-muted text-sm" style={{ marginLeft: 'auto' }}>{notifications.filter(n => !n.read).length} unread notifications</span>
             </div>
-            <div className="notif-list">
-              {filtered.length === 0 ? (
-                <div style={{ padding: '48px 24px' }}>
-                  <EmptyState 
-                    icon={Bell} 
-                    title="No Notifications" 
-                    description={activeTab === 'all' ? "You don't have any notifications yet." : `You don't have any ${activeTab} notifications.`} 
-                  />
-                </div>
-              ) : (
-                Object.entries(grouped).map(([date, items]) => (
-                  <div key={date}>
-                    <div className="notif-date-header">{date.replace('March', 'MARCH').toUpperCase()}</div>
-                    {items.map(n => (
-                      <div
-                        key={n.id}
-                        className={`notif-item ${selectedId === n.id ? 'selected' : ''} ${!n.read ? 'unread' : ''} ${isSelectionMode && checkedIds.includes(n.id) ? 'checked' : ''}`}
-                        onClick={() => {
-                          if (isSelectionMode) {
-                            handleToggleCheck(undefined, n.id);
-                          } else {
-                            setSelectedId(n.id);
-                          }
-                        }}
-                      >
-                        {(!isDriver || isSelectionMode) && (
-                          <input 
-                            type="checkbox" 
-                            className="notif-checkbox" 
-                            checked={checkedIds.includes(n.id)}
-                            onChange={(e) => handleToggleCheck(e, n.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        )}
-                        <div className="notif-item-content">
-                          <div className="notif-item-header">
-                            <strong>{n.title}</strong>
-                            {n.waybillNo && <span className="notif-waybill">{n.waybillNo}</span>}
-                            {n.statusBadge && <StatusBadge status={n.statusBadge} size="sm" />}
-                          </div>
-                          <p className="notif-item-desc">{n.description}</p>
-                          <span className="notif-item-meta">{n.timestamp} · {n.source}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
+            <NotificationCollection
+              className="notif-list"
+              notifications={filtered}
+              variant="list"
+              grouped
+              selectedId={selectedId}
+              checkedIds={checkedIds}
+              selectionMode={isSelectionMode}
+              showCheckboxes={!isDriver || isSelectionMode}
+              onCheckedChange={handleCheckedChange}
+              onActivate={handleNotificationActivate}
+              renderStatus={(notification) => notification.statusBadge
+                ? <StatusBadge status={notification.statusBadge} size="sm" />
+                : null}
+              empty={{
+                title: 'No Notifications',
+                description: activeTab === 'all'
+                  ? "You don't have any notifications yet."
+                  : `You don't have any ${activeTab} notifications.`,
+              }}
+            />
           </div>
         </div>
       </div>
@@ -307,7 +379,7 @@ export default function Notifications() {
               <button 
                 className="btn btn-outline"
                 style={{ flex: 1, justifyContent: 'center' }}
-                onClick={() => { markNotificationRead(selected.id); setSelectedId(''); }}
+                onClick={() => void handleSelectedRead()}
               >
                 <Check size={16} style={{ marginRight: '6px' }} /> Mark as Read
               </button>
@@ -315,7 +387,7 @@ export default function Notifications() {
                 <button 
                   className="btn btn-danger"
                   style={{ flex: 1, justifyContent: 'center' }}
-                  onClick={() => { deleteNotification(selected.id); setSelectedId(''); }}
+                  onClick={() => void handleSelectedDelete()}
                 >
                   <Trash2 size={16} style={{ marginRight: '6px' }} /> Delete
                 </button>

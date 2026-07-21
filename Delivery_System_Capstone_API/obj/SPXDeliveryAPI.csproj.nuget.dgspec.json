@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {}
+    "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {
+    "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
+        "projectUniqueName": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
         "projectName": "SPXDeliveryAPI",
-        "projectPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
+        "projectPath": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
         "packagesPath": "C:\\Users\\gab\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\obj\\",
+        "outputPath": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

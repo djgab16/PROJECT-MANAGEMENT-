@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
-import { 
-  Search, Calendar, Truck, UserCheck, Users, SlidersHorizontal, 
-  RefreshCw, AlertCircle, Package, ChevronDown, ChevronUp 
+import { useId, useMemo, useRef, useState } from 'react';
+import {
+  Search, Calendar, Truck, UserCheck, Users, SlidersHorizontal,
+  RefreshCw, AlertCircle, Package, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { validateDateRange } from '../../utils/filterUtils';
+import { useControlledPopup } from './useControlledPopup';
 import './EnterpriseFilters.css';
 
 export interface EnterpriseFilterState {
@@ -88,6 +89,21 @@ export default function EnterpriseFilters({
   const { deliveryOrders } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const idPrefix = `enterprise-filters-${useId()}`;
+  const titleId = `${idPrefix}-title`;
+  const panelId = `${idPrefix}-panel`;
+  const triggerId = `${panelId}-trigger`;
+  const dateErrorId = `${idPrefix}-date-error`;
+  const fieldId = (name: keyof EnterpriseFilterState) => `${idPrefix}-${name}`;
+
+  useControlledPopup({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    rootRef,
+    triggerRef,
+  });
 
   // Extract unique data options dynamically from current orders list
   const uniqueDrivers = useMemo(() => {
@@ -136,24 +152,32 @@ export default function EnterpriseFilters({
   };
 
   return (
-    <div className="enterprise-filters-container glass animate-fade-in">
-      <span style={{ display: 'none' }}>{title}</span>
+    <section
+      className="enterprise-filters-container glass ui-motion"
+      ref={rootRef}
+      aria-labelledby={titleId}
+    >
+      <h2 className="ui-sr-only" id={titleId}>{title}</h2>
       {/* Top Smart Search & Trigger Bar */}
       <div className="filters-primary-bar">
         <div className="smart-search-box">
-          <Search className="search-icon" size={18} />
+          <Search className="search-icon" size={18} aria-hidden="true" />
+          <label className="ui-sr-only" htmlFor={fieldId('searchQuery')}>Search records</label>
           <input
-            type="text"
+            id={fieldId('searchQuery')}
+            type="search"
+            aria-label="Search records"
             placeholder="Smart Search: tracking #, waybill, driver name, client name, employee ID..."
             value={filters.searchQuery}
             onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
             className="smart-search-input"
           />
           {filters.searchQuery && (
-            <button 
-              className="search-clear-btn" 
+            <button
+              type="button"
+              className="search-clear-btn"
               onClick={() => handleFilterChange('searchQuery', '')}
-              title="Clear Search"
+              aria-label="Clear search"
             >
               ×
             </button>
@@ -161,12 +185,16 @@ export default function EnterpriseFilters({
         </div>
 
         <div className="primary-actions">
-          <button 
-            type="button" 
+          <button
+            ref={triggerRef}
+            id={triggerId}
+            type="button"
             className={`btn-toggle-filters ${isOpen ? 'active' : ''}`}
+            aria-expanded={isOpen}
+            aria-controls={panelId}
             onClick={() => setIsOpen(!isOpen)}
           >
-            <SlidersHorizontal size={14} />
+            <SlidersHorizontal size={14} aria-hidden="true" />
             <span>{isOpen ? 'Hide Filters' : 'Advanced Filters'}</span>
             {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
@@ -180,7 +208,7 @@ export default function EnterpriseFilters({
                 onReset();
               }}
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={12} aria-hidden="true" />
               <span>Reset</span>
             </button>
           )}
@@ -189,7 +217,12 @@ export default function EnterpriseFilters({
 
       {/* Collapsible Advanced Filters Sections */}
       {isOpen && (
-        <div className="filters-expanded-content animate-slide-in">
+        <div
+          id={panelId}
+          className="filters-expanded-content"
+          role="region"
+          aria-labelledby={triggerId}
+        >
           <div className="filters-grid">
             {/* Date Filters Section */}
             {showCategoryFilters.date && (
@@ -200,8 +233,9 @@ export default function EnterpriseFilters({
                 </div>
                 <div className="category-body">
                   <div className="form-group">
-                    <label className="form-label">Date Range Type</label>
+                    <label className="form-label" htmlFor={fieldId('dateType')}>Date Range Type</label>
                     <select
+                      id={fieldId('dateType')}
                       value={filters.dateType}
                       onChange={(e) => handleFilterChange('dateType', e.target.value)}
                       className="filter-select"
@@ -221,29 +255,39 @@ export default function EnterpriseFilters({
                   {filters.dateType === 'custom' && (
                     <div className="custom-date-inputs animate-fade-in">
                       <div className="form-group">
-                        <label className="form-label">Start Date</label>
+                        <label className="form-label" htmlFor={fieldId('customStartDate')}>Start Date</label>
                         <input
+                          id={fieldId('customStartDate')}
                           type="date"
                           value={filters.customStartDate}
                           onChange={(e) => handleFilterChange('customStartDate', e.target.value)}
                           className={`form-input ${dateError ? 'error' : ''}`}
+                          aria-invalid={Boolean(dateError)}
+                          aria-describedby={dateError ? dateErrorId : undefined}
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">End Date</label>
+                        <label className="form-label" htmlFor={fieldId('customEndDate')}>End Date</label>
                         <input
+                          id={fieldId('customEndDate')}
                           type="date"
                           value={filters.customEndDate}
                           onChange={(e) => handleFilterChange('customEndDate', e.target.value)}
                           className={`form-input ${dateError ? 'error' : ''}`}
+                          aria-invalid={Boolean(dateError)}
+                          aria-describedby={dateError ? dateErrorId : undefined}
                         />
                       </div>
                     </div>
                   )}
 
                   {dateError && (
-                    <div className="date-error-alert text-sm text-failed">
-                      <AlertCircle size={14} />
+                    <div
+                      id={dateErrorId}
+                      className="date-error-alert text-sm text-failed"
+                      role="alert"
+                    >
+                      <AlertCircle size={14} aria-hidden="true" />
                       <span>{dateError}</span>
                     </div>
                   )}
@@ -260,8 +304,9 @@ export default function EnterpriseFilters({
                 </div>
                 <div className="category-body">
                   <div className="form-group">
-                    <label className="form-label">Task Type</label>
+                    <label className="form-label" htmlFor={fieldId('orderType')}>Task Type</label>
                     <select
+                      id={fieldId('orderType')}
                       value={filters.orderType}
                       onChange={(e) => handleFilterChange('orderType', e.target.value)}
                       className="filter-select"
@@ -272,8 +317,9 @@ export default function EnterpriseFilters({
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Logistics Status</label>
+                    <label className="form-label" htmlFor={fieldId('status')}>Logistics Status</label>
                     <select
+                      id={fieldId('status')}
                       value={filters.status}
                       onChange={(e) => handleFilterChange('status', e.target.value)}
                       className="filter-select"
@@ -307,8 +353,9 @@ export default function EnterpriseFilters({
                 </div>
                 <div className="category-body">
                   <div className="form-group">
-                    <label className="form-label">Assignee / Driver</label>
+                    <label className="form-label" htmlFor={fieldId('driver')}>Assignee / Driver</label>
                     <select
+                      id={fieldId('driver')}
                       value={filters.driver}
                       onChange={(e) => handleFilterChange('driver', e.target.value)}
                       className="filter-select"
@@ -321,8 +368,9 @@ export default function EnterpriseFilters({
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Route / Zone</label>
+                    <label className="form-label" htmlFor={fieldId('route')}>Route / Zone</label>
                     <select
+                      id={fieldId('route')}
                       value={filters.route}
                       onChange={(e) => handleFilterChange('route', e.target.value)}
                       className="filter-select"
@@ -334,8 +382,9 @@ export default function EnterpriseFilters({
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Driver Score Level</label>
+                    <label className="form-label" htmlFor={fieldId('driverRating')}>Driver Score Level</label>
                     <select
+                      id={fieldId('driverRating')}
                       value={filters.driverRating}
                       onChange={(e) => handleFilterChange('driverRating', e.target.value)}
                       className="filter-select"
@@ -359,8 +408,9 @@ export default function EnterpriseFilters({
                 </div>
                 <div className="category-body">
                   <div className="form-group">
-                    <label className="form-label">Dispatcher / Encoder</label>
+                    <label className="form-label" htmlFor={fieldId('dispatcher')}>Dispatcher / Encoder</label>
                     <select
+                      id={fieldId('dispatcher')}
                       value={filters.dispatcher}
                       onChange={(e) => handleFilterChange('dispatcher', e.target.value)}
                       className="filter-select"
@@ -372,8 +422,9 @@ export default function EnterpriseFilters({
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Region Area</label>
+                    <label className="form-label" htmlFor={fieldId('region')}>Region Area</label>
                     <select
+                      id={fieldId('region')}
                       value={filters.region}
                       onChange={(e) => handleFilterChange('region', e.target.value)}
                       className="filter-select"
@@ -397,8 +448,9 @@ export default function EnterpriseFilters({
                 </div>
                 <div className="category-body">
                   <div className="form-group">
-                    <label className="form-label">Client Segment</label>
+                    <label className="form-label" htmlFor={fieldId('clientType')}>Client Segment</label>
                     <select
+                      id={fieldId('clientType')}
                       value={filters.clientType}
                       onChange={(e) => handleFilterChange('clientType', e.target.value)}
                       className="filter-select"
@@ -409,8 +461,9 @@ export default function EnterpriseFilters({
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Package Type</label>
+                    <label className="form-label" htmlFor={fieldId('packageType')}>Package Type</label>
                     <select
+                      id={fieldId('packageType')}
                       value={filters.packageType}
                       onChange={(e) => handleFilterChange('packageType', e.target.value)}
                       className="filter-select"
@@ -427,6 +480,6 @@ export default function EnterpriseFilters({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

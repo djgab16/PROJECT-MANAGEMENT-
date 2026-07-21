@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import './StatCard.css';
 
-interface StatCardProps {
+export interface StatCardProps {
   icon: ReactNode;
   iconColor?: string;
   iconBg?: string;

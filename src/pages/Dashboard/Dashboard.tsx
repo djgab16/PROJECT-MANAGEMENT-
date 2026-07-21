@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Users, ClipboardList, CheckCircle2, Package, Bell } from 'lucide-react';
 import Header from '../../components/layout/Header';
+import AccessibleChartContainer from '../../components/ui/AccessibleChartContainer';
 import StatCard from '../../components/ui/StatCard';
 
 import { useData } from '../../context/DataContext';
@@ -258,21 +259,74 @@ export default function Dashboard() {
 
           {/* Performance Graph (Visible to Everyone) */}
           <div className="card dashboard-performance-graph">
-            <div className="card-header">
-              <h3>Delivery Performance</h3>
-              <span className="system-all-operational text-sm" style={{ background: 'var(--status-transit-bg)', color: 'var(--primary)' }}>This Week</span>
-            </div>
-            <div style={{ width: '100%', height: '220px', marginTop: '16px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dynamicDailyDeliveries}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E9EDF7" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#A3AED0' }} />
-                  <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
-                  <Bar dataKey="weekday" fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={40} name="Standard Deliveries" />
-                  <Bar dataKey="peak" fill="var(--status-pending)" radius={[4, 4, 0, 0]} maxBarSize={40} name="Peak Deliveries" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <AccessibleChartContainer
+              title="Delivery Performance"
+              summary="Weekly standard and peak delivery counts derived from the current visible orders."
+              controls={(
+                <span
+                  className="system-all-operational text-sm"
+                  style={{ background: 'var(--color-status-info-surface)', color: 'var(--color-text-link)' }}
+                >
+                  This Week
+                </span>
+              )}
+              dataAlternative={(
+                <table className="data-table">
+                  <caption>Delivery performance values by day</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Day</th>
+                      <th scope="col">Standard deliveries</th>
+                      <th scope="col">Peak deliveries</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dynamicDailyDeliveries.map((deliveryDay) => (
+                      <tr key={deliveryDay.day}>
+                        <th scope="row">{deliveryDay.day}</th>
+                        <td>{deliveryDay.weekday}</td>
+                        <td>{deliveryDay.peak}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            >
+              {({ reducedMotion }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dynamicDailyDeliveries}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="var(--color-chart-grid)"
+                    />
+                    <XAxis
+                      dataKey="day"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: 'var(--color-chart-label)' }}
+                    />
+                    <Tooltip cursor={{ fill: 'var(--color-surface-hover)' }} />
+                    <Bar
+                      dataKey="weekday"
+                      fill="var(--color-chart-1)"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                      name="Standard Deliveries"
+                      isAnimationActive={!reducedMotion}
+                    />
+                    <Bar
+                      dataKey="peak"
+                      fill="var(--color-chart-3)"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                      name="Peak Deliveries"
+                      isAnimationActive={!reducedMotion}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </AccessibleChartContainer>
           </div>
 
         </div>

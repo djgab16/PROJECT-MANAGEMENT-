@@ -20,6 +20,7 @@ namespace SPXDeliveryAPI.Data
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AppTask> Tasks { get; set; }
+        public DbSet<DeliveryPrediction> DeliveryPredictions { get; set; }
 
         public override int SaveChanges()
         {
@@ -151,6 +152,16 @@ namespace SPXDeliveryAPI.Data
                 .HasOne(t => t.Employee)
                 .WithMany()
                 .HasForeignKey(t => t.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DeliveryPrediction>()
+                .HasIndex(p => p.DeliveryOrderId)
+                .IsUnique();
+
+            modelBuilder.Entity<DeliveryPrediction>()
+                .HasOne(p => p.DeliveryOrder)
+                .WithMany()
+                .HasForeignKey(p => p.DeliveryOrderId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

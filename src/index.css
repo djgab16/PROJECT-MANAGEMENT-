@@ -1,113 +1,206 @@
-
-
-/* ─── Design Tokens ─── */
+/* ─── Semantic design tokens ───────────────────────────────────────────────
+   Tokens are global theme values only. Migrated selectors must remain under
+   a `.ui-*` or component-owned root namespace; no source-demo classes belong
+   in this file. Legacy names below are temporary aliases for unmigrated UI. */
 :root {
-  /* Sidebar */
-  --sidebar-bg: #0B1437;
-  --sidebar-bg-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-active-accent: #00A99D;
-  --sidebar-text: #A3AED0;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-width: 290px;
+  /* Brand */
+  --color-brand-primary: #00A99D;
+  --color-brand-primary-hover: #009189;
+  --color-brand-secondary: #1B254B;
+  --color-brand-secondary-hover: #2D3A6A;
+  --color-brand-navigation: #0B1437;
+  --color-brand-on-primary: #FFFFFF;
+  --color-brand-on-secondary: #FFFFFF;
+  --color-brand-subtle: rgba(0, 169, 157, 0.1);
 
-  /* Primary */
-  --primary: #00A99D;
-  --primary-hover: #009189;
-  --primary-dark: #1B254B;
-  --primary-dark-hover: #2D3A6A;
+  /* Typography: Inter is optional and local-only; the fallback path is complete. */
+  --font-family-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Backgrounds - Light Mode: warm, clean whites */
-  --bg-main: #F0F4FF;       /* Soft blue-white — not harsh */
-  --bg-body: #F7F9FF;       /* Even softer for card inner areas */
-  --bg-card: #FFFFFF;       /* Pure white cards */
-  --bg-header: rgba(255, 255, 255, 0.92); /* Frosted header */
-  --bg-overlay: rgba(15, 23, 42, 0.55);
-  --bg-input: #F8FAFF;      /* Subtle input background */
+  /* Background and surface */
+  --color-bg-canvas: #F0F4FF;
+  --color-bg-subtle: #F7F9FF;
+  --color-bg-overlay: rgba(15, 23, 42, 0.55);
+  --color-surface-primary: #FFFFFF;
+  --color-surface-secondary: #F8FAFF;
+  --color-surface-header: rgba(255, 255, 255, 0.92);
+  --color-surface-hover: rgba(0, 169, 157, 0.04);
 
-  /* Text - Light Mode: rich navy, not pure black */
-  --text-primary: #0F172A;    /* Deep navy — easier than pure black */
-  --text-secondary: #374151;  /* Warm dark gray */
-  --text-tertiary: #6B7280;   /* Mid gray */
-  --text-muted: #9CA3AF;      /* Soft muted */
-  --text-white: #FFFFFF;
-  --text-main: #0F172A;       /* Alias for primary */
+  /* Text */
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #374151;
+  --color-text-tertiary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: #007F77;
 
-  /* Status */
-  --status-active: #059669;
-  --status-active-bg: rgba(5, 150, 105, 0.1);
-  --status-pending: #D97706;
-  --status-pending-bg: rgba(217, 119, 6, 0.1);
-  --status-failed: #DC2626;
-  --status-failed-bg: rgba(220, 38, 38, 0.1);
-  --status-transit: #0284C7;
-  --status-transit-bg: rgba(2, 132, 199, 0.1);
-  --status-locked: #DC2626;
-  --status-new: #4F46E5;
-  --status-new-bg: rgba(79, 70, 229, 0.1);
+  /* Borders and focus */
+  --color-border-default: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-border-interactive: #00A99D;
+  --color-focus-ring: #007F77;
+  --color-focus-ring-offset: #FFFFFF;
+  --size-focus-ring: 3px;
+  --size-focus-ring-offset: 2px;
 
-  /* Borders - Light Mode: soft, barely visible */
-  --border: #E2E8F0;
-  --border-hover: #CBD5E1;
-  --border-focus: #00A99D;
+  /* Canonical presentation statuses: color + surface + on-color pairs */
+  --color-status-neutral: #475569;
+  --color-status-neutral-surface: rgba(71, 85, 105, 0.1);
+  --color-status-neutral-on: #FFFFFF;
+  --color-status-success: #059669;
+  --color-status-success-surface: rgba(5, 150, 105, 0.1);
+  --color-status-success-on: #FFFFFF;
+  --color-status-warning: #D97706;
+  --color-status-warning-surface: rgba(217, 119, 6, 0.1);
+  --color-status-warning-on: #FFFFFF;
+  --color-status-danger: #DC2626;
+  --color-status-danger-surface: rgba(220, 38, 38, 0.1);
+  --color-status-danger-on: #FFFFFF;
+  --color-status-info: #0284C7;
+  --color-status-info-surface: rgba(2, 132, 199, 0.1);
+  --color-status-info-on: #FFFFFF;
+  --color-status-brand: #4F46E5;
+  --color-status-brand-surface: rgba(79, 70, 229, 0.1);
+  --color-status-brand-on: #FFFFFF;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.04);
-  --shadow-card: 0px 4px 24px rgba(15, 23, 42, 0.06);
+  /* Charts */
+  --color-chart-1: #00A99D;
+  --color-chart-2: #059669;
+  --color-chart-3: #D97706;
+  --color-chart-4: #DC2626;
+  --color-chart-5: #4F46E5;
+  --color-chart-grid: #E2E8F0;
+  --color-chart-label: #374151;
+
+  /* Mobile-first spacing scale */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-content: 28px;
+  --space-card: 22px;
+  --space-layout-gap: 20px;
+
+  /* Size */
+  --size-control-sm: 36px;
+  --size-control-md: 44px;
+  --size-control-lg: 52px;
+  --size-icon-sm: 16px;
+  --size-icon-md: 20px;
+  --size-icon-lg: 24px;
+  --size-sidebar: 290px;
 
   /* Radius */
+  --radius-none: 0;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Spacing */
-  --content-padding: 28px;
-  --card-padding: 22px;
-  --gap: 20px;
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 4px 24px rgba(15, 23, 42, 0.06);
 
-  /* Role colors */
-  --role-super-admin: #00A99D;
-  --role-admin: #1B254B;
-  --role-ops-team: #FF7B42;
+  /* Motion */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  /* Chart colors */
-  --chart-teal: #00A99D;
-  --chart-green: #059669;
-  --chart-orange: #D97706;
-  --chart-red: #DC2626;
-  --chart-purple: #4F46E5;
-  --chart-gray: #E2E8F0;
+  /* Role presentation */
+  --color-role-super-admin: var(--color-brand-primary);
+  --color-role-admin: var(--color-brand-secondary);
+  --color-role-ops-team: #FF7B42;
+
+  /* Temporary compatibility aliases — remove only after caller inventory. */
+  --sidebar-bg: var(--color-brand-navigation);
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active-accent: var(--color-brand-primary);
+  --sidebar-text: #A3AED0;
+  --sidebar-text-active: var(--color-brand-on-secondary);
+  --sidebar-width: var(--size-sidebar);
+  --primary: var(--color-brand-primary);
+  --primary-hover: var(--color-brand-primary-hover);
+  --primary-light: var(--color-brand-subtle);
+  --primary-dark: var(--color-brand-secondary);
+  --primary-dark-hover: var(--color-brand-secondary-hover);
+  --bg-main: var(--color-bg-canvas);
+  --bg-body: var(--color-bg-subtle);
+  --bg-card: var(--color-surface-primary);
+  --bg-header: var(--color-surface-header);
+  --bg-overlay: var(--color-bg-overlay);
+  --bg-input: var(--color-surface-secondary);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-tertiary: var(--color-text-tertiary);
+  --text-muted: var(--color-text-muted);
+  --text-white: var(--color-text-inverse);
+  --text-main: var(--color-text-primary);
+  --status-active: var(--color-status-success);
+  --status-active-bg: var(--color-status-success-surface);
+  --status-pending: var(--color-status-warning);
+  --status-pending-bg: var(--color-status-warning-surface);
+  --status-failed: var(--color-status-danger);
+  --status-failed-bg: var(--color-status-danger-surface);
+  --status-transit: var(--color-status-info);
+  --status-transit-bg: var(--color-status-info-surface);
+  --status-locked: var(--color-status-danger);
+  --status-new: var(--color-status-brand);
+  --status-new-bg: var(--color-status-brand-surface);
+  --border: var(--color-border-default);
+  --border-hover: var(--color-border-strong);
+  --border-focus: var(--color-border-interactive);
+  --content-padding: var(--space-content);
+  --card-padding: var(--space-card);
+  --gap: var(--space-layout-gap);
+  --role-super-admin: var(--color-role-super-admin);
+  --role-admin: var(--color-role-admin);
+  --role-ops-team: var(--color-role-ops-team);
+  --chart-teal: var(--color-chart-1);
+  --chart-green: var(--color-chart-2);
+  --chart-orange: var(--color-chart-3);
+  --chart-red: var(--color-chart-4);
+  --chart-purple: var(--color-chart-5);
+  --chart-gray: var(--color-chart-grid);
 }
 
-/* ─── Dark Mode ─── */
+/* ─── Dark theme values; ThemeProvider remains the sole class owner. ─── */
 html.dark {
-  /* Backgrounds — rich deep navy, not pitch black */
-  --bg-main: #0D1424;           /* Deep navy — warm, not pure black */
-  --bg-body: #111827;           /* Slightly lighter for nested elements */
-  --bg-card: #1A2235;           /* Card surface — readable, distinct from bg */
-  --bg-header: rgba(17, 24, 39, 0.92); /* Frosted dark header */
-  --bg-overlay: rgba(0, 0, 0, 0.75);
-  --bg-input: #1E2A3D;          /* Input backgrounds */
-
-  /* Text — crisp and easy on the eyes */
-  --text-primary: #F1F5F9;      /* Bright but soft — not pure white */
-  --text-secondary: #CBD5E1;    /* Comfortable secondary */
-  --text-tertiary: #94A3B8;     /* Muted labels */
-  --text-muted: #64748B;        /* Very muted */
-  --text-main: #F1F5F9;         /* Alias */
-
-  /* Borders — subtle, just visible enough */
-  --border: #1E2D45;
-  --border-hover: #2D3F57;
-
-  /* Shadows — deeper for dark UI */
+  --color-bg-canvas: #0D1424;
+  --color-bg-subtle: #111827;
+  --color-bg-overlay: rgba(0, 0, 0, 0.75);
+  --color-surface-primary: #1A2235;
+  --color-surface-secondary: #1E2A3D;
+  --color-surface-header: rgba(17, 24, 39, 0.92);
+  --color-surface-hover: rgba(0, 169, 157, 0.08);
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #CBD5E1;
+  --color-text-tertiary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-text-link: #5EEAD4;
+  --color-border-default: #1E2D45;
+  --color-border-strong: #2D3F57;
+  --color-focus-ring: #5EEAD4;
+  --color-focus-ring-offset: #0D1424;
+  --color-chart-grid: #1E2D45;
+  --color-chart-label: #CBD5E1;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0px 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 html.dark .btn-outline {
@@ -137,7 +230,7 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-family-sans);
   background: var(--bg-main);
   background-size: 400% 400%;
   animation: gradientBG 15s ease infinite;
@@ -745,4 +838,266 @@ html.dark .quick-action-btn:first-child {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+}
+
+/* ─── Mobile-first accessibility and responsive foundations ────────────────
+   Base values support a 320px viewport. Components opt in through `.ui-*`
+   utilities so unmigrated routes retain their current layout. Breakpoint
+   custom properties document the shared bands; media queries use literals
+   because custom properties are not valid in media-query conditions. */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --space-page-gutter: var(--space-4);
+  --size-touch-target: 44px;
+  --size-focus-clearance: var(--space-12);
+  --size-content-max: 100%;
+
+  /* Compatibility aliases for foundation adopters during migration. */
+  --ui-safe-gutter: var(--space-page-gutter);
+  --ui-touch-target-size: var(--size-touch-target);
+}
+
+/* Safe gutters include display cutouts when viewport-fit=cover is active. */
+.ui-safe-gutters {
+  padding-inline: var(--space-page-gutter);
+  padding-inline-start: max(var(--space-page-gutter), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-page-gutter), env(safe-area-inset-right, 0px));
+}
+
+.ui-safe-area {
+  padding-block-start: max(var(--space-page-gutter), env(safe-area-inset-top, 0px));
+  padding-block-end: max(var(--space-page-gutter), env(safe-area-inset-bottom, 0px));
+  padding-inline-start: max(var(--space-page-gutter), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-page-gutter), env(safe-area-inset-right, 0px));
+}
+
+.ui-safe-bottom {
+  padding-block-end: max(var(--space-page-gutter), env(safe-area-inset-bottom, 0px));
+}
+
+/* These utilities bound content without masking accidental page overflow. */
+:where(.ui-page-boundary, .ui-content-boundary, .ui-overflow-boundary) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-page-boundary {
+  inline-size: 100%;
+}
+
+.ui-content-boundary {
+  inline-size: min(100%, var(--size-content-max));
+  margin-inline: auto;
+}
+
+.ui-overflow-boundary,
+.ui-break-words {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Add tabindex="0" and an accessible name when the region itself must be
+   keyboard-scrollable. Dense children opt into their own minimum width. */
+:where(.ui-scroll-region, .ui-overflow-x-auto) {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: var(--space-4);
+  padding-block: var(--size-focus-ring-offset);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ui-scroll-region--dense > :where(table, [role="table"], .ui-scroll-content) {
+  min-inline-size: var(--ui-scroll-min-inline-size, 48rem);
+}
+
+/* Apply to native controls or links; semantics and accessible names remain
+   in markup. The 44px minimum is retained above sm as a safe default. */
+:where(.ui-touch-target, .ui-control-target) {
+  min-block-size: var(--size-touch-target);
+  min-inline-size: var(--size-touch-target);
+  scroll-margin-block: var(--size-focus-clearance);
+  touch-action: manipulation;
+}
+
+.ui-touch-target--icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+/* A semantic, theme-aware ring remains visible against both canvas and
+   surfaces. Scroll margin keeps focused targets clear of sticky chrome. */
+:where(.ui-focus-ring, .ui-interactive, .ui-touch-target, .ui-control-target, .ui-scroll-region):focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-ring-offset);
+  box-shadow: 0 0 0 var(--size-focus-ring-offset) var(--color-focus-ring-offset);
+}
+
+:where(.ui-focus-anchor, .ui-interactive) {
+  scroll-margin-block: var(--size-focus-clearance);
+}
+
+.ui-focus-within:focus-within {
+  box-shadow: 0 0 0 var(--size-focus-ring) var(--color-focus-ring);
+}
+
+/* Status/state color and icons are supplementary. Callers provide visible
+   label/description text and role="status" or role="alert" as appropriate. */
+.ui-state-message {
+  --ui-state-accent: var(--color-status-neutral);
+  --ui-state-surface: var(--color-status-neutral-surface);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-inline-size: 100%;
+  padding: var(--space-4);
+  color: var(--color-text-primary);
+  background: var(--ui-state-surface);
+  border: 1px solid var(--ui-state-accent);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.ui-state-message__content {
+  min-inline-size: 0;
+}
+
+:where(.ui-state-message__label, .ui-status-label) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.ui-state-message__description {
+  color: var(--color-text-secondary);
+}
+
+.ui-state-message--success {
+  --ui-state-accent: var(--color-status-success);
+  --ui-state-surface: var(--color-status-success-surface);
+}
+
+.ui-state-message--warning {
+  --ui-state-accent: var(--color-status-warning);
+  --ui-state-surface: var(--color-status-warning-surface);
+}
+
+.ui-state-message--danger {
+  --ui-state-accent: var(--color-status-danger);
+  --ui-state-surface: var(--color-status-danger-surface);
+}
+
+.ui-state-message--info {
+  --ui-state-accent: var(--color-status-info);
+  --ui-state-surface: var(--color-status-info-surface);
+}
+
+.ui-responsive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-layout-gap);
+}
+
+.ui-responsive-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --space-page-gutter: var(--space-5);
+  }
+
+  .ui-responsive-grid {
+    grid-template-columns: repeat(var(--ui-grid-columns-sm, 1), minmax(0, 1fr));
+  }
+
+  .ui-responsive-row {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-page-gutter: var(--space-6);
+  }
+
+  .ui-responsive-grid {
+    grid-template-columns: repeat(var(--ui-grid-columns-md, 2), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --space-page-gutter: var(--space-7);
+  }
+
+  .ui-responsive-grid {
+    grid-template-columns: repeat(var(--ui-grid-columns-lg, 2), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --space-page-gutter: var(--space-8);
+    --size-content-max: 1200px;
+  }
+
+  .ui-responsive-grid {
+    grid-template-columns: repeat(var(--ui-grid-columns-xl, 3), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --space-page-gutter: var(--space-10);
+    --size-content-max: 1440px;
+  }
+
+  .ui-responsive-grid {
+    grid-template-columns: repeat(var(--ui-grid-columns-2xl, 3), minmax(0, 1fr));
+  }
+}
+
+/* Reduced motion removes ornamental movement while preserving immediate,
+   text-backed state changes. Existing animation helpers are explicit legacy
+   aliases; migrated components opt into `.ui-motion` boundaries. */
+@media (prefers-reduced-motion: reduce) {
+  :where(.ui-motion, .ui-motion *) {
+    scroll-behavior: auto !important;
+    transition-duration: var(--duration-instant) !important;
+    transition-delay: var(--duration-instant) !important;
+    animation-duration: var(--duration-instant) !important;
+    animation-delay: var(--duration-instant) !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  :where(.ui-scroll-smooth) {
+    scroll-behavior: auto;
+  }
+
+  body,
+  .page-content,
+  .sidebar-overlay,
+  .modal-overlay,
+  .search-popover,
+  .notification-dropdown,
+  .animate-fade-in,
+  .animate-slide-in,
+  .animate-scale-in,
+  .skeleton {
+    animation: none !important;
+  }
 }

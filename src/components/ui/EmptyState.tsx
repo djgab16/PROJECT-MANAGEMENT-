@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import './EmptyState.css';
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   icon: LucideIcon;
   title: string;
   description: string;

@@ -1,122 +1,70 @@
-/* ═══════════════════════════════════════════
-   PUBLIC CLIENT PORTAL — always fixed branded
-   No light/dark mode switching — always navy
-   ═══════════════════════════════════════════ */
-
-/* Re-declare ALL theme tokens inside the portal so
-   html.dark rules have zero effect on it */
+/* Public portal framing stays isolated from private navigation selectors while
+   consuming the shared semantic token and theme contract. */
 .public-tracking-container {
-  --bg-main:           #F0F4FF;
-  --bg-body:           #F7F9FF;
-  --bg-card:           #FFFFFF;
-  --bg-input:          #F8FAFF;
-  --bg-header:         rgba(255,255,255,0.92);
-  --text-primary:      #0F172A;
-  --text-main:         #0F172A;
-  --text-secondary:    #374151;
-  --text-tertiary:     #6B7280;
-  --text-muted:        #9CA3AF;
-  --text-white:        #FFFFFF;
-  --border:            #E2E8F0;
-  --border-hover:      #CBD5E1;
-  --primary:           #00A99D;
-  --primary-hover:     #009189;
-  --status-active:     #059669;
-  --status-active-bg:  rgba(5,150,105,0.1);
-  --status-transit:    #0284C7;
-  --status-transit-bg: rgba(0,169,157,0.08);
-  --status-failed:     #DC2626;
-  --status-failed-bg:  rgba(220,38,38,0.1);
-  --status-pending:    #D97706;
-  --status-pending-bg: rgba(217,119,6,0.1);
-  --status-new:        #4F46E5;
-  --status-new-bg:     rgba(79,70,229,0.1);
-  --shadow-card:       0 4px 24px rgba(15,23,42,0.08);
-  --radius-sm: 8px; --radius-md: 12px;
-  --radius-lg: 18px; --radius-xl: 24px;
-  --radius-full: 9999px;
-}
-
-/* Also forcibly neutralise html.dark input overrides inside portal */
-html.dark .public-tracking-container input,
-html.dark .public-tracking-container select,
-html.dark .public-tracking-container textarea {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: #0F172A !important;
-  border-color: transparent !important;
-}
-
-html.dark .public-tracking-container .card {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-color: rgba(255, 255, 255, 0.85) !important;
-  color: #0F172A !important;
-}
-
-html.dark .public-tracking-container .tracking-timeline-wrapper,
-html.dark .public-tracking-container .history-content h4,
-html.dark .public-tracking-container .history-content p,
-html.dark .public-tracking-container .history-time,
-html.dark .public-tracking-container .timeline-title,
-html.dark .public-tracking-container .step-label,
-html.dark .public-tracking-container .results-header-card h2,
-html.dark .public-tracking-container .results-header-card p {
-  color: #0F172A !important;
-}
-
-/* ── Base ── */
-.public-tracking-container {
-  min-height: 100vh;
-  position: relative;
-  overflow-y: auto;         /* Allow page scrolling */
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #0B1437 0%, #1B254B 40%, #0D2B6B 70%, #0B1437 100%);
-  background-attachment: fixed;
-  color: #0F172A;
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  overflow-x: clip;
+  overflow-y: auto;
+  color: var(--color-text-primary);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-navigation) 0%,
+    var(--color-brand-secondary) 45%,
+    color-mix(in srgb, var(--color-brand-navigation) 72%, var(--color-brand-primary)) 72%,
+    var(--color-brand-navigation) 100%
+  );
+  scroll-padding-block: var(--size-focus-clearance);
 }
 
-/* ── Ambient Orbs ── */
+.public-tracking-container :where(a, button, input, select, textarea, [tabindex]):not([tabindex="-1"]) {
+  scroll-margin-block: var(--size-focus-clearance);
+}
+
+/* Ambient decoration remains presentation-only and inherits brand tokens. */
 .public-tracking-container::before {
   content: '';
   position: fixed;
-  top: -120px;
-  left: -120px;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(0, 169, 157, 0.18) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
   z-index: 0;
-  animation: orbFloat1 12s ease-in-out infinite;
+  inset-block-start: -120px;
+  inset-inline-start: -120px;
+  inline-size: 500px;
+  block-size: 500px;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-brand-primary) 18%, transparent) 0%, transparent 70%);
+  border-radius: var(--radius-full);
+  animation: orbFloat1 12s var(--ease-standard) infinite;
 }
 
 .public-tracking-container::after {
   content: '';
   position: fixed;
-  bottom: -100px;
-  right: -100px;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(67, 24, 255, 0.12) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
   z-index: 0;
-  animation: orbFloat2 16s ease-in-out infinite;
+  inset-inline-end: -100px;
+  inset-block-end: -100px;
+  inline-size: 600px;
+  block-size: 600px;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-status-brand) 12%, transparent) 0%, transparent 70%);
+  border-radius: var(--radius-full);
+  animation: orbFloat2 16s var(--ease-standard) infinite;
 }
 
-/* Third mid orb */
 .public-tracking-orb-mid {
   position: fixed;
-  top: 45%;
-  right: 15%;
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
   z-index: 0;
-  animation: orbFloat3 20s ease-in-out infinite;
+  inset-block-start: 45%;
+  inset-inline-end: 15%;
+  inline-size: 350px;
+  block-size: 350px;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-text-inverse) 4%, transparent) 0%, transparent 70%);
+  border-radius: var(--radius-full);
+  animation: orbFloat3 20s var(--ease-standard) infinite;
 }
 
 @keyframes orbFloat1 {
@@ -134,95 +82,111 @@ html.dark .public-tracking-container .results-header-card p {
   50% { transform: translate(30px, -50px); }
 }
 
-/* ── Content wrapper sits above orbs ── */
 .public-tracking-content {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
 }
 
-/* ══ HEADER ══ */
 .public-header {
-  padding: 1.25rem 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(11, 20, 55, 0.6);
+  min-inline-size: 0;
+  padding-block-start: max(var(--space-4), env(safe-area-inset-top, 0px));
+  padding-block-end: var(--space-4);
+  padding-inline-start: max(var(--space-4), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-4), env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--color-brand-navigation) 88%, transparent);
+  border-block-end: 1px solid color-mix(in srgb, var(--color-text-inverse) 7%, transparent);
+  box-shadow: var(--shadow-md);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
 }
 
-/* Logo wrapper with glow */
 .logo-brand {
-  display: inline-block;
   position: relative;
+  display: inline-block;
+  min-inline-size: 0;
 }
 
 .logo-brand::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 150%;
-  height: 150%;
-  background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
-  border-radius: 50%;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 150%;
+  block-size: 150%;
   pointer-events: none;
-  transition: all 0.4s ease;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-text-inverse) 7%, transparent) 0%, transparent 70%);
+  border-radius: var(--radius-full);
+  transform: translate(-50%, -50%);
+  transition: background-color var(--duration-normal) var(--ease-standard);
 }
 
 .logo-brand-img {
-  height: 46px;
-  max-width: 220px;
-  object-fit: contain;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-  animation: logoFadeIn 0.8s ease-out;
+  display: block;
+  inline-size: auto;
+  max-inline-size: min(220px, 68vw);
+  block-size: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--color-brand-navigation) 30%, transparent));
+  animation: logoFadeIn var(--duration-slow) var(--ease-enter);
+  transition:
+    transform var(--duration-normal) var(--ease-standard),
+    filter var(--duration-normal) var(--ease-standard);
 }
 
 .logo-brand:hover .logo-brand-img {
   transform: scale(1.04) translateY(-2px);
-  filter: drop-shadow(0 8px 20px rgba(255,255,255,0.12));
+  filter: drop-shadow(0 8px 20px color-mix(in srgb, var(--color-text-inverse) 12%, transparent));
 }
 
 .logo-brand:hover::before {
-  background: radial-gradient(circle, rgba(255,255,255,0.11) 0%, transparent 75%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-text-inverse) 11%, transparent) 0%, transparent 75%);
 }
 
 @keyframes logoFadeIn {
   from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .header-tagline {
+  display: none;
+  color: color-mix(in srgb, var(--color-text-inverse) 62%, transparent);
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.5);
+  font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  font-weight: 600;
 }
 
-/* ══ MAIN CONTENT ══ */
 .public-main {
-  flex: 1;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 1rem 2rem;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 2rem;
-  justify-content: center;    /* Center search hero when no results */
+  justify-content: center;
+  gap: var(--space-8);
+  inline-size: 100%;
+  max-inline-size: 1000px;
+  min-inline-size: 0;
+  margin-inline: auto;
+  padding-block: var(--space-6);
+  padding-inline-start: max(var(--space-4), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-4), env(safe-area-inset-right, 0px));
 }
 
-/* Once results appear, stop centering */
+.public-main > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 .public-main:has(.tracking-results-view) {
   justify-content: flex-start;
 }
@@ -306,22 +270,61 @@ html.dark .public-tracking-container .results-header-card p {
 .tracking-results-view {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-6);
+  min-inline-size: 0;
 }
 
 .results-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  min-inline-size: 0;
 }
 
-/* ══ RESPONSIVE ══ */
-@media (max-width: 768px) {
-  .public-header { padding: 1rem 1.25rem; }
-  .public-main   { padding: 2rem 1rem; }
-  .results-grid  { grid-template-columns: 1fr; }
-  .results-header-card h2 { font-size: 1.5rem; }
-  .header-tagline { display: none; }
+.results-header-card h2 {
+  font-size: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .public-header {
+    padding-inline-start: max(var(--space-5), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-5), env(safe-area-inset-right, 0px));
+  }
+
+  .header-tagline {
+    display: inline;
+  }
+
+  .public-main {
+    padding-inline-start: max(var(--space-5), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-5), env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (min-width: 768px) {
+  .public-header {
+    padding-inline-start: max(var(--space-8), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-8), env(safe-area-inset-right, 0px));
+  }
+
+  .public-main {
+    padding-inline-start: max(var(--space-6), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-6), env(safe-area-inset-right, 0px));
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .results-header-card h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .public-tracking-container {
+    background-attachment: fixed;
+  }
 }
 
 /* ── Redelivery Card Styling ── */
@@ -578,3 +581,8 @@ html.dark .public-tracking-container .results-header-card p {
   }
 }
 
+.public-tracking-container :where(a, button, input, select, textarea, [tabindex]):not([tabindex="-1"]):focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-ring-offset);
+  box-shadow: 0 0 0 var(--size-focus-ring-offset) var(--color-focus-ring-offset);
+}

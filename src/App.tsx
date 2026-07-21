@@ -19,6 +19,7 @@ import DeliverySummary from './pages/DeliverySummary/DeliverySummary';
 import AnalyticsView from './pages/Analytics/AnalyticsView';
 import Tasks from './pages/DRIVER/Tasks';
 import Dispatch from './pages/Dispatch/Dispatch';
+import SlaMonitoring from './pages/SlaMonitoring/SlaMonitoring';
 import DeliveryHistoryLog from './pages/DeliveryOrders/DeliveryHistoryLog';
 import DriverDashboard from './pages/DRIVER/DriverDashboard';
 import QRScannerView from './pages/DRIVER/QRScannerView';
@@ -66,6 +67,9 @@ export default function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/dispatch" element={<Dispatch />} />
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'OP. TEAM']} />}>
+              <Route path="/sla-monitoring" element={<SlaMonitoring />} />
+            </Route>
             <Route path="/POT-records" element={<Navigate to="/archive" replace />} />
             <Route path="/activity-logs" element={<ActivityLogs />} />
             

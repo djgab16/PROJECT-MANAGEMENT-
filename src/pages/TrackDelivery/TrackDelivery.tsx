@@ -152,7 +152,7 @@ export default function TrackDelivery() {
                 </div>
                 <div className="timeline-stepper">
                   {steps.map((step, i) => (
-                    <div key={i} className={`timeline-step ${step.done ? 'done' : ''} ${step.current ? 'current' : ''}`}>
+                    <div key={step.label} className={`timeline-step ${step.done ? 'done' : ''} ${step.current ? 'current' : ''}`}>
                       <div className="timeline-circle">
                         {step.done && !step.current ? '✓' : step.current ? <Clock size={14} /> : i === 2 ? <MapPin size={14} /> : <Package size={14} />}
                       </div>

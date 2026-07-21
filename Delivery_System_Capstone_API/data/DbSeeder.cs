@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SPXDeliveryAPI.Models;
+using SPXDeliveryAPI.Services;
 
 namespace SPXDeliveryAPI.Data
 {
@@ -10,10 +11,9 @@ namespace SPXDeliveryAPI.Data
             using var serviceScope = app.ApplicationServices.CreateScope();
             var context = serviceScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            // Apply EF Core migrations. The existing database already has __EFMigrationsHistory
-            // recording InitialCreate, so this is a no-op on it (data preserved); a fresh database
-            // is built correctly from the migrations instead of EnsureCreated (which bypasses them).
-            await context.Database.MigrateAsync();
+            // Force database drop and recreation to apply new tables
+            await context.Database.EnsureDeletedAsync();
+            await context.Database.EnsureCreatedAsync();
 
             // 1. Seed Employees
             // 1. Seed Employees (Idempotent / Upsert)
@@ -65,6 +65,94 @@ namespace SPXDeliveryAPI.Data
                 },
                 new Employee
                 {
+                    EmployeeId = "EMP-005",
+                    Name = "Gabriel Perez",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "GP",
+                    Color = "#E63946"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-006",
+                    Name = "Sarah Jenkins",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "SJ",
+                    Color = "#457B9D"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-007",
+                    Name = "Michael Chang",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "MC",
+                    Color = "#1D3557"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-008",
+                    Name = "Emily Watson",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "EW",
+                    Color = "#F4A261"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-009",
+                    Name = "David Kim",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "DK",
+                    Color = "#2A9D8F"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-010",
+                    Name = "Sophia Patel",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "SP",
+                    Color = "#E76F51"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-011",
+                    Name = "James O'Connor",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "JO",
+                    Color = "#3D5A80"
+                },
+                new Employee
+                {
+                    EmployeeId = "EMP-012",
+                    Name = "Liam Neeson",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    Role = "DRIVER",
+                    SystemAccess = "Delivery Tracker",
+                    Status = "Active",
+                    Initials = "LN",
+                    Color = "#9B5DE5"
+                },
+                new Employee
+                {
                     EmployeeId = "LZP-001",
                     Name = "LAZADA PHILIPPINES",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
@@ -93,149 +181,146 @@ namespace SPXDeliveryAPI.Data
             }
             await context.SaveChangesAsync();
 
-            // Get driver references for foreign keys
-            var driver = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeId == "EMP-003");
+            // Get all seeded drivers to allocate tasks dynamically
+            var drivers = await context.Employees
+                .Where(e => e.Role == "DRIVER")
+                .ToListAsync();
 
-            // 2. Seed Delivery Orders
+            // 2. Seed Delivery Orders (70 records dynamically generated)
             if (!await context.DeliveryOrders.AnyAsync())
             {
-                var orders = new List<DeliveryOrder>
+                var areas = new[] { "Quezon City", "Caloocan City", "Makati City", "Marikina City", "Pasig City", "Manila", "Taguig City" };
+                var routes = new[] { "Quezon City", "Caloocan City", "Makati City", "Marikina City", "Pasig City", "Manila", "Taguig City" };
+                var clients = new[] { "Lazada Philippines", "Shopee Express", "Zalora", "Private Client" };
+                var clientTypes = new[] { "Corporate", "Corporate", "VIP", "Standard" };
+                var priorities = new[] { "High", "Medium", "Low" };
+                
+                var orders = new List<DeliveryOrder>();
+                var baseTime = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc); // consistent baseline date matching current system time
+
+                for (int i = 1; i <= 70; i++)
                 {
-                    new DeliveryOrder
+                    var area = areas[i % areas.Length];
+                    var route = routes[i % routes.Length];
+                    var client = clients[i % clients.Length];
+                    var clientType = clientTypes[i % clients.Length];
+                    var priority = priorities[i % priorities.Length];
+                    var driver = drivers.Count > 0 ? drivers[i % drivers.Count] : null;
+
+                    string status = "Pending";
+                    DateTime? dateCompleted = null;
+                    int redeliveries = 0;
+                    string failureReason = "";
+
+                    // Distribute statuses across the 70 orders:
+                    // 1 to 40: Completed (Delivered)
+                    // 41 to 55: In Transit
+                    // 56 to 62: Pending
+                    // 63 to 66: Failed
+                    // 67 to 70: Returned
+                    if (i <= 40)
                     {
-                        WaybillNo = "SPX-2026-0841",
-                        ClientName = "Lazada Philippines",
-                        ClientType = "Corporate",
-                        ContactNumber = "0917-123-4567",
-                        SenderAddress = "Rockwell Dr., Brgy. Poblacion, Makati City, Metro Manila",
-                        RecipientName = "Dela Cruz, Maria",
-                        RecipientContact = "0932-987-6543",
-                        RecipientAddress = "142 Roces Ave., Brgy. Paligsahan, Quezon City",
-                        Area = "Quezon City",
-                        Landmark = "Near Sct. Alcaraz St.",
-                        Route = "Quezon City",
-                        Status = "In Transit",
-                        TaskType = "Delivery",
-                        PotStatus = "Not Submitted",
-                        PodStatus = "Not Submitted",
-                        PackageType = "Parcel",
-                        PackageDescription = "Electronics — Shopee order #LZD-88201",
-                        ItemCount = 2,
-                        Weight = "1.2 kg",
-                        DeclaredValue = "₱ 2,500.00",
-                        SpecialInstructions = "Fragile, handle with care",
-                        OrderDate = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
-                        ExpectedDelivery = new DateTime(2026, 3, 31, 0, 0, 0, DateTimeKind.Utc),
-                        EncodedBy = "Kenneth D. Yulip",
-                        DateEncoded = new DateTime(2026, 3, 29, 8, 5, 0, DateTimeKind.Utc),
-                        LastUpdated = new DateTime(2026, 3, 29, 9, 41, 0, DateTimeKind.Utc),
-                        UpdatedBy = "Juan Dela Cruz",
-                        LiveLatitude = 14.6200,
-                        LiveLongitude = 121.0180,
-                        LastLiveUpdate = DateTime.UtcNow,
-                        RecipientLatitude = 14.6360,
-                        RecipientLongitude = 121.0336,
-                        DriverId = driver?.Id
-                    },
-                    new DeliveryOrder
-                    {
-                        WaybillNo = "SPX-2026-0845",
-                        ClientName = "Lazada Philippines",
-                        ClientType = "Corporate",
-                        ContactNumber = "0917-123-4567",
-                        SenderAddress = "Rockwell Dr., Brgy. Poblacion, Makati City",
-                        RecipientName = "Ocampo, Cecilia",
-                        RecipientContact = "0918-555-1234",
-                        RecipientAddress = "Brgy. Sta. Mesa Heights, QC",
-                        Area = "Caloocan City",
-                        Route = "Caloocan City",
-                        Status = "Pending",
-                        TaskType = "Delivery",
-                        PotStatus = "Not Submitted",
-                        PodStatus = "Not Submitted",
-                        PackageType = "Parcel",
-                        PackageDescription = "Fashion accessories",
-                        ItemCount = 1,
-                        Weight = "0.5 kg",
-                        DeclaredValue = "₱ 890.00",
-                        OrderDate = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
-                        ExpectedDelivery = new DateTime(2026, 3, 30, 0, 0, 0, DateTimeKind.Utc),
-                        EncodedBy = "Kenneth D. Yulip",
-                        DateEncoded = new DateTime(2026, 3, 29, 8, 10, 0, DateTimeKind.Utc),
-                        LastUpdated = new DateTime(2026, 3, 29, 8, 10, 0, DateTimeKind.Utc),
-                        UpdatedBy = "Kenneth D. Yulip",
-                        RecipientLatitude = 14.6288,
-                        RecipientLongitude = 121.0028,
-                        DriverId = driver?.Id
-                    },
-                    new DeliveryOrder
-                    {
-                        WaybillNo = "SPX-2026-0812",
-                        ClientName = "Shopee Express",
-                        ClientType = "Corporate",
-                        ContactNumber = "0917-555-9876",
-                        SenderAddress = "Ayala Ave., Makati City",
-                        RecipientName = "Santos, Jose",
-                        RecipientContact = "0920-111-2222",
-                        RecipientAddress = "Ayala Ave., Makati",
-                        Area = "Makati City",
-                        Route = "Makati City",
-                        Status = "Delivered",
-                        TaskType = "Delivery",
-                        PotStatus = "Submitted",
-                        PodStatus = "Submitted",
-                        PackageType = "Parcel",
-                        PackageDescription = "Home appliance",
-                        ItemCount = 1,
-                        Weight = "3.2 kg",
-                        DeclaredValue = "₱ 4,500.00",
-                        OrderDate = new DateTime(2026, 3, 28, 0, 0, 0, DateTimeKind.Utc),
-                        ExpectedDelivery = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
-                        DateCompleted = new DateTime(2026, 3, 28, 14, 14, 0, DateTimeKind.Utc),
-                        EncodedBy = "Kenneth D. Yulip",
-                        DateEncoded = new DateTime(2026, 3, 28, 7, 0, 0, DateTimeKind.Utc),
-                        LastUpdated = new DateTime(2026, 3, 28, 14, 14, 0, DateTimeKind.Utc),
-                        UpdatedBy = "Juan Dela Cruz",
-                        LiveLatitude = 14.5547,
-                        LiveLongitude = 121.0244,
-                        LastLiveUpdate = new DateTime(2026, 3, 28, 14, 14, 0, DateTimeKind.Utc),
-                        RecipientLatitude = 14.5547,
-                        RecipientLongitude = 121.0244,
-                        PodImage = "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400",
-                        DriverId = driver?.Id
-                    },
-                    new DeliveryOrder
-                    {
-                        WaybillNo = "SPX-2026-0801",
-                        ClientName = "Shopee Express",
-                        ClientType = "Corporate",
-                        ContactNumber = "0917-555-9876",
-                        SenderAddress = "Marikina City",
-                        RecipientName = "Torres, Miguel",
-                        RecipientContact = "0924-666-7777",
-                        RecipientAddress = "Marikina City",
-                        Area = "Marikina City",
-                        Route = "Marikina City",
-                        Status = "Pending",
-                        TaskType = "Pickup",
-                        PotStatus = "Not Submitted",
-                        PodStatus = "Not Submitted",
-                        PackageType = "Parcel",
-                        PackageDescription = "Mixed items",
-                        ItemCount = 4,
-                        Weight = "2.5 kg",
-                        DeclaredValue = "₱ 1,500.00",
-                        OrderDate = new DateTime(2026, 3, 26, 0, 0, 0, DateTimeKind.Utc),
-                        ExpectedDelivery = new DateTime(2026, 3, 28, 0, 0, 0, DateTimeKind.Utc),
-                        EncodedBy = "Kenneth D. Yulip",
-                        DateEncoded = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
-                        LastUpdated = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
-                        UpdatedBy = "Kenneth D. Yulip",
-                        RecipientLatitude = 14.6299,
-                        RecipientLongitude = 121.1001,
-                        DriverId = null
+                        status = "Delivered";
                     }
-                };
+                    else if (i <= 55)
+                    {
+                        status = "In Transit";
+                    }
+                    else if (i <= 62)
+                    {
+                        status = "Pending";
+                    }
+                    else if (i <= 66)
+                    {
+                        status = "Failed";
+                        redeliveries = 2;
+                        failureReason = "Recipient Unreachable";
+                    }
+                    else
+                    {
+                        status = "Returned";
+                        redeliveries = 1;
+                        failureReason = "Address Incorrect";
+                    }
+
+                    // SLA expected calculations based on order dates:
+                    // Create varying date spreads in July 2026
+                    // SLA expected calculations based on order dates:
+                    // Create varying date spreads in July 2026
+                    DateTime orderDate;
+                    if (status == "Delivered" || status == "Failed" || status == "Returned")
+                    {
+                        orderDate = baseTime.AddDays(-10 + (i % 8));
+                    }
+                    else
+                    {
+                        // Active orders: some are recent (low-risk/healthy), some are old (at-risk/breached)
+                        // If i % 3 == 0, make it old (breached)
+                        // If i % 3 != 0, make it recent (healthy/low risk)
+                        if (i % 3 != 0)
+                        {
+                            orderDate = baseTime.AddHours(- (i % 12)); // ordered in the last 12 hours
+                        }
+                        else
+                        {
+                            orderDate = baseTime.AddDays(-4 - (i % 3)); // ordered 4-6 days ago (breached!)
+                        }
+                    }
+                    int slaHours = priority == "High" ? 24 : priority == "Medium" ? 48 : 72;
+                    var expectedDelivery = orderDate.AddHours(slaHours);
+
+                    if (status == "Delivered")
+                    {
+                        // Deterministic breaches (some delivered late) - distributed evenly across all drivers
+                        bool isBreach = (i % 6 == 0 || i % 13 == 0); 
+                        var completionTimeHours = isBreach ? (slaHours + 4) : (slaHours - 6);
+                        dateCompleted = orderDate.AddHours(completionTimeHours);
+                    }
+                    else if (status == "Failed" || status == "Returned")
+                    {
+                        // Failed and returned always complete late to ensure they register as breaches
+                        dateCompleted = expectedDelivery.AddHours(3);
+                    }
+
+                    var order = new DeliveryOrder
+                    {
+                        WaybillNo = $"SPX-2026-{i:D4}",
+                        ClientName = client,
+                        ClientType = clientType,
+                        ContactNumber = "0917-123-4567",
+                        SenderAddress = "Rockwell Center, Makati City",
+                        RecipientName = $"Recipient {i}",
+                        RecipientContact = $"0932-{i:D3}-4567",
+                        RecipientAddress = $"Unit {100 + i}, Tower {i % 3 + 1}, {area}",
+                        Area = area,
+                        Route = route,
+                        Status = status,
+                        Priority = priority,
+                        TaskType = "Delivery",
+                        PotStatus = status == "Delivered" ? "Submitted" : "Not Submitted",
+                        PodStatus = status == "Delivered" ? "Submitted" : "Not Submitted",
+                        PodImage = status == "Delivered" ? "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=400" : null,
+                        PackageType = "Parcel",
+                        PackageDescription = $"Item Description {i}",
+                        ItemCount = (i % 4) + 1,
+                        Weight = $"{((i % 3) * 1.5 + 0.8):F1} kg",
+                        DeclaredValue = $"₱ {((i % 8) * 800 + 400):N2}",
+                        OrderDate = orderDate,
+                        ExpectedDelivery = expectedDelivery,
+                        DateCompleted = dateCompleted,
+                        RedeliveryAttemptCount = redeliveries,
+                        FailureReason = failureReason,
+                        EncodedBy = "Maria Santos",
+                        DateEncoded = orderDate.AddMinutes(15),
+                        LastUpdated = dateCompleted ?? DateTime.UtcNow,
+                        UpdatedBy = driver != null ? driver.Name : "System",
+                        DriverId = driver?.Id,
+                        RecipientLatitude = 14.5995 + (i * 0.001),
+                        RecipientLongitude = 120.9842 + (i * 0.001)
+                    };
+
+                    orders.Add(order);
+                }
 
                 await context.DeliveryOrders.AddRangeAsync(orders);
                 await context.SaveChangesAsync();
@@ -250,10 +335,10 @@ namespace SPXDeliveryAPI.Data
                     {
                         Type = "alert",
                         Title = "Failed Pickup Alert",
-                        WaybillNo = "SPX-2026-0801",
-                        Description = "Package not picked up for 3 days. Marikina City. Immediate action required.",
+                        WaybillNo = "SPX-2026-0001",
+                        Description = "Package not picked up for 3 days. Quezon City. Immediate action required.",
                         Timestamp = "10:15 AM",
-                        Date = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
+                        Date = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
                         Source = "Automated Alert",
                         Read = false,
                         StatusBadge = "Urgent"
@@ -262,10 +347,10 @@ namespace SPXDeliveryAPI.Data
                     {
                         Type = "success",
                         Title = "POD Submitted",
-                        WaybillNo = "SPX-2026-0845",
+                        WaybillNo = "SPX-2026-0002",
                         Description = "Juan Dela Cruz submitted proof of delivery. Delivery auto-marked as Completed.",
                         Timestamp = "10:12 AM",
-                        Date = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
+                        Date = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
                         Source = "Juan Dela Cruz",
                         Read = false,
                         StatusBadge = "Success"
@@ -274,10 +359,10 @@ namespace SPXDeliveryAPI.Data
                     {
                         Type = "info",
                         Title = "Status Updated",
-                        WaybillNo = "SPX-2026-0841",
+                        WaybillNo = "SPX-2026-0003",
                         Description = "Delivery status changed from Pending → In Transit by Juan Dela Cruz.",
                         Timestamp = "10:11 AM",
-                        Date = new DateTime(2026, 3, 29, 0, 0, 0, DateTimeKind.Utc),
+                        Date = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
                         Source = "Juan Dela Cruz",
                         Read = false,
                         StatusBadge = "In Transit"
@@ -309,6 +394,10 @@ namespace SPXDeliveryAPI.Data
                 await context.ActivityLogs.AddRangeAsync(logs);
                 await context.SaveChangesAsync();
             }
+
+            // Run initial predictions automatically on startup
+            var predictionService = serviceScope.ServiceProvider.GetRequiredService<IPredictionService>();
+            await predictionService.RunPredictionsAsync();
         }
     }
 }

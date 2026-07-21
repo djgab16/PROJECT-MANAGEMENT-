@@ -56,7 +56,11 @@ export default function TrackingTimeline({ events, currentStatus }: TrackingTime
       {/* Detailed History Log */}
       <div className="history-log">
         {events.map((event, idx) => (
-          <div key={idx} className="history-event fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
+          <div
+            key={`${event.timestamp}:${event.status}:${event.location ?? ''}:${event.description}`}
+            className="history-event fade-in"
+            style={{ animationDelay: `${idx * 0.1}s` }}
+          >
             <div className="history-time">
               <span>{event.timestamp.split(' ')[0]}</span>
               <span className="time">{event.timestamp.split(' ')[1]} {event.timestamp.split(' ')[2]}</span>

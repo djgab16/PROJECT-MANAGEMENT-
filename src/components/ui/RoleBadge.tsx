@@ -1,7 +1,7 @@
 import type { UserRole } from '../../types';
 import './RoleBadge.css';
 
-interface RoleBadgeProps {
+export interface RoleBadgeProps {
   role: UserRole;
 }
 

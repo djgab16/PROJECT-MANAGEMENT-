@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import AccessibleMapContainer from '../../../components/ui/AccessibleMapContainer';
 import 'leaflet/dist/leaflet.css';
 import './StaticMapBox.css';
 
@@ -29,21 +30,20 @@ export default function StaticMapBox({ location }: StaticMapBoxProps) {
   const position: [number, number] = [location.lat, location.lng];
 
   return (
-    <div className="static-map-wrapper">
-      <div className="map-header">
-        <h3>Last Known Location</h3>
-        <span className="live-indicator">
-          <span className="pulse-dot"></span> Static Pin View
-        </span>
-      </div>
-      
+    <AccessibleMapContainer
+      className="static-map-wrapper"
+      title="Last Known Location"
+      status="Static pin view"
+      locationText={`Last scan coordinates: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}. This is not live GPS.`}
+      minHeight={250}
+    >
       <div className="leaflet-container-override">
         <MapContainer 
           center={position} 
           zoom={13} 
           scrollWheelZoom={false}
-          dragging={false} // Disable dragging to keep it "static"
-          zoomControl={false} // Disable zoom
+          dragging={false}
+          zoomControl={false}
           style={{ height: '100%', width: '100%', borderRadius: '12px' }}
         >
           <TileLayer
@@ -58,10 +58,6 @@ export default function StaticMapBox({ location }: StaticMapBoxProps) {
           </Marker>
         </MapContainer>
       </div>
-      
-      <div className="map-footer-note">
-        * Location represents the area of the last tracking scan, not live GPS.
-      </div>
-    </div>
+    </AccessibleMapContainer>
   );
 }

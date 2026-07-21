@@ -2,12 +2,13 @@ import { Check } from 'lucide-react';
 import './ProgressStepper.css';
 
 interface Step {
+  id?: string | number;
   label: string;
   subLabel?: string;
 }
 
 interface ProgressStepperProps {
-  steps: Step[];
+  steps: readonly Step[];
   currentStep: number;
 }
 
@@ -20,7 +21,7 @@ export default function ProgressStepper({ steps, currentStep }: ProgressStepperP
 
         return (
           <div 
-            key={index} 
+            key={step.id ?? step.label} 
             className={`stepper-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}
           >
             <div className="stepper-node-wrapper">

@@ -825,8 +825,8 @@ export default function AnalyticsView() {
                     <span className="text-muted text-sm">Cities with highest failed delivery rates</span>
                   </div>
                   <div className="geo-hotspots-table" style={{ marginTop: '16px', flex: 1 }}>
-                    {geographicAnalytics.hotspots.map((h, i) => (
-                      <div key={i} className="hotspot-row" style={{ cursor: 'pointer' }} onClick={() => triggerDrilldown(`Failed deliveries in ${h.name}`, filteredOrders.filter(o => o.area === h.name && o.status === 'Failed'))}>
+                    {geographicAnalytics.hotspots.map((h) => (
+                      <div key={h.name} className="hotspot-row" style={{ cursor: 'pointer' }} onClick={() => triggerDrilldown(`Failed deliveries in ${h.name}`, filteredOrders.filter(o => o.area === h.name && o.status === 'Failed'))}>
                         <span className="hotspot-name">{h.name}</span>
                         <div className="hotspot-stats">
                           <span className="hotspot-total">Total: {h.total}</span>
@@ -857,8 +857,8 @@ export default function AnalyticsView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {geographicAnalytics.clientsData.map((client, idx) => (
-                      <tr key={idx}>
+                    {geographicAnalytics.clientsData.map((client) => (
+                      <tr key={client.name}>
                         <td className="cell-name">{client.name}</td>
                         <td>
                           <span style={{ 

@@ -54,7 +54,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page ui-page-boundary ui-motion">
       <div className="login-left">
         <div className="login-left-content">
           <div className="login-logo" style={{ background: 'transparent', padding: '0' }}>

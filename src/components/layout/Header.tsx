@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Package, User, AlertCircle, CheckCircle2, Info, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Bell, Package, User, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import NotificationCollection from '../ui/NotificationCollection';
+import StaffHeaderComposition from '../ui/StaffHeaderComposition';
+import { notifyActionFeedback, resetActionFeedback } from '../ui/actionFeedback';
+import { runConfirmedNotificationMutation } from '../ui/notificationMutations';
 import { useData } from '../../context/DataContext';
-import { ROLE_DISPLAY } from '../../types';
+import { ROLE_DISPLAY, type Notification } from '../../types';
 import './Header.css';
 
 interface HeaderProps {
@@ -47,8 +51,17 @@ export default function Header({ title, subtitle, date, actions, showBack, onBac
         setShowNotifications(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowResults(false);
+      setShowNotifications(false);
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const searchResults = () => {
@@ -72,83 +85,135 @@ export default function Header({ title, subtitle, date, actions, showBack, onBac
   const { orders, employees: empResults } = searchResults();
   const hasResults = orders.length > 0 || empResults.length > 0;
 
+  const handleNotificationActivate = (notification: Notification) => {
+    setShowNotifications(false);
+
+    if (!notification.read) {
+      const actionId = `header-notification-read:${notification.id}`;
+      resetActionFeedback(actionId);
+      void runConfirmedNotificationMutation(
+        notifications,
+        { kind: 'read', notificationId: notification.id },
+        () => markNotificationRead(notification.id),
+      ).then((result) => {
+        if (!result.confirmed) {
+          notifyActionFeedback({
+            actionId,
+            phase: 'failure',
+            toast: { type: 'error', message: result.message },
+          });
+        }
+      });
+    }
+
+    if (notification.waybillNo) {
+      const order = deliveryOrders.find(
+        (candidate) => candidate.waybillNo?.trim().toUpperCase()
+          === notification.waybillNo?.trim().toUpperCase(),
+      );
+      navigate(order ? `/delivery-orders/${order.id}` : '/notifications');
+      return;
+    }
+
+    navigate('/notifications');
+  };
+
   return (
-    <header className="header">
-      <div className="header-left">
-        {showBack && (
-          <button className="header-back-btn" onClick={handleBack} title="Go Back">
-            <ArrowLeft size={20} />
-          </button>
-        )}
-        <div className="header-title-container">
-          {subtitle && <span className="header-breadcrumb">{subtitle}</span>}
-          <h1 className="header-title">{title}</h1>
-        </div>
-      </div>
-      <div className="header-right">
-        <span className="header-date">{displayDate}</span>
-        
+    <StaffHeaderComposition
+      title={title}
+      subtitle={subtitle}
+      date={displayDate}
+      navigationControl={showBack ? (
+        <button
+          type="button"
+          className="header-back-btn"
+          onClick={handleBack}
+          title="Go Back"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={20} aria-hidden="true" />
+        </button>
+      ) : undefined}
+      search={(
         <div className="header-search-container" ref={searchRef}>
-          <Search size={16} className="header-search-icon" />
+          <label className="ui-sr-only" htmlFor="staff-global-search">
+            Search waybills, clients, and employees
+          </label>
+          <Search size={16} className="header-search-icon" aria-hidden="true" />
           <input
-            type="text"
+            id="staff-global-search"
+            type="search"
             placeholder="Search waybill, client, employee..."
             className="header-search-input"
+            role="combobox"
+            aria-haspopup="dialog"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+            aria-controls={showResults && searchQuery.trim() ? 'staff-global-search-results' : undefined}
+            aria-expanded={Boolean(showResults && searchQuery.trim())}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
               setShowResults(true);
             }}
             onFocus={() => setShowResults(true)}
           />
-          
+
           {showResults && searchQuery.trim() && (
-            <div className="search-popover">
+            <div
+              className="search-popover"
+              id="staff-global-search-results"
+              role="dialog"
+              aria-label="Global search results"
+            >
               {!hasResults ? (
-                <div className="search-empty">No results found for "{searchQuery}"</div>
+                <div className="search-empty" role="status">
+                  No results found for "{searchQuery}"
+                </div>
               ) : (
                 <>
                   {orders.length > 0 && (
                     <div className="search-group">
                       <div className="search-group-title">Deliveries</div>
-                      {orders.map(o => (
-                        <div 
-                          key={o.id} 
+                      {orders.map((order) => (
+                        <button
+                          type="button"
+                          key={order.id}
                           className="search-item"
                           onClick={() => {
                             setShowResults(false);
                             setSearchQuery('');
-                            navigate(`/delivery-orders/${o.id}`);
+                            navigate(`/delivery-orders/${order.id}`);
                           }}
                         >
-                          <Package size={14} />
-                          <div className="search-item-info">
-                            <span className="search-item-main">{o.waybillNo}</span>
-                            <span className="search-item-sub">{o.recipientName}</span>
-                          </div>
-                        </div>
+                          <Package size={14} aria-hidden="true" />
+                          <span className="search-item-info">
+                            <span className="search-item-main">{order.waybillNo}</span>
+                            <span className="search-item-sub">{order.recipientName}</span>
+                          </span>
+                        </button>
                       ))}
                     </div>
                   )}
                   {empResults.length > 0 && (
                     <div className="search-group">
                       <div className="search-group-title">Employees</div>
-                      {empResults.map(e => (
-                        <div 
-                          key={e.id} 
+                      {empResults.map((employee) => (
+                        <button
+                          type="button"
+                          key={employee.id}
                           className="search-item"
                           onClick={() => {
                             setShowResults(false);
                             setSearchQuery('');
-                            // Assuming an employee detail/edit route might exist later
                           }}
                         >
-                          <User size={14} />
-                          <div className="search-item-info">
-                            <span className="search-item-main">{e.name}</span>
-                            <span className="search-item-sub">{ROLE_DISPLAY[e.role as keyof typeof ROLE_DISPLAY] ?? e.role}</span>
-                          </div>
-                        </div>
+                          <User size={14} aria-hidden="true" />
+                          <span className="search-item-info">
+                            <span className="search-item-main">{employee.name}</span>
+                            <span className="search-item-sub">
+                              {ROLE_DISPLAY[employee.role as keyof typeof ROLE_DISPLAY] ?? employee.role}
+                            </span>
+                          </span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -157,101 +222,62 @@ export default function Header({ title, subtitle, date, actions, showBack, onBac
             </div>
           )}
         </div>
-
+      )}
+      notifications={(
         <div className="header-notification-container" ref={notificationRef}>
-          <button 
-            className="header-notification-btn" 
-            id="header-notifications" 
-            title="Notifications" 
+          <button
+            type="button"
+            className="header-notification-btn"
+            id="header-notifications"
+            title="Notifications"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+            aria-expanded={showNotifications}
+            aria-controls="staff-header-notification-dropdown"
             onClick={() => setShowNotifications(!showNotifications)}
           >
-            <Bell size={20} />
-            {unreadCount > 0 && <span className="notification-dot" />}
+            <Bell size={20} aria-hidden="true" />
+            {unreadCount > 0 && <span className="notification-dot" aria-hidden="true" />}
           </button>
-          
+
           {showNotifications && (
-            <div className="notification-dropdown">
+            <div
+              className="notification-dropdown"
+              id="staff-header-notification-dropdown"
+              role="region"
+              aria-label="Notifications Center"
+            >
               <div className="notification-dropdown-header">
                 <span>Notifications Center</span>
                 {unreadCount > 0 && <span className="notification-unread-pill">{unreadCount} unread</span>}
               </div>
               <div className="notification-dropdown-list">
-                {notifications.length === 0 ? (
-                  <div className="notification-dropdown-empty">
-                    You don't have any notifications.
-                  </div>
-                ) : (
-                  notifications.slice(0, 5).map((n) => {
-                    const getIcon = () => {
-                      switch (n.type) {
-                        case 'alert':
-                          return <AlertCircle size={14} />;
-                        case 'success':
-                          return <CheckCircle2 size={14} />;
-                        default:
-                          return <Info size={14} />;
-                      }
-                    };
-
-                    return (
-                      <div 
-                        key={n.id} 
-                        className={`notification-dropdown-item ${!n.read ? 'unread' : ''}`}
-                        onClick={() => {
-                          setShowNotifications(false);
-                          if (!n.read) {
-                            markNotificationRead(n.id);
-                          }
-                          if (n.waybillNo) {
-                            const order = deliveryOrders.find(
-                              o => o.waybillNo?.trim().toUpperCase() === n.waybillNo?.trim().toUpperCase()
-                            );
-                            if (order) {
-                              navigate(`/delivery-orders/${order.id}`);
-                            } else {
-                              navigate('/notifications');
-                            }
-                          } else {
-                            navigate('/notifications');
-                          }
-                        }}
-                      >
-                        <div className="notification-dropdown-item-content">
-                          <div className={`notification-dropdown-icon-container ${n.type || 'info'}`}>
-                            {getIcon()}
-                          </div>
-                          <div className="notification-dropdown-text-container">
-                            <div className="notification-dropdown-item-header">
-                              <span className="notification-dropdown-item-title">{n.title}</span>
-                              {!n.read && <span className="notification-dropdown-unread-dot" />}
-                            </div>
-                            <p className="notification-dropdown-item-desc">{n.description}</p>
-                            <span className="notification-dropdown-item-time">{n.timestamp}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                <NotificationCollection
+                  notifications={notifications}
+                  variant="compact"
+                  limit={5}
+                  onActivate={handleNotificationActivate}
+                  empty={{ title: "You don't have any notifications." }}
+                />
               </div>
               {notifications.length > 5 && (
                 <div className="notification-dropdown-footer">
-                  <span 
-                    className="notification-dropdown-see-more" 
+                  <button
+                    type="button"
+                    className="notification-dropdown-see-more"
                     onClick={() => {
                       setShowNotifications(false);
                       navigate('/notifications');
                     }}
                   >
-                    See More <ChevronRight size={14} style={{ marginLeft: '2px' }} />
-                  </span>
+                    See More <ChevronRight size={14} aria-hidden="true" />
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
-        {actions}
-      </div>
-    </header>
+      )}
+      actions={actions}
+    />
   );
 }

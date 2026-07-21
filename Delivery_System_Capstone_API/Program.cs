@@ -76,6 +76,8 @@ builder.Services.AddCors(options =>
 // ─── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDeliveryOrderService, DeliveryOrderService>();
+builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<IPredictionService, PredictionService>();
 builder.Services.AddHostedService<DataRetentionService>();
 
 // ─── Swagger ──────────────────────────────────────────────────────────────────

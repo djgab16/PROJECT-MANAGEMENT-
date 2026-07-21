@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "1Xj5dMTtWGA=",
+  "dgSpecHash": "a0XKu5Obgso=",
   "success": true,
-  "projectFilePath": "C:\\Users\\gab\\Documents\\CODE\\CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
+  "projectFilePath": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gab\\.nuget\\packages\\azure.core\\1.53.0\\azure.core.1.53.0.nupkg.sha512",
     "C:\\Users\\gab\\.nuget\\packages\\azure.identity\\1.21.0\\azure.identity.1.21.0.nupkg.sha512",
@@ -77,5 +77,18 @@
     "C:\\Users\\gab\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
     "C:\\Users\\gab\\.nuget\\packages\\xlparser\\1.5.2\\xlparser.1.5.2.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.6 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q",
+      "projectPath": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\gab\\Documents\\CODE\\PM- CAPSTONE\\Delivery_System_Capstone_API\\SPXDeliveryAPI.csproj",
+      "libraryId": "SQLitePCLRaw.lib.e_sqlite3",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }

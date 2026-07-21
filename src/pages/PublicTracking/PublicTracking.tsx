@@ -74,7 +74,7 @@ export default function PublicTracking() {
   };
 
   return (
-    <div className="public-tracking-container">
+    <div className="public-tracking-container ui-page-boundary ui-motion">
       {/* Mid ambient orb */}
       <div className="public-tracking-orb-mid" />
 

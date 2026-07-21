@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import Header from '../../components/layout/Header';
+import ControlledSearch from '../../components/ui/ControlledSearch';
+import QueryToolbar from '../../components/ui/QueryToolbar';
 import { useData } from '../../context/DataContext';
 import { toast } from 'sonner';
 import { 
   Truck, ShieldCheck, MapPin, Calendar, 
-  Search, ClipboardList, CircleDot
+  ClipboardList, CircleDot
 } from 'lucide-react';
 import './Dispatch.css';
 
@@ -147,27 +149,38 @@ export default function Dispatch() {
               </div>
 
               {/* Filters */}
-              <div className="dispatch-filters">
-                <div className="search-box">
-                  <Search size={14} className="search-icon" />
-                  <input
-                    type="text"
+              <QueryToolbar
+                className="dispatch-filters"
+                label="Pending dispatch search and area filter"
+                search={(
+                  <ControlledSearch
+                    label="Search pending dispatch orders"
+                    visuallyHideLabel
                     placeholder="Search waybill, client, recipient..."
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
+                    onChange={(event) => setSearchQuery(event.target.value)}
                   />
-                </div>
-                <select
-                  value={selectedArea}
-                  onChange={e => setSelectedArea(e.target.value)}
-                  className="area-select"
-                >
-                  <option value="All">All Routes / Areas</option>
-                  {uniqueAreas.filter(a => a !== 'All').map(area => (
-                    <option key={area} value={area}>{area}</option>
-                  ))}
-                </select>
-              </div>
+                )}
+                filters={(
+                  <>
+                    <label className="ui-sr-only" htmlFor="dispatch-area-filter">
+                      Filter pending dispatch orders by area
+                    </label>
+                    <select
+                      id="dispatch-area-filter"
+                      value={selectedArea}
+                      onChange={(event) => setSelectedArea(event.target.value)}
+                      className="area-select"
+                    >
+                      <option value="All">All Routes / Areas</option>
+                      {uniqueAreas.filter((area) => area !== 'All').map((area) => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
+                context={`${filteredOrders.length} pending ${filteredOrders.length === 1 ? 'order' : 'orders'}`}
+              />
 
               {/* List */}
               <div className="unassigned-list-container">

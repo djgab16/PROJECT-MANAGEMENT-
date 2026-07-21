@@ -432,8 +432,8 @@ export default function DesignSystem() {
               <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))}><ChevronLeft size={14} /></button>
               {[1, 2, 3, '...', 25].map((p, i) => (
                 typeof p === 'number'
-                  ? <button key={i} className={`pagination-btn ${currentPage === p ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</button>
-                  : <span key={i} className="pagination-ellipsis">{p}</span>
+                  ? <button key={`page-${p}`} className={`pagination-btn ${currentPage === p ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</button>
+                  : <span key={`ellipsis-${i}`} className="pagination-ellipsis">{p}</span>
               ))}
               <button className="pagination-btn" onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={14} /></button>
             </div>

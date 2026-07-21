@@ -16,10 +16,10 @@ interface DataContextType {
   bulkAssignDriver: (orderIds: string[], driverId: number) => Promise<void>;
   deleteDeliveryOrder: (id: string) => Promise<void>;
   addNotification: (notification: Notification) => void;
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-  deleteNotification: (id: string) => void;
-  clearAllNotifications: () => void;
+  markNotificationRead: (id: string) => Promise<boolean>;
+  markAllNotificationsRead: () => Promise<boolean>;
+  deleteNotification: (id: string) => Promise<boolean>;
+  clearAllNotifications: () => Promise<boolean>;
   addActivityLog: (log: Pick<ActivityLog, 'action' | 'description' | 'reference'>) => Promise<void>;
   refreshOrders: () => Promise<void>;
 }
@@ -444,39 +444,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotifications(prev => [notification, ...prev]);
   };
 
-  const markNotificationRead = async (id: string) => {
+  const markNotificationRead = async (id: string): Promise<boolean> => {
     try {
       await apiClient.patch(`/api/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      return true;
     } catch (e) {
       console.error("Failed to mark notification as read", e);
+      return false;
     }
   };
 
-  const markAllNotificationsRead = async () => {
+  const markAllNotificationsRead = async (): Promise<boolean> => {
     try {
       await apiClient.patch('/api/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      return true;
     } catch (e) {
       console.error("Failed to mark all notifications as read", e);
+      return false;
     }
   };
 
-  const deleteNotification = async (id: string) => {
+  const deleteNotification = async (id: string): Promise<boolean> => {
     try {
       await apiClient.delete(`/api/notifications/${id}`);
       setNotifications(prev => prev.filter(n => n.id !== id));
+      return true;
     } catch (e) {
       console.error("Failed to delete notification", e);
+      return false;
     }
   };
 
-  const clearAllNotifications = async () => {
+  const clearAllNotifications = async (): Promise<boolean> => {
     try {
       await apiClient.delete('/api/notifications');
       setNotifications([]);
+      return true;
     } catch (e) {
       console.error("Failed to clear notifications", e);
+      return false;
     }
   };
 

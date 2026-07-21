@@ -1,121 +1,150 @@
 .support-banner {
-  padding: 2rem;
-  background: rgba(11, 20, 55, 0.85);
+  padding-block-start: var(--space-8);
+  padding-block-end: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  padding-inline-start: max(var(--space-4), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-4), env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--color-brand-navigation) 92%, transparent);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-text-inverse) 7%, transparent);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .support-address {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  color: rgba(163, 174, 208, 0.7);
+  justify-content: center;
+  gap: var(--space-1);
+  margin-block-start: 6px;
+  color: color-mix(in srgb, var(--color-text-inverse) 62%, transparent);
   font-size: 0.8rem;
 }
 
 .support-address svg {
-  flex-shrink: 0;
-  color: rgba(163, 174, 208, 0.5);
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--color-text-inverse) 50%, transparent);
 }
 
 .support-footer-note {
-  max-width: 1000px;
-  margin: 1.5rem auto 0;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
+  max-inline-size: 1000px;
+  margin: var(--space-6) auto 0;
+  padding-block-start: var(--space-4);
+  color: color-mix(in srgb, var(--color-text-inverse) 52%, transparent);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-text-inverse) 6%, transparent);
   font-size: 0.75rem;
-  color: rgba(163, 174, 208, 0.5);
   letter-spacing: 0.3px;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .support-content {
-  max-width: 1000px;
-  margin: 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  gap: var(--space-6);
+  inline-size: 100%;
+  max-inline-size: 1000px;
+  min-inline-size: 0;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .support-icon-wrapper {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--status-transit-bg);
-  color: var(--primary);
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  inline-size: 60px;
+  block-size: 60px;
+  color: var(--color-brand-primary);
+  background: var(--color-status-info-surface);
+  border-radius: var(--radius-full);
 }
 
 .support-text {
-  flex: 1;
+  flex: 1 1 auto;
+  min-inline-size: 0;
 }
 
 .support-text h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--sidebar-text-active);
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-inverse);
   font-size: 1.2rem;
 }
 
 .support-text p {
   margin: 0;
-  color: var(--sidebar-text);
+  color: color-mix(in srgb, var(--color-text-inverse) 68%, transparent);
   font-size: 0.95rem;
+  overflow-wrap: anywhere;
 }
 
 .support-contacts {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
 }
 
 .contact-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--primary);
-  color: var(--text-white);
-  text-decoration: none;
-  padding: 0.75rem 1.25rem;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--size-touch-target);
+  padding: var(--space-3) var(--space-5);
+  color: var(--color-brand-on-primary);
+  background: var(--color-brand-primary);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 600;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .contact-btn:hover {
-  background: var(--primary-hover);
+  background: var(--color-brand-primary-hover);
   transform: translateY(-2px);
 }
 
 .contact-btn.secondary {
+  color: var(--color-text-inverse);
   background: transparent;
-  border: 1.5px solid var(--border);
-  color: var(--sidebar-text-active);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 32%, transparent);
 }
 
 .contact-btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-hover);
+  background: color-mix(in srgb, var(--color-text-inverse) 5%, transparent);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 48%, transparent);
 }
 
-@media (max-width: 768px) {
+.contact-btn:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-ring-offset);
+  box-shadow: 0 0 0 var(--size-focus-ring-offset) var(--color-brand-navigation);
+}
+
+@media (min-width: 768px) {
+  .support-banner {
+    padding-inline-start: max(var(--space-8), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-8), env(safe-area-inset-right, 0px));
+  }
+
   .support-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 1.5rem;
+    flex-direction: row;
+    text-align: start;
   }
-  
+
+  .support-address {
+    justify-content: flex-start;
+  }
+
   .support-contacts {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .contact-btn {
-    justify-content: center;
+    flex-direction: row;
+    inline-size: auto;
   }
 }

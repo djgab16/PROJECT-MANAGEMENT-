@@ -1,0 +1,98 @@
+.ui-notification-collection {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-notification-item--compact {
+  display: block;
+  inline-size: 100%;
+  min-block-size: var(--size-touch-target);
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.ui-notification-item--compact .notification-dropdown-icon-container > svg {
+  inline-size: var(--size-icon-sm);
+  block-size: var(--size-icon-sm);
+}
+
+.ui-notification-item--list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  min-inline-size: 0;
+}
+
+.ui-notification-item--list:not(:has(.notif-checkbox)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ui-notification-item__activation {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--size-touch-target);
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.ui-notification-item__activation:focus-visible,
+.ui-notification-item--compact:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--size-focus-ring));
+}
+
+.ui-notification-item__unread-text {
+  color: var(--color-text-link);
+  font-weight: 700;
+}
+
+.ui-notification-collection__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.ui-notification-collection__empty > span {
+  color: var(--color-text-tertiary);
+  font-size: 0.875rem;
+}
+
+.ui-notification-group {
+  min-inline-size: 0;
+}
+
+.ui-notification-group > .notif-date-header {
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .ui-notification-item--list {
+    align-items: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-notification-item,
+  .ui-notification-item * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

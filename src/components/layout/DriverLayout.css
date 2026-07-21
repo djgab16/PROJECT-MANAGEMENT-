@@ -1,146 +1,159 @@
 .driver-layout {
+  --driver-bottom-nav-height: 70px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  background-color: var(--bg-main);
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-block-size: 100vh;
+  block-size: 100dvh;
   overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-bg-canvas);
 }
 
 .driver-header {
+  z-index: 2;
   display: flex;
-  justify-content: space-between;
+  flex: 0 0 auto;
   align-items: center;
-  padding: 12px 20px;
-  background: var(--sidebar-bg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  flex-shrink: 0;
+  justify-content: space-between;
+  min-inline-size: 0;
+  padding-block-start: max(var(--space-3), env(safe-area-inset-top, 0px));
+  padding-block-end: var(--space-3);
+  padding-inline-start: max(var(--space-4), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-4), env(safe-area-inset-right, 0px));
+  color: var(--color-text-inverse);
+  background: var(--color-brand-navigation);
+  border-block-end: 1px solid color-mix(in srgb, var(--color-text-inverse) 8%, transparent);
+  box-shadow: var(--shadow-md);
 }
 
 .driver-logo {
-  height: 30px;
-  max-width: 140px;
+  display: block;
+  block-size: 30px;
+  max-inline-size: 140px;
   object-fit: contain;
 }
 
-.driver-header-left {
-  flex: 1;
+.driver-header-left,
+.driver-header-right {
   display: flex;
-  justify-content: flex-start;
+  flex: 1;
   align-items: center;
+  min-inline-size: var(--size-touch-target);
+}
+
+.driver-header-left {
+  justify-content: flex-start;
 }
 
 .driver-header-center {
-  flex: 2;
   display: flex;
-  justify-content: center;
+  flex: 2;
   align-items: center;
+  justify-content: center;
+  min-inline-size: 0;
 }
 
 .driver-header-right {
-  flex: 1;
-  display: flex;
   justify-content: flex-end;
-  align-items: center;
 }
 
-.icon-btn-plain {
-  background: none;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-  border-radius: 8px;
-  transition: all 0.2s;
-}
-
-.icon-btn-plain:active {
-  background-color: var(--bg-main);
-  transform: scale(0.95);
-}
-
+.driver-header .icon-btn,
 .driver-header .icon-btn-plain {
-  color: white;
-}
-
-.driver-header .icon-btn-plain:active {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-  border-radius: 50%;
-  transition: background-color 0.2s;
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: var(--size-touch-target);
+  min-block-size: var(--size-touch-target);
+  padding: var(--space-2);
+  color: var(--color-text-inverse);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+  touch-action: manipulation;
 }
 
 .driver-header .icon-btn {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 15%, transparent);
 }
 
-.icon-btn:active {
-  background-color: var(--bg-main);
-  transform: scale(0.95);
+.driver-header .icon-btn:hover,
+.driver-header .icon-btn-plain:hover {
+  background: color-mix(in srgb, var(--color-text-inverse) 14%, transparent);
 }
 
-.driver-header .icon-btn:active {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(0.95);
+.driver-header .icon-btn:active,
+.driver-header .icon-btn-plain:active {
+  background: color-mix(in srgb, var(--color-text-inverse) 20%, transparent);
+  transform: scale(0.96);
+}
+
+.driver-header :where(.icon-btn, .icon-btn-plain):focus-visible,
+.driver-nav-item:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-ring-offset);
+  box-shadow: 0 0 0 var(--size-focus-ring-offset) var(--color-brand-navigation);
 }
 
 .driver-main-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px;
   position: relative;
-  /* Extra padding at bottom to ensure content isn't hidden by bottom nav */
-  padding-bottom: 80px;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-block-start: var(--space-3);
+  padding-block-end: calc(var(--driver-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-8));
+  padding-inline-start: max(var(--space-3), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-3), env(safe-area-inset-right, 0px));
+  scroll-padding-block-start: var(--size-focus-clearance);
+  scroll-padding-block-end: calc(var(--driver-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--size-focus-clearance));
 }
 
-/* Bottom Navigation */
+.driver-main-content :where(a, button, input, select, textarea, [tabindex]):not([tabindex="-1"]) {
+  scroll-margin-block: var(--size-focus-clearance);
+}
+
 .driver-bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  background: var(--bg-card);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  block-size: calc(var(--driver-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-block-end: env(safe-area-inset-bottom, 0px);
+  padding-inline-start: max(var(--space-2), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--space-2), env(safe-area-inset-right, 0px));
+  background: var(--color-surface-primary);
+  border-block-start: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-md);
 }
 
 .driver-nav-item {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  color: var(--text-secondary);
+  gap: var(--space-1);
+  min-inline-size: var(--size-touch-target);
+  max-inline-size: 96px;
+  min-block-size: var(--size-touch-target);
+  padding: var(--space-2);
+  color: var(--color-text-secondary);
   text-decoration: none;
-  width: 70px;
-  transition: color 0.2s;
+  border-radius: var(--radius-md);
+  transition: color var(--duration-fast) var(--ease-standard);
+  touch-action: manipulation;
 }
 
 .driver-nav-item span {
@@ -149,45 +162,56 @@
 }
 
 .driver-nav-item.active {
-  color: var(--primary);
+  color: var(--color-brand-primary);
 }
 
-/* QR Code Center Button */
 .scan-nav-item {
   position: relative;
-  top: -20px;
+  inset-block-start: calc(var(--space-5) * -1);
+}
+
+.scan-nav-item span {
+  margin-block-start: var(--space-2);
 }
 
 .scan-icon-wrapper {
-  width: 60px;
-  height: 60px;
-  background: var(--primary);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 169, 157, 0.3);
-  border: 4px solid var(--bg-main);
-  transition: transform 0.2s;
+  inline-size: 60px;
+  block-size: 60px;
+  flex: 0 0 auto;
+  color: var(--color-brand-on-primary);
+  background: var(--color-brand-primary);
+  border: 4px solid var(--color-bg-canvas);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--duration-fast) var(--ease-standard);
 }
 
 .scan-nav-item.active .scan-icon-wrapper {
-  background: var(--primary-dark);
+  background: var(--color-brand-secondary);
 }
 
 .scan-nav-item:active .scan-icon-wrapper {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
-/* Base mobile typography & cards */
-@media (max-width: 480px) {
+@media (min-width: 640px) {
   .driver-header {
-    padding: 12px 16px;
+    padding-inline-start: max(var(--space-5), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-5), env(safe-area-inset-right, 0px));
   }
 
   .driver-main-content {
-    padding: 12px;
-    padding-bottom: 80px;
+    padding-block-start: var(--space-4);
+    padding-inline-start: max(var(--space-5), env(safe-area-inset-left, 0px));
+    padding-inline-end: max(var(--space-5), env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-layout :where(.icon-btn, .icon-btn-plain, .driver-nav-item, .scan-icon-wrapper) {
+    transition-duration: var(--duration-instant);
   }
 }

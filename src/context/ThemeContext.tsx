@@ -9,41 +9,37 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem('app-theme') as Theme;
-    return savedTheme || 'light';
+    const savedTheme = localStorage.getItem('app-theme');
+    return isTheme(savedTheme) ? savedTheme : 'light';
   });
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-      return;
-    }
-
-    root.classList.add(theme);
-    localStorage.setItem('app-theme', theme);
-  }, [theme]);
-
-  // Listen for system theme changes if theme is 'system'
-  useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = () => {
-      if (theme === 'system') {
-        const root = window.document.documentElement;
-        root.classList.remove('light', 'dark');
-        root.classList.add(mediaQuery.matches ? 'dark' : 'light');
-      }
+
+    const applyResolvedTheme = () => {
+      const resolvedTheme = theme === 'system'
+        ? (mediaQuery.matches ? 'dark' : 'light')
+        : theme;
+
+      root.classList.remove('light', 'dark');
+      root.classList.add(resolvedTheme);
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    // Persist the selected mode, not the currently resolved system appearance.
+    localStorage.setItem('app-theme', theme);
+    applyResolvedTheme();
+
+    if (theme !== 'system') return;
+
+    mediaQuery.addEventListener('change', applyResolvedTheme);
+    return () => mediaQuery.removeEventListener('change', applyResolvedTheme);
   }, [theme]);
 
   return (

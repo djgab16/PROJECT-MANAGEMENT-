@@ -1,12 +1,11 @@
-import type { DeliveryStatus, AccountStatus, POTStatus } from '../../types';
+import type { StatusBadgeProps } from './contracts';
+import {
+  resolveCanonicalStatusPresentation,
+  UNKNOWN_STATUS_PRESENTATION,
+} from './statusPresentation';
 import './StatusBadge.css';
 
-interface StatusBadgeProps {
-  status: DeliveryStatus | AccountStatus | POTStatus | string;
-  size?: 'sm' | 'md';
-}
-
-const statusConfig: Record<string, { className: string; label?: string }> = {
+const statusConfig: Readonly<Record<string, { className: string; label?: string }>> = {
   'Active': { className: 'status-active' },
   'Pending': { className: 'status-pending' },
   'Processing': { className: 'status-pending' },
@@ -37,12 +36,21 @@ const statusConfig: Record<string, { className: string; label?: string }> = {
   'High': { className: 'status-high', label: 'High Priority' },
 };
 
-export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-  const config = statusConfig[status] || { className: 'status-default' };
+export default function StatusBadge({ status, size = 'md', domain }: StatusBadgeProps) {
+  const rawStatus = String(status);
+  const config = statusConfig[rawStatus] || { className: 'status-default' };
+  const canonicalPresentation = domain
+    ? resolveCanonicalStatusPresentation(domain, rawStatus)
+    : undefined;
+  const label =
+    canonicalPresentation && canonicalPresentation !== UNKNOWN_STATUS_PRESENTATION
+      ? canonicalPresentation.label
+      : config.label || rawStatus;
+
   return (
     <span className={`status-badge ${config.className} status-${size}`}>
       <span className="status-dot" />
-      {config.label || status}
+      {label}
     </span>
   );
 }
