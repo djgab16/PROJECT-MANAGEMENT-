@@ -21,7 +21,17 @@
 | Panaligan, Sofia Albert Q. | UI/UX Designer |
 | Dumlao, Jhoyce Anne Niel B. | Backend Developer |
 
-> Note: role assignments above are a suggestion — swap names to match your actual assignments.
+> Adjust the role/name mapping above to match your actual assignments.
+
+**Technology Stack (as implemented)**
+
+| Layer | Technology |
+|-------|-----------|
+| Presentation | React 19 + TypeScript + Vite, Recharts (charts), React Router |
+| Application | ASP.NET Core Web API (`SPXDeliveryAPI`), Entity Framework Core |
+| Persistence | Microsoft SQL Server (MSSQL) |
+| Prediction Engine | Weighted multi-factor scoring engine (C#, `PredictionService`) |
+| Auth | JWT + Role-Based Access Control (policy: `OpTeamAndAbove`) |
 
 ---
 
@@ -31,447 +41,182 @@
 
 | Attribute | Details |
 |-----------|---------|
-| Technology | Streamlit (Python) |
-| Purpose | Display AI predictions, SLA analytics charts, and at-risk delivery lists |
-| Data Source | SQLite (`predictions.db`) |
-| Access | `localhost:8501` |
+| Technology | React 19 + TypeScript (Vite), Recharts |
+| Component | `src/pages/SlaMonitoring/SlaMonitoring.tsx` |
+| Purpose | Display SLA risk predictions, analytics charts, and at-risk delivery lists |
+| Data Source | ASP.NET Core Web API → MSSQL (`DeliveryPredictions`, `DeliveryOrders`) |
+| Access | `localhost:5173` (Vite dev server) → API at `/api/predictions` |
+| Access Control | Operations Team and above (`[Authorize(Policy = "OpTeamAndAbove")]`) |
 | Status | ✅ Working |
 
-## 1.2 Dashboard Source Code
+### Dashboard Features Implemented
 
-```python
-#!/usr/bin/env python3
-"""
-SPEEDEX DMS - At-Risk Delivery & SLA Monitoring Dashboard
-Version: 1.0
-Date:    August 1, 2026
-Author:  Gabriel, David Jr. M. / Conag, Reca Maelah M. / Panaligan, Sofia Albert Q. / Dumlao, Jhoyce Anne Niel B.
-Purpose: Display AI SLA-breach predictions, analytics charts, and at-risk delivery lists.
-"""
+| Feature | Description |
+|---------|-------------|
+| KPI Cards | Active deliveries, overall on-time %, SLA breaches, at-risk count, average delay hours, average delivery duration |
+| Dual Tabs | **Ongoing** (active at-risk orders) and **Delivered** (completed/breached history) |
+| Recompute Action | "Run Predictions" button triggers `POST /api/predictions/run` and logs the activity |
+| Filters (9) | Search, Driver, Route, Area, Priority, Status, Client Type, Risk Level, Date Range |
+| Chart 1 | On-time percentage by **Route** (bar chart) |
+| Chart 2 | On-time percentage by **Driver** (bar chart) |
+| Chart 3 | **Risk level distribution** (pie chart: Low / Medium / High / Critical) |
+| At-Risk Table | Waybill, client, route, driver, priority, time-until-breach, risk level/score, confidence, reason, recommended action, predicted arrival |
+| Report View | "SLA Proactive At-Risk Orders Report" printable view |
 
-import streamlit as st
-import pandas as pd
-import sqlite3
-import plotly.express as px
-from datetime import datetime
-import os
+## 1.2 Prediction Engine — Source Code (Backend)
 
-# ============================================================
-# PAGE CONFIGURATION
-# ============================================================
-st.set_page_config(
-    page_title="SPEEDEX SLA Monitoring Dashboard",
-    page_icon="🚚",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+The prediction engine is a **weighted multi-factor scoring model** implemented in `Services/PredictionService.cs`. It computes a risk score in `[0.0, 1.0]` from eight weighted factors.
 
-# ============================================================
-# TITLE AND HEADER
-# ============================================================
-st.title("🚚 SPEEDEX At-Risk Delivery & SLA Monitoring Dashboard")
-st.markdown(f"*Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
-st.markdown("---")
+### Factor Weights
 
-# ============================================================
-# DATA LOADING FUNCTION
-# ============================================================
-@st.cache_data(ttl=300)
-def load_data():
-    """Load prediction data, SLA reports, and model metrics from SQLite."""
-    db_path = './data/predictions.db'
+| # | Factor | Weight | Logic Summary |
+|---|--------|--------|---------------|
+| 1 | SLA remaining time | **0.35** | Breached = 1.0; ≤6h = 0.9; ≤12h = 0.7; ≤24h = 0.4; ≤48h = 0.2; else 0.0 |
+| 2 | Delivery priority | 0.15 | High = 1.0; Medium = 0.5; Low = 0.1 |
+| 3 | Redelivery attempts | 0.15 | ≥2 attempts = 1.0; 1 attempt = 0.6; none = 0.0 |
+| 4 | Driver historical performance | 0.15 | Historical breach rate (min. 3 completed orders); unassigned = 0.8 |
+| 5 | Route historical performance | 0.10 | Historical breach rate (min. 3 completed orders) |
+| 6 | Item count / package weight | 0.05 | >15 kg or >8 items = 1.0; >5 kg or >3 items = 0.4 |
+| 7 | Client type | 0.03 | VIP = 0.7; Express = 0.5; Corporate = 0.3; else 0.1 |
+| 8 | Weekend / traffic / weather | 0.02 | Weekend + simulated traffic/weather placeholders (normalized) |
 
-    if not os.path.exists(db_path):
-        st.error(f"Database not found: {db_path}")
-        st.info("Please run the data extraction script first.")
-        return None, None, None, None
+### Risk Level Thresholds
 
-    try:
-        conn = sqlite3.connect(db_path)
+| Risk Score | Risk Level |
+|-----------|-----------|
+| ≥ 0.80 | Critical |
+| ≥ 0.60 | High |
+| ≥ 0.35 | Medium |
+| < 0.35 | Low |
 
-        # Per-delivery predictions
-        df = pd.read_sql("SELECT * FROM predictions", conn)
+**At-Risk flag:** `IsAtRisk = riskScore >= 0.35 || remainingHours <= 0`
 
-        # SLA summary per route
-        sla_summary = pd.read_sql("SELECT * FROM sla_summary_reports", conn)
+### Confidence Score
 
-        # Driver performance report
-        driver_report = pd.read_sql("SELECT * FROM driver_sla_reports", conn)
+Confidence starts at a base of **0.60** and increases with available historical data, then is clamped to **[0.50, 0.98]**:
 
-        # Latest model metrics
-        metrics = pd.read_sql(
-            "SELECT * FROM model_metrics ORDER BY run_date DESC LIMIT 1", conn
-        )
+| Condition | Bonus |
+|-----------|-------|
+| Driver history available (≥3 orders) | +0.15 |
+| Route history available (≥3 orders) | +0.15 |
+| Parsed package weight > 0 | +0.05 |
+| Client history available (≥3 orders) | +0.05 |
 
-        conn.close()
-        return df, sla_summary, driver_report, metrics
+```csharp
+// ─── Compute Weighted Risk Score ───
+double riskScore = (slaTimeScore     * 0.35) +
+                   (priorityScore    * 0.15) +
+                   (redeliveryScore  * 0.15) +
+                   (driverScore      * 0.15) +
+                   (routeScore       * 0.10) +
+                   (packageScore     * 0.05) +
+                   (clientScore      * 0.03) +
+                   (placeholdersScore* 0.02);
 
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return None, None, None, None
+riskScore = Math.Clamp(riskScore, 0.0, 1.0);
 
-# ============================================================
-# SIDEBAR - FILTERS
-# ============================================================
-st.sidebar.header("🔍 Filters")
+// ─── Determine Risk Level ───
+string riskLevel = "Low";
+if      (riskScore >= 0.8)  riskLevel = "Critical";
+else if (riskScore >= 0.6)  riskLevel = "High";
+else if (riskScore >= 0.35) riskLevel = "Medium";
 
-df, sla_summary, driver_report, metrics = load_data()
-
-if df is not None and not df.empty:
-    # Route filter
-    routes = ['All'] + sorted(df['route'].dropna().unique().tolist())
-    selected_route = st.sidebar.selectbox("Select Route", routes)
-
-    # Client type filter
-    client_types = ['All'] + sorted(df['client_type'].dropna().unique().tolist())
-    selected_client = st.sidebar.selectbox("Select Client Type", client_types)
-
-    # At-risk status filter
-    at_risk_filter = st.sidebar.radio(
-        "Delivery Status",
-        ['All', 'At-Risk Only', 'On-Track Only']
-    )
-
-    # Apply filters
-    filtered_df = df.copy()
-
-    if selected_route != 'All':
-        filtered_df = filtered_df[filtered_df['route'] == selected_route]
-
-    if selected_client != 'All':
-        filtered_df = filtered_df[filtered_df['client_type'] == selected_client]
-
-    if at_risk_filter == 'At-Risk Only':
-        filtered_df = filtered_df[filtered_df['at_risk'] == 1]
-    elif at_risk_filter == 'On-Track Only':
-        filtered_df = filtered_df[filtered_df['at_risk'] == 0]
-
-# ============================================================
-# MAIN DASHBOARD
-# ============================================================
-if df is None or df.empty:
-    st.warning("No data available. Please run the data extraction script.")
-    st.stop()
-
-# ============================================================
-# METRIC CARDS
-# ============================================================
-st.subheader("📈 Key Metrics")
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    total_deliveries = filtered_df['delivery_id'].nunique()
-    st.metric("Active Deliveries", f"{total_deliveries:,}")
-
-with col2:
-    at_risk_count = filtered_df[filtered_df['at_risk'] == 1]['delivery_id'].nunique()
-    at_risk_pct = (at_risk_count / total_deliveries * 100) if total_deliveries > 0 else 0
-    st.metric("At-Risk Deliveries", f"{at_risk_count:,}", delta=f"{at_risk_pct:.1f}%",
-              delta_color="inverse")
-
-with col3:
-    on_time_rate = ((total_deliveries - at_risk_count) / total_deliveries * 100) \
-        if total_deliveries > 0 else 0
-    st.metric("Projected On-Time Rate", f"{on_time_rate:.1f}%")
-
-with col4:
-    avg_risk = filtered_df['risk_score'].mean()
-    st.metric("Average Risk Score", f"{avg_risk:.3f}")
-
-with col5:
-    if metrics is not None and not metrics.empty:
-        accuracy = metrics['accuracy'].iloc[0]
-        st.metric("Model Accuracy", f"{accuracy * 100:.1f}%")
-    else:
-        st.metric("Model Accuracy", "N/A")
-
-st.markdown("---")
-
-# ============================================================
-# CHARTS - ROW 1
-# ============================================================
-st.subheader("📊 SLA Risk Analysis")
-col1, col2 = st.columns(2)
-
-with col1:
-    # Risk score distribution
-    risk_bins = [0, 0.2, 0.4, 0.5, 0.7, 1.01]
-    risk_labels = ['Very Low', 'Low', 'Moderate', 'High', 'Critical']
-    filtered_df['risk_band'] = pd.cut(
-        filtered_df['risk_score'], bins=risk_bins, labels=risk_labels, right=False
-    )
-    risk_dist = filtered_df['risk_band'].value_counts().reindex(risk_labels).reset_index()
-    risk_dist.columns = ['Risk Band', 'Count']
-
-    fig1 = px.bar(
-        risk_dist, x='Risk Band', y='Count',
-        title='Risk Score Distribution', color='Risk Band',
-        color_discrete_sequence=px.colors.sequential.OrRd
-    )
-    fig1.update_layout(showlegend=False)
-    st.plotly_chart(fig1, use_container_width=True)
-
-with col2:
-    # On-time rate by route
-    route_perf = filtered_df.groupby('route').agg(
-        total=('delivery_id', 'count'),
-        at_risk=('at_risk', 'sum')
-    ).reset_index()
-    route_perf['On-Time Rate'] = (
-        (route_perf['total'] - route_perf['at_risk']) / route_perf['total'] * 100
-    ).round(1)
-
-    fig2 = px.bar(
-        route_perf, x='route', y='On-Time Rate',
-        title='Projected On-Time Rate by Route',
-        color='On-Time Rate', color_continuous_scale='RdYlGn'
-    )
-    st.plotly_chart(fig2, use_container_width=True)
-
-st.markdown("---")
-
-# ============================================================
-# CHARTS - ROW 2
-# ============================================================
-col1, col2 = st.columns(2)
-
-with col1:
-    # Redelivery attempts vs risk score
-    fig3 = px.scatter(
-        filtered_df, x='redelivery_attempts', y='risk_score',
-        color='at_risk', title='Redelivery Attempts vs Risk Score',
-        labels={'redelivery_attempts': 'Redelivery Attempts',
-                'risk_score': 'Risk Score'},
-        color_discrete_map={0: 'green', 1: 'red'}
-    )
-    fig3.update_traces(marker=dict(size=9, opacity=0.7))
-    st.plotly_chart(fig3, use_container_width=True)
-
-with col2:
-    # At-risk percentage by route
-    at_risk_by_route = filtered_df.groupby('route').agg(
-        at_risk=('at_risk', 'sum'), total=('delivery_id', 'count')
-    ).reset_index()
-    at_risk_by_route['At-Risk %'] = (
-        at_risk_by_route['at_risk'] / at_risk_by_route['total'] * 100
-    ).round(1)
-    at_risk_by_route = at_risk_by_route.sort_values('At-Risk %', ascending=False)
-
-    fig4 = px.bar(
-        at_risk_by_route, x='route', y='At-Risk %',
-        title='At-Risk Percentage by Route',
-        color='At-Risk %', color_continuous_scale='Reds'
-    )
-    st.plotly_chart(fig4, use_container_width=True)
-
-st.markdown("---")
-
-# ============================================================
-# AT-RISK DELIVERY LIST
-# ============================================================
-st.subheader("⚠️ At-Risk Deliveries")
-
-if at_risk_filter in ('All', 'At-Risk Only'):
-    at_risk_deliveries = filtered_df[filtered_df['at_risk'] == 1].copy()
-
-    if not at_risk_deliveries.empty:
-        at_risk_deliveries = at_risk_deliveries.sort_values('risk_score', ascending=False)
-
-        display_cols = ['waybill_no', 'client_type', 'route', 'driver_name',
-                        'priority', 'status', 'expected_delivery', 'risk_score']
-
-        st.dataframe(
-            at_risk_deliveries[display_cols],
-            use_container_width=True,
-            column_config={
-                'waybill_no': 'Waybill No',
-                'client_type': 'Client Type',
-                'route': 'Route',
-                'driver_name': 'Driver',
-                'priority': 'Priority',
-                'status': 'Status',
-                'expected_delivery': 'Expected Delivery',
-                'risk_score': 'Risk Score'
-            }
-        )
-
-        csv = at_risk_deliveries[display_cols].to_csv(index=False)
-        st.download_button(
-            label="📥 Download At-Risk List (CSV)",
-            data=csv,
-            file_name=f"at_risk_deliveries_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info("No at-risk deliveries found with the current filters.")
-else:
-    st.info("Filter set to 'On-Track Only'. Switch to 'All' or 'At-Risk Only' to view at-risk deliveries.")
-
-st.markdown("---")
-
-# ============================================================
-# RAW DATA SECTION
-# ============================================================
-with st.expander("📋 View Raw Data"):
-    st.dataframe(filtered_df, use_container_width=True)
-    csv = filtered_df.to_csv(index=False)
-    st.download_button(
-        label="📥 Download Data (CSV)",
-        data=csv,
-        file_name=f"speedex_predictions_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv"
-    )
-
-# ============================================================
-# FOOTER
-# ============================================================
-st.markdown("---")
-st.caption(f"SPEEDEX SLA Monitoring Dashboard v1.0 | "
-           f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-# ============================================================
-# RUN COMMAND
-# ============================================================
-# To run: streamlit run dashboard.py
+// At-Risk flag (includes Medium, High, and Critical)
+bool isAtRisk = riskScore >= 0.35 || remainingHours <= 0;
 ```
 
-## 1.3 API Endpoints (Optional – FastAPI)
+### Explainability Output
 
-```python
-#!/usr/bin/env python3
-"""
-SPEEDEX DMS - SLA Analytics API
-Version: 1.0
-Date:    August 1, 2026
-Author:  Gabriel, David Jr. M. / Conag, Reca Maelah M. / Panaligan, Sofia Albert Q. / Dumlao, Jhoyce Anne Niel B.
-Purpose: Provide API endpoints for delivery SLA analytics data.
-"""
+Unlike a black-box model, each prediction returns a human-readable justification and a recommended dispatch action:
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-import sqlite3
-import pandas as pd
-from typing import Optional
+| Output Field | Example |
+|--------------|---------|
+| `RiskReason` | "• SLA deadline is very short (4.2 hours remaining).<br>• Order has failed delivery 2 time(s) previously." |
+| `RecommendedAction` | "Contact recipient to confirm availability and address details before next delivery attempt." |
 
-app = FastAPI(title="SPEEDEX SLA Analytics API", version="1.0")
+**Recommended-action decision order:** deadline passed → unassigned driver → poor-performing driver → ≥2 redelivery attempts → high priority with ≤6h remaining → risk ≥ 0.35 → no action required.
 
-DB_PATH = './data/predictions.db'
+## 1.3 API Endpoints (ASP.NET Core Web API)
 
-# ============================================================
-# HELPER FUNCTIONS
-# ============================================================
-def get_db_connection():
-    """Get database connection."""
-    return sqlite3.connect(DB_PATH)
+Base route: `api/predictions` · Authorization: `OpTeamAndAbove`
 
-def run_query(query, params=None):
-    """Run SQL query and return results as a list of dicts."""
-    conn = get_db_connection()
-    df = pd.read_sql(query, conn, params=params)
-    conn.close()
-    return df.to_dict('records')
+| Method | Endpoint | Purpose | Response |
+|--------|----------|---------|----------|
+| `POST` | `/api/predictions/run` | Recompute predictions for all active orders; writes an `ActivityLog` audit entry | `{ message, ordersProcessed, durationMs }` |
+| `GET` | `/api/predictions/at-risk` | Active (non-completed) orders with risk data + predicted arrival | `AtRiskOrderDto[]` |
+| `GET` | `/api/predictions/completed` | Delivered / Failed / Returned history with actual outcome | `AtRiskOrderDto[]` |
+| `GET` | `/api/predictions/sla-summary` | KPI totals + route and priority breakdowns | `SlaSummaryDto` |
+| `GET` | `/api/predictions/driver-performance` | Per-driver on-time %, breaches, average delay | `DriverSlaPerformanceDto[]` |
 
-# ============================================================
-# API ENDPOINTS
-# ============================================================
-@app.get("/")
-async def root():
-    return {"message": "SPEEDEX SLA Analytics API", "version": "1.0"}
+### Performance Design Notes
 
-@app.get("/api/deliveries")
-async def get_deliveries(
-    route: Optional[str] = None,
-    at_risk: Optional[int] = None,
-    limit: int = 100
-):
-    """Get delivery predictions with optional filters."""
-    query = "SELECT * FROM predictions WHERE 1=1"
-    params = []
+- **N+1 query avoidance:** `RunPredictionsAsync()` pre-fetches driver, route, and client historical aggregates into dictionaries once, plus all existing predictions, before the per-order loop.
+- **Read efficiency:** all read endpoints use `.AsNoTracking()`.
+- **Upsert:** existing `DeliveryPrediction` rows are updated in place; new orders get inserted.
+- **Auditability:** every recompute writes an `ActivityLog` row with user, role, order count, and duration.
 
-    if route:
-        query += " AND route = ?"
-        params.append(route)
+```csharp
+[HttpPost("run")]
+public async Task<IActionResult> RunPredictions()
+{
+    var stopwatch = Stopwatch.StartNew();
+    int processedCount = await _predictionService.RunPredictionsAsync();
+    stopwatch.Stop();
 
-    if at_risk is not None:
-        query += " AND at_risk = ?"
-        params.append(at_risk)
+    // ... resolve acting employee for the audit trail ...
 
-    query += " LIMIT ?"
-    params.append(limit)
+    var activityLog = new ActivityLog
+    {
+        Timestamp   = DateTime.UtcNow,
+        Action      = "Prediction",
+        Description = $"Recomputed at-risk SLA predictions. Processed {processedCount} active orders in {stopwatch.ElapsedMilliseconds}ms.",
+        Reference   = $"Run-{DateTime.UtcNow:yyyyMMddHHmmss}"
+    };
+    await _context.ActivityLogs.AddAsync(activityLog);
+    await _context.SaveChangesAsync();
 
-    return JSONResponse(run_query(query, params))
-
-@app.get("/api/sla-summary")
-async def get_sla_summary():
-    """Get SLA summary reports per route."""
-    return JSONResponse(run_query("SELECT * FROM sla_summary_reports"))
-
-@app.get("/api/drivers")
-async def get_driver_reports():
-    """Get driver on-time performance reports."""
-    return JSONResponse(run_query("SELECT * FROM driver_sla_reports"))
-
-@app.get("/api/metrics")
-async def get_metrics():
-    """Get latest model metrics."""
-    results = run_query(
-        "SELECT * FROM model_metrics ORDER BY run_date DESC LIMIT 1"
-    )
-    return JSONResponse(results[0] if results else {})
-
-@app.get("/api/at-risk")
-async def get_at_risk(limit: int = 50):
-    """Get top at-risk deliveries."""
-    query = """
-        SELECT waybill_no, client_type, route, driver_name,
-               priority, expected_delivery, risk_score
-        FROM predictions
-        WHERE at_risk = 1
-        ORDER BY risk_score DESC
-        LIMIT ?
-    """
-    return JSONResponse(run_query(query, [limit]))
-
-@app.get("/api/trends")
-async def get_trends():
-    """Get SLA risk trends by run date."""
-    query = """
-        SELECT run_date, COUNT(*) AS total_deliveries,
-               AVG(risk_score) AS avg_risk_score,
-               SUM(at_risk) AS at_risk_count
-        FROM predictions
-        GROUP BY run_date
-        ORDER BY run_date DESC
-        LIMIT 10
-    """
-    return JSONResponse(run_query(query))
-
-# ============================================================
-# RUN COMMAND
-# ============================================================
-# To run: uvicorn api:app --reload --host 0.0.0.0 --port 8000
+    return Ok(new { message = "Predictions recomputed successfully.",
+                    ordersProcessed = processedCount,
+                    durationMs = stopwatch.ElapsedMilliseconds });
+}
 ```
 
-## 1.4 Dashboard Screenshots
+## 1.4 Frontend Data Access Layer
 
-**Screenshot 1: Dashboard Main View** *(insert your captured screenshot here)*
+```typescript
+// src/api/predictionApi.ts
+export const predictionApi = {
+  runPredictions:       async () => (await apiClient.post<RunPredictionsResponse>('/predictions/run')).data,
+  getAtRiskOrders:      async () => (await apiClient.get<AtRiskOrder[]>('/predictions/at-risk')).data,
+  getCompletedOrders:   async () => (await apiClient.get<AtRiskOrder[]>('/predictions/completed')).data,
+  getSlaSummary:        async () => (await apiClient.get<SlaSummaryResponse>('/predictions/sla-summary')).data,
+  getDriverPerformance: async () => (await apiClient.get<DriverSlaPerformance[]>('/predictions/driver-performance')).data,
+};
+```
 
-Suggested capture — a "Dashboard Main View" showing:
-- Filters panel (Route = All, Client Type = All, Status = At-Risk Only)
-- Key Metrics cards: **Active Deliveries: 200 · At-Risk: 18 (9.0%) · On-Time Rate: 91.0% · Avg Risk Score: 0.281 · Model Accuracy: 85.0%**
-- Risk Score Distribution + Projected On-Time Rate by Route charts
-- Redelivery Attempts vs Risk Score scatter + At-Risk % by Route charts
-- At-Risk Deliveries table with a **Download At-Risk List (CSV)** button
+## 1.5 Dashboard Screenshots
 
-**Sample At-Risk Deliveries table (for the screenshot / demo):**
+**Screenshot 1: SLA Monitoring — Ongoing Tab** *(insert your captured screenshot)*
 
-| Waybill No | Client Type | Route | Driver | Priority | Expected Delivery | Risk Score |
-|------------|-------------|-------|--------|----------|-------------------|-----------|
-| SPX-2026-0142 | Premium | Manila | Jose Rizal | High | 2026-08-01 18:00 | 0.87 |
-| SPX-2026-0119 | Standard | Pasig City | Andres Bonifacio | High | 2026-08-01 20:00 | 0.81 |
-| SPX-2026-0158 | Premium | Quezon City | Gabriela Silang | Medium | 2026-08-02 12:00 | 0.74 |
-| SPX-2026-0107 | Standard | Manila | Juan Luna | High | 2026-08-01 17:00 | 0.68 |
-| SPX-2026-0166 | Economy | Parañaque | Melchora Aquino | Medium | 2026-08-02 15:00 | 0.61 |
+Capture checklist for this screenshot:
+- KPI cards row (active deliveries, on-time %, breaches, at-risk count, avg delay, avg duration)
+- Filter bar with the Ongoing tab selected
+- Route on-time bar chart, Driver on-time bar chart, Risk distribution pie chart
+- At-risk orders table showing risk level badges, time-until-breach, and recommended action
+
+**Screenshot 2: SLA Monitoring — Delivered Tab** *(insert your captured screenshot)*
+
+**Screenshot 3: SLA Proactive At-Risk Orders Report** *(insert your captured screenshot)*
+
+**Sample At-Risk Orders table (for the demo walkthrough):**
+
+| Waybill No | Client Type | Route | Driver | Priority | Time Until Breach | Risk Level | Score | Confidence |
+|------------|-------------|-------|--------|----------|-------------------|-----------|-------|-----------|
+| SPX-2026-0142 | VIP | Manila | Jose Rizal | High | Breached by 2.4 hrs | Critical | 0.87 | 0.95 |
+| SPX-2026-0119 | Express | Pasig City | Andres Bonifacio | High | 3.1 hrs | Critical | 0.81 | 0.90 |
+| SPX-2026-0158 | Corporate | Quezon City | Gabriela Silang | Medium | 9.5 hrs | High | 0.68 | 0.85 |
+| SPX-2026-0107 | Express | Manila | *Unassigned* | High | 14.0 hrs | High | 0.64 | 0.70 |
+| SPX-2026-0166 | Standard | Parañaque | Melchora Aquino | Medium | 22.8 hrs | Medium | 0.41 | 0.80 |
 
 ---
 
@@ -483,156 +228,164 @@ Suggested capture — a "Dashboard Main View" showing:
 |-----------|---------|
 | Test Date | August 1, 2026 |
 | Tester | [Student Name] |
-| Environment | Localhost (MSSQL LocalDB + Python + Redis/Docker) |
-| Test Scope | Full data flow: SPX Delivery MSSQL → Extraction → AI/Analytics → SQLite → Dashboard |
+| Environment | Localhost — MSSQL + ASP.NET Core API (`dotnet run`) + Vite dev server |
+| Test Scope | Full flow: MSSQL → EF Core → Prediction Engine → `DeliveryPredictions` → API → React Dashboard |
 | Status | ✅ PASSED |
 
 ## 2.2 Test Flow Diagram (End-to-End)
 
 ```
-STEP 1: SPX Delivery MSSQL (Source)
-   Database: SPXDeliveryDb
-   Tables: DeliveryOrders, Employees, DeliveryHistoryLogs, ActivityLogs, Notifications
-   Row Count: 224 (200 active / non-archived)
-   Status: ✅ Running, UNTOUCHED (read-only)
+STEP 1: MSSQL Database (SPXDeliveryDb)
+   Tables (legacy, unaltered): DeliveryOrders, Employees, ActivityLogs,
+                               DeliveryHistoryLogs, Notifications
+   New table (additive): DeliveryPredictions
+   Status: ✅ Running — no legacy schema modified
         |
         v
-STEP 2: Data Extraction Script (extract_delivery_data.py)
-   Action: Read-Only SELECT queries executed
-   Output: Pandas DataFrame (200 active records)
-   Duration: 12 seconds
+STEP 2: Trigger Recompute  (POST /api/predictions/run)
+   Auth: JWT, policy OpTeamAndAbove
+   Action: Fetch active non-archived orders (excludes Delivered/Completed/
+           Failed/Returned/Cancelled)
+   Status: ✅ Authorized & executed
+        |
+        v
+STEP 3: Historical Profile Aggregation (EF Core, single pass)
+   Builds driver / route / client breach-rate dictionaries (min. 3 orders each)
+   Purpose: avoid N+1 queries
    Status: ✅ Successful
         |
         v
-STEP 3: AI Model (ai_model.py)
-   Action: Logistic Regression training + prediction (heuristic fallback for small data)
-   Output: Risk scores + At-Risk flags (18 at-risk, 9%)
-   Model Accuracy: 0.850 | F1: 0.76
-   Duration: 5 seconds
+STEP 4: Prediction Engine (PredictionService.ComputePredictionInternal)
+   8 weighted factors -> riskScore [0..1] -> riskLevel + confidence
+   Also emits RiskReason + RecommendedAction (explainability)
    Status: ✅ Successful
         |
         v
-STEP 4: Redis Cache Population (cache_predictions.py) - Optional
-   Action: Cache risk scores per waybill (SETEX, 1-hour TTL)
-   Output: 200 keys cached (risk:{waybill_no})
-   Duration: 3 seconds
-   Status: ✅ Successful
+STEP 5: Persist Predictions (DeliveryPredictions table)
+   Upsert: update existing rows, insert new ones; single SaveChangesAsync()
+   Audit: ActivityLog row written (user, role, count, durationMs)
+   Status: ✅ Data written successfully
         |
         v
-STEP 5: SQLite Database (predictions.db)
-   Tables: predictions, sla_summary_reports, driver_sla_reports, model_metrics
-   Row Count: 200 (predictions)
-   Status: ✅ Data written successfully (WAL mode)
-        |
-        v
-STEP 6: Dashboard (dashboard.py)
-   Action: Read SQLite & display visualizations
-   Output: Metric cards, charts, at-risk list
-   Load Time: 1.1 seconds
-   Status: ✅ Displayed correctly
-        |
-        v
-STEP 7: API Endpoints (api.py) - Optional
-   Endpoints: /api/deliveries, /api/sla-summary, /api/metrics, /api/at-risk, /api/trends
-   Response Time: < 400 ms
+STEP 6: Read APIs
+   /at-risk · /completed · /sla-summary · /driver-performance
+   All use .AsNoTracking()
    Status: ✅ All endpoints responding
+        |
+        v
+STEP 7: React Dashboard (SlaMonitoring.tsx)
+   Parallel fetch -> KPI cards, 9 filters, 3 Recharts visualizations,
+   Ongoing/Delivered tabs, printable report
+   Status: ✅ Displayed correctly
 ```
 
 ## 2.3 Test Cases
 
-**Test Case 1: Data Extraction**
+**Test Case 1: Authorization Enforcement**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-001 |
-| Description | Verify data extraction from SPX Delivery MSSQL (read-only) |
-| Precondition | MSSQL running, `readonly_user` created with SELECT-only rights |
-| Steps | 1. Run `extract_delivery_data.py` · 2. Check logs for success · 3. Verify row count |
-| Expected Result | Data extracted successfully with correct row count |
-| Actual Result | ✅ 200 active records extracted |
+| Description | Verify prediction endpoints reject unauthorized roles |
+| Precondition | API running; JWT for a below-Operations role available |
+| Steps | 1. Call `GET /api/predictions/at-risk` with no token · 2. Retry with a low-privilege token · 3. Retry with an Operations token |
+| Expected Result | 401 without token, 403 for low privilege, 200 for Operations |
+| Actual Result | ✅ Policy `OpTeamAndAbove` enforced on all five endpoints |
 | Status | ✅ PASS |
 
-**Test Case 2: AI Model Training**
+**Test Case 2: Prediction Recompute**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-002 |
-| Description | Verify AI model training and SLA-breach prediction |
-| Precondition | Data extracted successfully |
-| Steps | 1. Run `ai_model.py` · 2. Check accuracy/F1 · 3. Verify at-risk flags |
-| Expected Result | Accuracy ≥ 0.80, predictions generated |
-| Actual Result | ✅ Accuracy = 0.850, F1 = 0.76, 18 deliveries flagged at-risk |
+| Description | Verify `POST /predictions/run` computes and persists predictions |
+| Precondition | Active delivery orders exist in MSSQL |
+| Steps | 1. Call `POST /api/predictions/run` · 2. Inspect response · 3. Query `DeliveryPredictions` |
+| Expected Result | `ordersProcessed` > 0; one prediction row per active order |
+| Actual Result | ✅ Predictions upserted; response returned `ordersProcessed` and `durationMs` |
 | Status | ✅ PASS |
 
-**Test Case 3: Redis Cache Population (Optional)**
+**Test Case 3: Risk Scoring Correctness**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-003 |
-| Description | Verify risk scores cached in Redis |
-| Precondition | Predictions generated; Redis running (port 6379) |
-| Steps | 1. Run `cache_predictions.py` · 2. Check `DBSIZE` · 3. Verify a sample key |
-| Expected Result | Risk scores cached successfully |
-| Actual Result | ✅ 200 keys cached (`risk:{waybill_no}`, TTL 3600s) |
+| Description | Verify risk score, level, and at-risk flag follow the defined thresholds |
+| Precondition | Predictions computed |
+| Steps | 1. Seed an order past its `ExpectedDelivery` · 2. Seed a low-risk order 72h out · 3. Compare scores/levels |
+| Expected Result | Breached order → score 1.0-weighted, level Critical, `IsAtRisk = true`; distant low-priority order → Low, `IsAtRisk = false` |
+| Actual Result | ✅ Thresholds (0.35 / 0.60 / 0.80) applied correctly; scores clamped to [0,1] |
 | Status | ✅ PASS |
 
-**Test Case 4: SQLite Storage**
+**Test Case 4: Explainability Output**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-004 |
-| Description | Verify data written to SQLite |
-| Precondition | Predictions generated |
-| Steps | 1. Open `predictions.db` · 2. Verify tables · 3. Verify row count |
-| Expected Result | Data written successfully |
-| Actual Result | ✅ 200 rows in `predictions`; `sla_summary_reports` (7), `driver_sla_reports` (6), `model_metrics` (1) |
+| Description | Verify each prediction returns a reason and a recommended action |
+| Precondition | Predictions computed |
+| Steps | 1. Fetch `/api/predictions/at-risk` · 2. Inspect `riskReason` and `recommendedAction` |
+| Expected Result | Non-empty, human-readable strings for every record |
+| Actual Result | ✅ Bulleted reasons returned; low-risk orders return "No severe risk factors identified." |
 | Status | ✅ PASS |
 
-**Test Case 5: Dashboard Display**
+**Test Case 5: SLA Summary Aggregation**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-005 |
-| Description | Verify dashboard displays correctly |
-| Precondition | SQLite populated |
-| Steps | 1. Run `streamlit run dashboard.py` · 2. Check metrics · 3. Verify charts · 4. Verify at-risk list |
-| Expected Result | All components display correctly |
-| Actual Result | ✅ All components visible and accurate |
+| Description | Verify KPI totals and route/priority breakdowns are internally consistent |
+| Precondition | Completed and active orders exist |
+| Steps | 1. Call `/api/predictions/sla-summary` · 2. Verify per-route `onTime + breached = totalOrders` · 3. Verify on-time % math |
+| Expected Result | Breakdown counts reconcile to totals; percentages match counts |
+| Actual Result | ✅ Route and priority breakdowns reconcile; values rounded to 1 decimal |
 | Status | ✅ PASS |
 
-**Test Case 6: API Endpoints**
+**Test Case 6: Audit Trail Logging**
 
 | Attribute | Details |
 |-----------|---------|
 | Test ID | TC-006 |
-| Description | Verify API endpoints return data |
-| Precondition | SQLite populated |
-| Steps | 1. Start uvicorn · 2. Call `/api/deliveries` · 3. Call `/api/metrics` · 4. Call `/api/at-risk` |
-| Expected Result | JSON responses with correct data |
-| Actual Result | ✅ All endpoints returning data |
+| Description | Verify each recompute writes an `ActivityLog` entry |
+| Precondition | Authenticated Operations user |
+| Steps | 1. Call `POST /predictions/run` · 2. Query `ActivityLogs` for `Action = "Prediction"` |
+| Expected Result | One log row with user, role, order count, duration, and `Run-` reference |
+| Actual Result | ✅ Audit row created per run |
+| Status | ✅ PASS |
+
+**Test Case 7: Dashboard Display & Filtering**
+
+| Attribute | Details |
+|-----------|---------|
+| Test ID | TC-007 |
+| Description | Verify dashboard renders and all filters/tabs work |
+| Precondition | Predictions persisted; API reachable |
+| Steps | 1. Open SLA Monitoring page · 2. Verify KPI cards and 3 charts · 3. Exercise all 9 filters · 4. Switch Ongoing ↔ Delivered |
+| Expected Result | All components render; filters narrow results correctly |
+| Actual Result | ✅ Charts, tabs, and all filters functioning |
 | Status | ✅ PASS |
 
 ## 2.4 Performance Metrics
 
-| Component | Step | Duration | Status |
-|-----------|------|----------|--------|
-| Data Extraction | MSSQL → Pandas | 12 sec | ✅ |
-| AI Model | Training → Prediction | 5 sec | ✅ |
-| Redis Cache | Predictions → Cache | 3 sec | ✅ |
-| SQLite | Pandas → SQLite | 2 sec | ✅ |
-| Dashboard | SQLite → Display | 1.1 sec | ✅ |
-| API | Query → Response | < 400 ms | ✅ |
-| **Total End-to-End** | Start → Finish | **~23 sec** | ✅ |
+| Component | Step | Measurement | Status |
+|-----------|------|-------------|--------|
+| Historical aggregation | EF Core grouped queries | Pre-fetched once (no N+1) | ✅ |
+| Prediction engine | Score computation per order | In-memory, no I/O per order | ✅ |
+| Persistence | Upsert + single `SaveChangesAsync()` | One round trip | ✅ |
+| `POST /predictions/run` | End-to-end recompute | Reported in `durationMs` | ✅ |
+| Read endpoints | Query → JSON (`AsNoTracking`) | Sub-second | ✅ |
+| Dashboard | API → render | Sub-second on local | ✅ |
+
+> Replace the qualitative entries above with the actual `durationMs` values from your demo run and browser timings.
 
 ## 2.5 Test Summary
 
 | Metric | Value |
 |--------|-------|
-| Total Test Cases | 6 |
-| Passed | 6 |
+| Total Test Cases | 7 |
+| Passed | 7 |
 | Failed | 0 |
 | Pass Rate | 100% |
-| Total Duration | ~23 seconds |
 
 ---
 
@@ -641,119 +394,135 @@ STEP 7: API Endpoints (api.py) - Optional
 ## 3.1 Architecture 1: Conceptual (Business View)
 
 ```
-+------------------------------------------------------------------+
-|                  CONCEPTUAL ARCHITECTURE (FINAL)                 |
-|                                                                  |
-|  [SPX Delivery]     [Data Extraction]      [Analytics & AI]      |
-|  [   MSSQL    ] --> [  (Read-Only)   ] --> [   Processing  ]     |
-|  [ UNTOUCHED  ]     | - SQL / CSV    |     | - Logistic Reg.|    |
-|                     | - Read-Only    |     | - At-Risk Flags|    |
-|                     |   User         |     |                |    |
-|                                                     |            |
-|                                                     v            |
-|  [ Ops Manager  ]   [   Dashboard   ]      [ Predictions &  ]    |
-|  [   Decision   ] <-- [  (Streamlit) ] <-- [ Reports (SQLite)]   |
-|  [ Intervention ]   | - Metrics      |     |                |    |
-|                     | - Charts       |     |                |    |
-|                                                                  |
-|  Value: Early identification of at-risk deliveries ->            |
-|         Proactive dispatch intervention -> SLA compliance        |
-+------------------------------------------------------------------+
++---------------------------------------------------------------------+
+|                   CONCEPTUAL ARCHITECTURE (FINAL)                   |
+|                                                                     |
+|   [ Delivery Orders ]      [ Prediction Engine ]                    |
+|   [   (SPX DMS /    ] ---> [  Weighted 8-Factor ] ---+              |
+|   [    MSSQL)       ]      [  SLA Risk Scoring   ]   |              |
+|                                                      v              |
+|   [ Operations Team ]      [  SLA Monitoring   ]  [ Risk Level +    ]|
+|   [    Decision &   ] <--- [    Dashboard      ] <-[ Reason +       ]|
+|   [   Intervention  ]      [ (React + Recharts)]   [ Recommendation ]|
+|                                                                     |
+|   Value: Early identification of at-risk deliveries ->              |
+|          Explainable, actionable dispatch intervention ->           |
+|          Improved SLA compliance                                    |
++---------------------------------------------------------------------+
 ```
+
+**Business differentiator:** the engine does not only flag risk — it returns *why* an order is at risk and *what dispatch should do about it*, so operators can act without interpreting a model score.
 
 ## 3.2 Architecture 2: Logical (Layers View)
 
 ```
-================= LOGICAL ARCHITECTURE (FINAL) =====================
+================== LOGICAL ARCHITECTURE (FINAL) ======================
 
 PRESENTATION LAYER
-  - SPX Delivery Web Portal (ASP.NET / MVC - UNTOUCHED)
-      Orders, Dispatch, Drivers, Admin
-  - Streamlit Dashboard (NEW)
-      SLA Summary Metrics | Risk Distribution Charts | At-Risk List
+  React 19 + TypeScript (Vite)
+   - Existing DMS pages (Orders, Dispatch, Drivers, Reports)
+   - NEW: SlaMonitoring.tsx
+       KPI cards | Ongoing & Delivered tabs | 9 filters
+       Route on-time bar | Driver on-time bar | Risk distribution pie
+       Printable "SLA Proactive At-Risk Orders Report"
                              |
+                    axios (predictionApi.ts)
                              v
-APPLICATION LAYER (NEW)
-  Python Script (Cron Job - Nightly 11:00 PM)
-   1. Data Extraction (SQL/CSV)  -> 2. Analytics Module (Pandas)
-   -> 3. AI Module (scikit-learn, Logistic Regression)
-   -> 4. Redis Cache Population (risk scores)
+APPLICATION LAYER  (ASP.NET Core Web API - SPXDeliveryAPI)
+  PredictionsController  [Authorize(Policy = "OpTeamAndAbove")]
+   POST /run | GET /at-risk | GET /completed
+   GET /sla-summary | GET /driver-performance
                              |
-                             v
-INTEGRATION LAYER (Strangler Fig Strategy: Read-Replica)
-  - Read-Only SQL Query (Primary): SELECT only, dedicated readonly_user
-  - CSV Export (Backup): manual/scheduled export
+  Services
+   - IPredictionService / PredictionService  (8-factor scoring engine)
+   - ISlaService / SlaService                (duration formatting, SLA helpers)
                              |
+                       Entity Framework Core
                              v
-DATA LAYER (POLYGLOT PERSISTENCE)
-  - LEGACY: MSSQL (SPXDeliveryDb)  [UNTOUCHED, READ-ONLY]
-      DeliveryOrders, Employees, DeliveryHistoryLogs
-  - NEW: SQLite (predictions.db)
-      predictions | sla_summary_reports | driver_sla_reports | model_metrics
-  - NEW (Optional): Redis Cache
-      risk:{waybill_no} keys | 1-hour TTL
+PERSISTENCE LAYER  (Microsoft SQL Server - SPXDeliveryDb)
+  LEGACY (unaltered): DeliveryOrders | Employees | ActivityLogs
+                      DeliveryHistoryLogs | Notifications
+  NEW (additive):     DeliveryPredictions
+                      (RiskScore, RiskLevel, ConfidenceScore, IsAtRisk,
+                       RiskReason, RecommendedAction, PredictedAt)
 
-Legend: RED = Legacy/Untouched | GREEN = New/Enhancement
-        BLUE = Integration Layer | ARROWS = Data Flow
+CROSS-CUTTING
+  - JWT auth + RBAC          - Activity logging / audit trail
+  - AsNoTracking reads       - Aggregate pre-fetch (N+1 avoidance)
+
+Legend: LEGACY = unmodified | NEW = enhancement | ARROWS = data flow
 ```
 
 ## 3.3 Architecture 3: Physical (Deployment View)
 
 ```
-============== PHYSICAL ARCHITECTURE (FINAL) ======================
+=============== PHYSICAL ARCHITECTURE (FINAL) ========================
 LOCAL DEVELOPMENT ENVIRONMENT
 
-  [ MSSQL SERVER (LocalDB / SQL Server 2019+) ]
-     - Instance: (localdb)\MSSQLLocalDB
-     - Database: SPXDeliveryDb  (UNTOUCHED)
-     - Access:   readonly_user (SELECT only)
+  [ MICROSOFT SQL SERVER ]
+     - Database: SPXDeliveryDb
+     - Legacy tables: unaltered
+     - New table:     DeliveryPredictions (EF Core migration)
 
-  [ PYTHON ENVIRONMENT ]
-     - Scripts: extract_delivery_data.py (Cron Job)
-                ai_model.py
-                cache_predictions.py
-     - SQLite Database: ./data/predictions.db  (Size: ~1.5 MB)
-     - Streamlit Dashboard: localhost:8501
+  [ ASP.NET CORE WEB API  -  SPXDeliveryAPI ]
+     - Controllers: PredictionsController (api/predictions)
+     - Services:    PredictionService, SlaService
+     - ORM:         Entity Framework Core
+     - Docs:        Swagger
+     - Auth:        JWT + RBAC (OpTeamAndAbove)
 
-  [ REDIS (Docker) - Optional ]
-     - Port: 6379
-     - Cached AI risk scores (risk:{waybill_no})
+  [ REACT FRONTEND  (Vite dev server, localhost:5173) ]
+     - Page:   src/pages/SlaMonitoring/SlaMonitoring.tsx
+     - Charts: Recharts (BarChart, PieChart)
+     - HTTP:   axios via src/api/predictionApi.ts
+
+  [ DEPLOYMENT TARGET ]
+     - Docker (containerization) -> Hostinger (hosting)
 
 Data Flow:
-  (1) Python Script  -> MSSQL   (SELECT queries, read-only)
-  (2) Python Script  -> SQLite  (WRITE predictions & reports)
-  (3) Python Script  -> Redis   (WRITE cached risk scores)
-  (4) Streamlit      -> SQLite  (READ predictions & reports)
-  (5) Ops Manager    -> Streamlit (Dashboard access via browser)
+  (1) React        -> API      (HTTPS/JSON, JWT bearer token)
+  (2) API          -> MSSQL    (EF Core: READ DeliveryOrders/Employees)
+  (3) API          -> MSSQL    (EF Core: UPSERT DeliveryPredictions)
+  (4) API          -> MSSQL    (EF Core: INSERT ActivityLogs - audit)
+  (5) Ops Manager  -> React    (browser, role-gated dashboard access)
 
-Cost: $0  (All tools open source, localhost only)
+Cost: $0 for local development (open-source toolchain)
 ```
 
 ## 3.4 Architecture 4: Process (Timing View)
 
 ```
-============== PROCESS ARCHITECTURE (FINAL) =======================
+=============== PROCESS ARCHITECTURE (FINAL) =========================
 
-SCENARIO A: ASYNCHRONOUS (BATCH) - OVERNIGHT PROCESSING (11:00 PM)
-  11:00 PM        11:01 PM       11:02 PM        11:03 PM      11:04 PM
-  Cron Job -> Read MSSQL -> Process Data -> Run AI Model -> Save to SQLite
-  Starts      (SELECT)      (Pandas)       (Logistic Reg.)  (+ Redis cache)
-  Duration: ~4 minutes total | Trigger: Automated (Cron)
-  User Interaction: NONE      | Data Freshness: Up to 24 hours old
+SCENARIO A: ON-DEMAND RECOMPUTE  (Operations-triggered)
+  T+0ms        T+~ms            T+~ms             T+~ms          T+~ms
+  Ops clicks -> POST /run   -> Aggregate      -> Score 8      -> Upsert
+  "Run          (authorize)    driver/route/     factors per     predictions
+  Predictions"                 client history    active order    + audit log
+  Trigger: User-initiated (Operations Team and above)
+  User Interaction: YES  |  Duration: reported as durationMs in response
+  Data Freshness: real-time as of the click
 
-SCENARIO B: SYNCHRONOUS (REAL-TIME) - USER VIEWS DASHBOARD (8:00 AM)
-  8:00 AM        8:00:01 AM       8:00:02 AM        8:00:03 AM
-  Ops Manager -> Opens Streamlit -> Query SQLite -> Displays Reports
-  Logs In        URL               (SELECT)         & Charts
-  Duration: < 2 seconds total | Trigger: User-initiated
-  User Interaction: YES        | Data Freshness: from last overnight run
+SCENARIO B: DASHBOARD READ  (Operations views SLA Monitoring)
+  T+0ms            T+~ms              T+~ms            T+~ms
+  Ops opens   -> GET /at-risk    -> Query MSSQL   -> Render KPI cards,
+  SLA page       /completed         (AsNoTracking)   3 charts, tables
+                 /sla-summary
+                 /driver-performance
+  Trigger: User navigation  |  User Interaction: YES
+  Data Freshness: as of the last recompute (Scenario A)
 
-SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
-  Any Time      < 400 ms      < 400 ms
-  Client   -> API Call -> Query SQLite -> JSON Response { ... }
-  Request
-  Duration: < 400 ms/request | Trigger: API call (REST)
-  User Interaction: YES (via application) | Data Freshness: up to 24h old
+SCENARIO C: CLIENT-SIDE FILTERING  (no server round trip)
+  T+0ms                    T+~ms
+  Ops changes filter -> useMemo recomputes filtered list & charts
+  Trigger: UI interaction  |  Duration: instant (in-memory)
+  Note: 9 filters + tab switching operate on already-fetched data
+
+DESIGN NOTE - Freshness vs. Cost
+  Predictions are recomputed on demand rather than on a fixed schedule.
+  Because factor #1 (SLA remaining time, weight 0.35) is time-sensitive,
+  a recompute is recommended at the start of each dispatch shift.
+  A scheduled job is documented as a future enhancement.
 ```
 
 ---
@@ -768,13 +537,14 @@ SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
 | Legacy System | SPEEDEX Delivery Management System (DMS) |
 | Project Sponsor | SPEEDEX Operations Management |
 | Project Manager | Gabriel, David Jr. M. |
-| Vision Statement | To transform the SPEEDEX DMS from a transactional record-keeping system into a proactive, intelligence-driven platform that enables early intervention on at-risk deliveries and improves SLA compliance through predictive analytics and data-driven dispatch decisions. |
+| Vision Statement | To transform the SPEEDEX DMS from a transactional record-keeping system into a proactive, intelligence-driven platform that identifies at-risk deliveries before they breach SLA and gives dispatch explainable, actionable recommendations. |
 
 **Success Criteria**
-1. Dashboard displays delivery and SLA data with 100% accuracy (row counts match source).
-2. At-risk deliveries identified with 80%+ model accuracy.
-3. Zero modifications to the SPX Delivery code or production database (read-only guarantee).
-4. All deliverables submitted on time.
+1. Dashboard displays delivery and SLA data accurately, with aggregate breakdowns reconciling to source totals.
+2. Every at-risk delivery is accompanied by a risk level, confidence score, reason, and recommended action.
+3. No modification to existing DMS tables or business logic — the enhancement is strictly additive.
+4. Prediction access restricted to Operations Team and above, with every recompute recorded in the audit trail.
+5. All deliverables submitted on time.
 
 ## 4.2 Final WBS Summary
 
@@ -782,26 +552,34 @@ SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
 |--------|-------|-------|--------------|------------------|
 | Project Initiation | Project Setup | 5 | 9 hrs | Charter, Risk Register, Communication Plan, WBS |
 | Sprint 1 | Requirements & Design | 7 | 13.5 hrs | 4 Architecture Diagrams, Release Plan |
-| Sprint 2 | Data Layer Implementation | 8 | 9.5 hrs | Data Extraction Script, SQLite Database |
-| Sprint 3 | Analytics & AI Module | 9 | 13.5 hrs | AI Model, Redis Cache, Analytics Queries |
-| Sprint 4 | Dashboard & Integration | 9 | 11 hrs | Streamlit Dashboard, End-to-End Testing |
-| Final Wrap | Final Submission | 6 | 8 hrs | Complete ZIP Package, Demo Video |
+| Sprint 2 | Data Layer Implementation | 8 | 9.5 hrs | `DeliveryPredictions` schema + EF Core migration |
+| Sprint 3 | Prediction Engine & API | 9 | 13.5 hrs | `PredictionService`, `SlaService`, 5 API endpoints |
+| Sprint 4 | Dashboard & Integration | 9 | 11 hrs | `SlaMonitoring.tsx`, End-to-End Testing |
+| Final Wrap | Final Submission | 6 | 8 hrs | Complete Package, Demo Video |
 | **TOTAL** | | **44** | **62.5 hrs** | |
 
 ## 4.3 Final Risk Register Summary
 
-| ID | Risk Description | Owner | Status |
-|----|------------------|-------|--------|
-| R1 | Data Export Fails – Cannot connect to MSSQL | Backend Developer | ✅ Mitigated |
-| R2 | AI Model Inaccurate – Predictions unreliable | Backend Developer | ⚠️ Active |
-| R3 | Time Shortage – Cannot complete all tasks | PM | ⚠️ Active |
-| R4 | SQLite Data Loss – File corrupted or deleted | Backend Developer | ✅ Mitigated |
-| R5 | Dashboard Not Working – Streamlit fails to launch | Frontend Developer | ✅ Mitigated |
-| R6 | Scope Creep – Adding unnecessary features | PM | ⚠️ Active |
-| R7 | Team Collaboration Issues – Conflicting schedules | PM | ✅ Mitigated |
-| R8 | Python Library Conflicts – Version incompatibility | Backend Developer | ✅ Mitigated |
-| R9 | Data Duplication – Duplicate waybills from joins | Backend Developer | ⚠️ Active |
-| R10 | CSV / Export File Size – Exceeds memory limits | Backend Developer | ⚠️ Active |
+| ID | Risk Description | Category | Owner | Status |
+|----|------------------|----------|-------|--------|
+| R1 | MSSQL connection / credential failure during prediction run | Technical | Backend Developer | ✅ Mitigated |
+| R2 | Risk weights not validated against real outcomes — predictions unreliable | Technical | Backend Developer | ⚠️ Active |
+| R3 | Time shortage — cannot complete all tasks | Schedule | PM | ⚠️ Active |
+| R4 | Prediction data loss or stale predictions after order updates | Operational | Backend Developer | ✅ Mitigated |
+| R5 | Dashboard fails to load or charts render empty | Technical | Frontend Developer | ✅ Mitigated |
+| R6 | Scope creep — adding unnecessary features | Scope | PM | ⚠️ Active |
+| R7 | Team collaboration issues — conflicting schedules | Resource | PM | ✅ Mitigated |
+| R8 | Dependency / version incompatibility (React 19, EF Core) | Technical | Backend Developer | ✅ Mitigated |
+| R9 | Duplicate or orphaned prediction rows from joins | Technical | Backend Developer | ✅ Mitigated |
+| R10 | Performance degradation as order volume grows (N+1, large table scans) | Operational | Backend Developer | ⚠️ Active |
+| R11 | Unauthorized access to prediction data | Security | Backend Developer | ✅ Mitigated |
+| R12 | Time-sensitive scores go stale between recomputes | Operational | PM | ⚠️ Active |
+
+**Notes on newly mitigated items**
+- **R9** — resolved by keying predictions on `DeliveryOrderId` with an upsert, so one active order maps to exactly one prediction row.
+- **R10** — partially mitigated via one-time aggregate pre-fetch and `AsNoTracking()`; still Active because volume growth has not been load-tested.
+- **R11** — mitigated by `[Authorize(Policy = "OpTeamAndAbove")]` on all prediction endpoints.
+- **R12** — Active: factor #1 carries 0.35 weight and decays with time; a scheduled recompute is the proposed mitigation.
 
 ## 4.4 Final Communication Plan
 
@@ -809,8 +587,8 @@ SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
 |-------------|----------------------|-----------|
 | Operations Management (Sponsor) | Status report via email | Weekly |
 | Hub Supervisors / Dispatchers | Dashboard demonstrations | Sprint Reviews |
-| Delivery Riders / Drivers | Dashboard demonstrations | Sprint Reviews |
-| IT Department | Technical documentation | At project completion |
+| Delivery Riders / Drivers | Performance feedback sessions | Sprint Reviews |
+| IT Department | Technical documentation + Swagger reference | At project completion |
 | Project Team | Team meetings | Weekly |
 | Instructor (Professor) | Sprint deliverables | Every Saturday |
 
@@ -819,10 +597,21 @@ SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
 | Sprint | Dates | Theme | Key Deliverable |
 |--------|-------|-------|-----------------|
 | 1 | July 4–11 | Requirements & Design | 4 Architecture Diagrams |
-| 2 | July 12–18 | Data Layer | Data Extraction Script + Midterm Exam |
-| 3 | July 19–25 | AI & Analytics | AI Model + Redis Cache |
-| 4 | July 26–Aug 1 | Dashboard & Integration | Dashboard + End-to-End Testing |
-| Final | Aug 2–8 | Final Submission | Complete ZIP Package + Demo Video |
+| 2 | July 12–18 | Data Layer | `DeliveryPredictions` schema + migration (+ Midterm Exam) |
+| 3 | July 19–25 | Prediction Engine & API | Scoring engine + 5 endpoints |
+| 4 | July 26–Aug 1 | Dashboard & Integration | SLA Monitoring dashboard + End-to-End Testing |
+| Final | Aug 2–8 | Final Submission | Complete package + Demo Video |
+
+## 4.6 Future Enhancements (Out of Current Scope)
+
+| # | Enhancement | Rationale |
+|---|-------------|-----------|
+| 1 | Scheduled recompute (background service / cron) | Keeps the time-decaying SLA factor current without manual triggering |
+| 2 | Weight calibration against historical outcomes | Replace hand-tuned weights with values fitted to actual breach data (addresses R2) |
+| 3 | Real traffic and weather API integration | Factor #8 currently uses simulated placeholders |
+| 4 | Prediction accuracy tracking table | Persist predicted vs. actual outcomes to measure precision/recall over time |
+| 5 | Caching layer for summary endpoints | Reduce repeated aggregate computation as volume grows (addresses R10) |
+| 6 | Automated alerts (email / SMS / push) | Escalate Critical-risk orders without requiring dashboard monitoring |
 
 ---
 
@@ -830,9 +619,11 @@ SCENARIO C: SYNCHRONOUS (REAL-TIME) - API ENDPOINTS
 
 | Item | Submitted? |
 |------|-----------|
-| Working Dashboard (Streamlit) | ✅ |
-| Dashboard Source Code | ✅ |
-| Dashboard Screenshots | ✅ |
+| Working Dashboard (React SLA Monitoring page) | ✅ |
+| Dashboard Source Code (`SlaMonitoring.tsx`) | ✅ |
+| Prediction Engine Source Code (`PredictionService.cs`) | ✅ |
+| API Endpoints (`PredictionsController.cs`) | ✅ |
+| Dashboard Screenshots | ⬜ *insert captures* |
 | End-to-End Test Report | ✅ |
 | Finalized Conceptual Architecture | ✅ |
 | Finalized Logical Architecture | ✅ |
