@@ -7,40 +7,53 @@ namespace SPXDeliveryAPI.Migrations
     /// <inheritdoc />
     public partial class AddStructuredAddressFields : Migration
     {
+        // Legacy columns this migration was originally generated to drop. They were
+        // created by an earlier revision of 20260610180217_InitialCreate that has since
+        // been regenerated, so none of them exist when the chain is replayed against a
+        // clean database. The original unconditional DropColumn calls therefore failed
+        // with "ALTER TABLE DROP COLUMN failed because column 'DamagePhoto' does not
+        // exist in table 'DeliveryOrders'", which made every clean database
+        // un-migratable. The drops below are guarded so they become no-ops when the
+        // column was never created. Databases that already applied this migration are
+        // unaffected - EF Core never re-runs an applied migration.
+        private static readonly string[] LegacyDroppedColumns =
+        {
+            "DamagePhoto",
+            "DelayReason",
+            "IncidentDetails",
+            "IsDelayed",
+            "IsIncidentReported",
+            "VerificationPin",
+            "VerifiedIdNumber",
+            "VerifiedIdType"
+        };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "DamagePhoto",
-                table: "DeliveryOrders");
+            foreach (var column in LegacyDroppedColumns)
+            {
+                // Drop the column's default constraint first (IsDelayed and
+                // IsIncidentReported were created NOT NULL with a default), then the
+                // column itself. Both steps are conditional on the column existing.
+                migrationBuilder.Sql($@"
+IF COL_LENGTH('DeliveryOrders', '{column}') IS NOT NULL
+BEGIN
+    DECLARE @defaultConstraint sysname;
+    SELECT @defaultConstraint = dc.name
+    FROM sys.default_constraints dc
+    INNER JOIN sys.columns c
+        ON c.default_object_id = dc.object_id
+       AND c.object_id = dc.parent_object_id
+    WHERE dc.parent_object_id = OBJECT_ID('DeliveryOrders')
+      AND c.name = '{column}';
 
-            migrationBuilder.DropColumn(
-                name: "DelayReason",
-                table: "DeliveryOrders");
+    IF @defaultConstraint IS NOT NULL
+        EXEC('ALTER TABLE [DeliveryOrders] DROP CONSTRAINT [' + @defaultConstraint + ']');
 
-            migrationBuilder.DropColumn(
-                name: "IncidentDetails",
-                table: "DeliveryOrders");
-
-            migrationBuilder.DropColumn(
-                name: "IsDelayed",
-                table: "DeliveryOrders");
-
-            migrationBuilder.DropColumn(
-                name: "IsIncidentReported",
-                table: "DeliveryOrders");
-
-            migrationBuilder.DropColumn(
-                name: "VerificationPin",
-                table: "DeliveryOrders");
-
-            migrationBuilder.DropColumn(
-                name: "VerifiedIdNumber",
-                table: "DeliveryOrders");
-
-            migrationBuilder.DropColumn(
-                name: "VerifiedIdType",
-                table: "DeliveryOrders");
+    ALTER TABLE [DeliveryOrders] DROP COLUMN [{column}];
+END");
+            }
 
             migrationBuilder.AddColumn<string>(
                 name: "RecipientBarangay",

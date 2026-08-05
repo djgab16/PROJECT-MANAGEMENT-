@@ -26,11 +26,16 @@ namespace SPXDeliveryAPI.Controllers
     {
         private readonly IDeliveryOrderService _service;
         private readonly AppDbContext _context;
+        private readonly IPredictionOutcomeService _predictionOutcomeService;
 
-        public DeliveryOrderController(IDeliveryOrderService service, AppDbContext context)
+        public DeliveryOrderController(
+            IDeliveryOrderService service,
+            AppDbContext context,
+            IPredictionOutcomeService predictionOutcomeService)
         {
             _service = service;
             _context = context;
+            _predictionOutcomeService = predictionOutcomeService;
         }
 
         [HttpGet]
@@ -1053,6 +1058,12 @@ namespace SPXDeliveryAPI.Controllers
                     StatusBadge = "Confirmed"
                 };
                 await _context.Notifications.AddAsync(notification);
+
+                // Client-portal confirmation sets Status = "Completed" directly on the context
+                // rather than going through DeliveryOrderService.UpdateOrderAsync, so outcome
+                // capture is hooked explicitly here. Runs before SaveChangesAsync so the
+                // outcome commits in the same unit of work as the status change.
+                await _predictionOutcomeService.TryCaptureOutcomeAsync(order);
 
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Delivery confirmed successfully." });

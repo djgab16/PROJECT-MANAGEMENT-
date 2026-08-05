@@ -21,6 +21,7 @@ namespace SPXDeliveryAPI.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AppTask> Tasks { get; set; }
         public DbSet<DeliveryPrediction> DeliveryPredictions { get; set; }
+        public DbSet<PredictionOutcome> PredictionOutcomes { get; set; }
 
         public override int SaveChanges()
         {
@@ -163,6 +164,23 @@ namespace SPXDeliveryAPI.Data
                 .WithMany()
                 .HasForeignKey(p => p.DeliveryOrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Mirrors the DeliveryPrediction configuration above. The unique index is what
+            // makes outcome capture idempotent: a status update that fires twice cannot
+            // double-count an order in the accuracy confusion matrix.
+            modelBuilder.Entity<PredictionOutcome>()
+                .HasIndex(o => o.DeliveryOrderId)
+                .IsUnique();
+
+            modelBuilder.Entity<PredictionOutcome>()
+                .HasOne(o => o.DeliveryOrder)
+                .WithMany()
+                .HasForeignKey(o => o.DeliveryOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Accuracy queries filter on the evaluation window.
+            modelBuilder.Entity<PredictionOutcome>()
+                .HasIndex(o => o.OutcomeRecordedAt);
         }
     }
 }
