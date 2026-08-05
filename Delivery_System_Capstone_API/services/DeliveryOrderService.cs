@@ -7,10 +7,14 @@ namespace SPXDeliveryAPI.Services
     public class DeliveryOrderService : IDeliveryOrderService
     {
         private readonly AppDbContext _context;
+        private readonly IPredictionOutcomeService _predictionOutcomeService;
 
-        public DeliveryOrderService(AppDbContext context)
+        public DeliveryOrderService(
+            AppDbContext context,
+            IPredictionOutcomeService predictionOutcomeService)
         {
             _context = context;
+            _predictionOutcomeService = predictionOutcomeService;
         }
 
         public async Task<IEnumerable<DeliveryOrder>> GetAllOrdersAsync()
@@ -302,6 +306,11 @@ namespace SPXDeliveryAPI.Services
                     StatusBadge = "Expired"
                 };
                 await _context.Notifications.AddAsync(notification);
+
+                // This path sets Status = "Failed" directly and never calls UpdateOrderAsync,
+                // so it needs its own capture hook or auto-expired pickups would silently
+                // vanish from the accuracy matrix.
+                await _predictionOutcomeService.TryCaptureOutcomeAsync(order);
 
                 expiredCount++;
             }
@@ -697,6 +706,15 @@ namespace SPXDeliveryAPI.Services
 
                 // Create Notifications based on transition rules
                 await CreateStatusNotificationAsync(order, oldStatus, newStatus, editor);
+
+                // Snapshot the prior prediction against the real result once the order reaches
+                // a terminal status. Placed here, after DateCompleted/IsArchived have been
+                // applied and before the single SaveChangesAsync below, so the outcome row
+                // commits atomically with the transition. This is the central transition path:
+                // it covers PUT /{id}, PATCH /{id}/status, PATCH /{id}/assign-driver,
+                // PATCH /{id}/schedule-redelivery, PATCH /{id}/restore, POST /{id}/pod and
+                // PATCH /bulk-assign-driver, all of which funnel through UpdateOrderAsync.
+                await _predictionOutcomeService.TryCaptureOutcomeAsync(order);
             }
 
             order.LastUpdated = DateTime.UtcNow;

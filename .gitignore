@@ -20,5 +20,9 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
+
+# Solution files are tracked on purpose. `*.sln` was inherited from the Vite template, which
+# assumes the repo contains no .NET projects; here the solution is the single build entry point
+# for the API and its test project, so ignoring it would hide it from every contributor and CI.
+!*.sln

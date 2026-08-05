@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SPXDeliveryAPI.Data;
 
@@ -11,9 +12,11 @@ using SPXDeliveryAPI.Data;
 namespace SPXDeliveryAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260731184308_AddDeliveryPredictions")]
+    partial class AddDeliveryPredictions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -567,55 +570,6 @@ namespace SPXDeliveryAPI.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("SPXDeliveryAPI.Models.PredictionOutcome", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("ActuallyBreached")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("DeliveryOrderId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("OutcomeRecordedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("PredictedAtRisk")
-                        .HasColumnType("bit");
-
-                    b.Property<double>("PredictedConfidence")
-                        .HasColumnType("float");
-
-                    b.Property<string>("PredictedRiskLevel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<double>("PredictedRiskScore")
-                        .HasColumnType("float");
-
-                    b.Property<DateTime>("PredictionMadeAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("WaybillNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeliveryOrderId")
-                        .IsUnique();
-
-                    b.HasIndex("OutcomeRecordedAt");
-
-                    b.ToTable("PredictionOutcomes");
-                });
-
             modelBuilder.Entity("SPXDeliveryAPI.Models.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -695,17 +649,6 @@ namespace SPXDeliveryAPI.Migrations
                 });
 
             modelBuilder.Entity("SPXDeliveryAPI.Models.DeliveryPrediction", b =>
-                {
-                    b.HasOne("SPXDeliveryAPI.Models.DeliveryOrder", "DeliveryOrder")
-                        .WithMany()
-                        .HasForeignKey("DeliveryOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DeliveryOrder");
-                });
-
-            modelBuilder.Entity("SPXDeliveryAPI.Models.PredictionOutcome", b =>
                 {
                     b.HasOne("SPXDeliveryAPI.Models.DeliveryOrder", "DeliveryOrder")
                         .WithMany()

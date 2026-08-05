@@ -9,9 +9,28 @@ import {
   Legend, PieChart, Pie, Cell 
 } from 'recharts';
 import { predictionApi } from '../../api/predictionApi';
-import type { AtRiskOrder, SlaSummaryResponse, DriverSlaPerformance } from '../../api/predictionApi';
+import type {
+  AtRiskOrder, SlaSummaryResponse, DriverSlaPerformance, PredictionAccuracy
+} from '../../api/predictionApi';
 import { toast } from 'sonner';
 import './SlaMonitoring.css';
+
+/**
+ * Pulls `response.data.message` out of an axios error without resorting to `any`.
+ * Returns null when the shape does not match, so callers can fall back to their own copy.
+ */
+function extractApiMessage(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null;
+
+  const response = (error as { response?: unknown }).response;
+  if (typeof response !== 'object' || response === null) return null;
+
+  const data = (response as { data?: unknown }).data;
+  if (typeof data !== 'object' || data === null) return null;
+
+  const message = (data as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim().length > 0 ? message : null;
+}
 
 export default function SlaMonitoring() {
   const [summary, setSummary] = useState<SlaSummaryResponse | null>(null);
@@ -21,6 +40,11 @@ export default function SlaMonitoring() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRecomputing, setIsRecomputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Model performance is fetched alongside the rest but kept in its own state with its own
+  // error flag, so an accuracy-endpoint failure degrades only that panel.
+  const [accuracy, setAccuracy] = useState<PredictionAccuracy | null>(null);
+  const [accuracyFailed, setAccuracyFailed] = useState(false);
 
   // Active tab state: 'ongoing' or 'delivered'
   const [activeTab, setActiveTab] = useState<'ongoing' | 'delivered'>('ongoing');
@@ -40,18 +64,31 @@ export default function SlaMonitoring() {
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      const [summaryData, ordersData, completedData, driverData] = await Promise.all([
+      const [summaryData, ordersData, completedData, driverData, accuracyResult] = await Promise.all([
         predictionApi.getSlaSummary(),
         predictionApi.getAtRiskOrders(),
         predictionApi.getCompletedOrders(),
-        predictionApi.getDriverPerformance()
+        predictionApi.getDriverPerformance(),
+        // Settled inline rather than allowed to reject: the model-performance panel is
+        // supplementary, and losing it must not blank the operational dashboard.
+        predictionApi.getAccuracy()
+          .then((data) => ({ ok: true as const, data }))
+          .catch(() => ({ ok: false as const, data: null }))
       ]);
       setSummary(summaryData);
       setAtRiskOrders(ordersData);
       setCompletedOrders(completedData);
       setDriverPerf(driverData);
+
+      if (accuracyResult.ok) {
+        setAccuracy(accuracyResult.data);
+        setAccuracyFailed(false);
+      } else {
+        setAccuracyFailed(true);
+      }
+
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching SLA predictions data', err);
       setError('Failed to fetch prediction models. Please verify database connectivity.');
       toast.error('Failed to load SLA data');
@@ -68,9 +105,9 @@ export default function SlaMonitoring() {
       const result = await predictionApi.runPredictions();
       toast.success(result.message);
       await fetchData(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error recomputing predictions', err);
-      toast.error(err.response?.data?.message || 'Error executing prediction run');
+      toast.error(extractApiMessage(err) ?? 'Error executing prediction run');
     } finally {
       setIsRecomputing(false);
     }
@@ -360,6 +397,47 @@ export default function SlaMonitoring() {
     }));
   }, [driverPerf]);
 
+  // ─── Model performance ───────────────────────────────────────────────────────
+  // The model is only "validated" once at least one delivery has completed and had its
+  // outcome recorded. Until then the four metrics are structurally zero and must not be
+  // presented as though they were measured.
+  const isModelValidated = useMemo(
+    () => accuracy !== null && accuracy.totalEvaluated > 0,
+    [accuracy]
+  );
+
+  const accuracyChartData = useMemo(() => {
+    if (!accuracy || accuracy.totalEvaluated === 0) return [];
+    return [
+      { name: 'Accuracy', Score: Math.round(accuracy.accuracy * 100) },
+      { name: 'Precision', Score: Math.round(accuracy.precision * 100) },
+      { name: 'Recall', Score: Math.round(accuracy.recall * 100) },
+      { name: 'F1', Score: Math.round(accuracy.f1Score * 100) }
+    ];
+  }, [accuracy]);
+
+  const confusionMatrix = useMemo(() => {
+    if (!accuracy || accuracy.totalEvaluated === 0) return [];
+    return [
+      { label: 'Correctly flagged at risk', value: accuracy.truePositives, tone: 'success' },
+      { label: 'False alarms', value: accuracy.falsePositives, tone: 'warning' },
+      { label: 'Correctly cleared', value: accuracy.trueNegatives, tone: 'success' },
+      { label: 'Missed breaches', value: accuracy.falseNegatives, tone: 'danger' }
+    ];
+  }, [accuracy]);
+
+  // Freshness indicator: the newest prediction timestamp across the active set. Pairs with the
+  // background scheduler so an operator can tell how current the risk scores are.
+  const lastPredictionRun = useMemo(() => {
+    if (atRiskOrders.length === 0) return null;
+    const newest = atRiskOrders.reduce<number | null>((latest, order) => {
+      const parsed = new Date(order.predictedAt).getTime();
+      if (Number.isNaN(parsed)) return latest;
+      return latest === null || parsed > latest ? parsed : latest;
+    }, null);
+    return newest === null ? null : new Date(newest);
+  }, [atRiskOrders]);
+
   if (isLoading) {
     return (
       <div className="sla-loading-container">
@@ -476,7 +554,104 @@ export default function SlaMonitoring() {
               <span>{isRecomputing ? 'Recomputing...' : 'Recompute SLA Risk'}</span>
             </button>
           </div>
+          <p className="sla-freshness">
+            <Clock size={13} />
+            <span>
+              {lastPredictionRun
+                ? `Risk scores last computed ${lastPredictionRun.toLocaleString()}`
+                : 'No prediction run recorded yet for the active order set.'}
+            </span>
+          </p>
         </div>
+
+        {/* Model Performance — measured against recorded delivery outcomes */}
+        <section className="card sla-model-card" aria-labelledby="model-performance-heading">
+          <header className="card-header">
+            <h3 id="model-performance-heading">Model Performance</h3>
+            <span className="subtitle">
+              Prediction quality measured against completed deliveries, not against itself
+            </span>
+          </header>
+
+          {accuracyFailed ? (
+            <div className="sla-empty-state">
+              <AlertTriangle size={36} className="text-danger" />
+              <h3>Model metrics unavailable</h3>
+              <p>
+                The accuracy endpoint could not be reached. The rest of this dashboard is
+                unaffected and continues to refresh normally.
+              </p>
+            </div>
+          ) : !isModelValidated ? (
+            <div className="sla-empty-state">
+              <Info size={36} className="text-teal" />
+              <h3>Not enough completed deliveries yet</h3>
+              <p>
+                Accuracy, precision, recall and F1 appear here once deliveries finish and their
+                outcomes are recorded against the prediction that preceded them. No score is
+                shown yet because the model has not been validated &mdash; that is different from
+                scoring zero.
+              </p>
+            </div>
+          ) : (
+            <div className="model-performance-body">
+              <dl className="model-metric-grid">
+                <div className="model-metric">
+                  <dt>Accuracy</dt>
+                  <dd>{accuracy!.accuracy.toFixed(3)}</dd>
+                  <span className="model-metric-hint">Overall correct calls</span>
+                </div>
+                <div className="model-metric">
+                  <dt>Precision</dt>
+                  <dd>{accuracy!.precision.toFixed(3)}</dd>
+                  <span className="model-metric-hint">Of those flagged, how many breached</span>
+                </div>
+                <div className="model-metric">
+                  <dt>Recall</dt>
+                  <dd>{accuracy!.recall.toFixed(3)}</dd>
+                  <span className="model-metric-hint">Of those that breached, how many were caught</span>
+                </div>
+                <div className="model-metric">
+                  <dt>F1 Score</dt>
+                  <dd>{accuracy!.f1Score.toFixed(3)}</dd>
+                  <span className="model-metric-hint">Balance of precision and recall</span>
+                </div>
+                <div className="model-metric">
+                  <dt>Deliveries Evaluated</dt>
+                  <dd>{accuracy!.totalEvaluated}</dd>
+                  <span className="model-metric-hint">
+                    {accuracy!.evaluationPeriodStart && accuracy!.evaluationPeriodEnd
+                      ? `${new Date(accuracy!.evaluationPeriodStart).toLocaleDateString()} – ${new Date(accuracy!.evaluationPeriodEnd).toLocaleDateString()}`
+                      : 'Evaluation window unavailable'}
+                  </span>
+                </div>
+              </dl>
+
+              <div className="model-performance-visuals">
+                <div className="chart-wrapper model-chart-wrapper">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={accuracyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={10} tickLine={false} />
+                      <YAxis stroke="var(--text-secondary)" domain={[0, 100]} fontSize={10} tickLine={false} />
+                      <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
+                      <Bar dataKey="Score" fill="#868CFF" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <ul className="confusion-matrix-list">
+                  {confusionMatrix.map((cell) => (
+                    <li key={cell.label} className={`confusion-cell tone-${cell.tone}`}>
+                      <span className="confusion-value">{cell.value}</span>
+                      <span className="confusion-label">{cell.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Analytical Visualizations Grid */}
         <div className="sla-charts-grid">

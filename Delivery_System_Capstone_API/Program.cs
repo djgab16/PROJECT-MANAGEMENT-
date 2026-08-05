@@ -74,11 +74,17 @@ builder.Services.AddCors(options =>
 });
 
 // ─── Services ─────────────────────────────────────────────────────────────────
+builder.Services.AddMemoryCache();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDeliveryOrderService, DeliveryOrderService>();
 builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddSingleton<IPredictionCache, PredictionCache>();
+builder.Services.AddScoped<IExternalConditionsService, LocalHistoryConditionsService>();
 builder.Services.AddScoped<IPredictionService, PredictionService>();
+builder.Services.AddScoped<IPredictionOutcomeService, PredictionOutcomeService>();
 builder.Services.AddHostedService<DataRetentionService>();
+builder.Services.AddHostedService<PredictionSchedulerService>();
 
 // ─── Swagger ──────────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
