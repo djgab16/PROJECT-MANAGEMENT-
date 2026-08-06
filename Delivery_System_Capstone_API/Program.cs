@@ -81,6 +81,7 @@ builder.Services.AddScoped<IDeliveryOrderService, DeliveryOrderService>();
 builder.Services.AddScoped<ISlaService, SlaService>();
 builder.Services.AddSingleton<IPredictionCache, PredictionCache>();
 builder.Services.AddScoped<IExternalConditionsService, LocalHistoryConditionsService>();
+builder.Services.AddScoped<IMlRiskModelService, MlRiskModelService>();
 builder.Services.AddScoped<IPredictionService, PredictionService>();
 builder.Services.AddScoped<IPredictionOutcomeService, PredictionOutcomeService>();
 builder.Services.AddHostedService<DataRetentionService>();

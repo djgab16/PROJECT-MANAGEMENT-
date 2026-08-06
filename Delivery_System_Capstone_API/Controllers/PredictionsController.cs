@@ -24,19 +24,27 @@ namespace SPXDeliveryAPI.Controllers
         private readonly AppDbContext _context;
         private readonly ILogger<PredictionsController> _logger;
         private readonly IPredictionCache _cache;
+        private readonly IMlRiskModelService? _mlModelService;
 
+        /// <param name="mlModelService">
+        /// Optional so the controller stays constructible for the endpoints that predate the
+        /// learned model. The container always supplies it; when absent, the model endpoints
+        /// report "no model" rather than failing, and the heuristic endpoints are unaffected.
+        /// </param>
         public PredictionsController(
             IPredictionService predictionService,
             ISlaService slaService,
             AppDbContext context,
             ILogger<PredictionsController> logger,
-            IPredictionCache cache)
+            IPredictionCache cache,
+            IMlRiskModelService? mlModelService = null)
         {
             _predictionService = predictionService;
             _slaService = slaService;
             _context = context;
             _logger = logger;
             _cache = cache;
+            _mlModelService = mlModelService;
         }
 
         [HttpPost("run")]
@@ -530,29 +538,59 @@ namespace SPXDeliveryAPI.Controllers
                 return Ok(new PredictionAccuracyDto());
             }
 
-            var truePositives  = matrix.TruePositives;
-            var falsePositives = matrix.FalsePositives;
-            var trueNegatives  = matrix.TrueNegatives;
-            var falseNegatives = matrix.FalseNegatives;
-
             // The four predicates partition the set exactly (two booleans, four combinations),
             // so deriving TotalEvaluated from the cells makes the documented invariant
             // TP + FP + TN + FN == TotalEvaluated true by construction. A mismatch against the
             // raw row count would mean a NULL crept into a non-nullable bit column, so it is
             // logged rather than silently absorbed — and never thrown, because this endpoint
             // must not return 500 for a reporting anomaly.
-            var totalEvaluated = truePositives + falsePositives + trueNegatives + falseNegatives;
+            var result = BuildAccuracy(
+                matrix.TruePositives,
+                matrix.FalsePositives,
+                matrix.TrueNegatives,
+                matrix.FalseNegatives,
+                matrix.PeriodStart,
+                matrix.PeriodEnd);
 
-            if (totalEvaluated != matrix.RowCount)
+            if (result.TotalEvaluated != matrix.RowCount)
             {
                 _logger.LogWarning(
                     "Prediction accuracy confusion matrix does not tie out: cells sum to {CellSum} but {RowCount} outcome rows matched the filter.",
-                    totalEvaluated,
+                    result.TotalEvaluated,
                     matrix.RowCount);
             }
 
-            // Unrounded, so F1 stays arithmetically consistent with the cell counts rather than
-            // compounding two already-rounded inputs.
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Division that yields 0 for a zero (or negative) denominator instead of NaN or a
+        /// DivideByZeroException. Every metric on this endpoint has an empty-set case.
+        /// </summary>
+        private static double SafeRatio(int numerator, int denominator)
+        {
+            return denominator <= 0 ? 0.0 : (double)numerator / denominator;
+        }
+
+        /// <summary>
+        /// Builds the metric set from four confusion-matrix cells.
+        /// </summary>
+        /// <remarks>
+        /// Shared by <see cref="GetPredictionAccuracy"/> and
+        /// <see cref="CompareModelAccuracy"/> so the two endpoints cannot report the same
+        /// situation differently. Precision and recall are combined into F1 before rounding, so
+        /// F1 stays consistent with the cells instead of compounding two rounded inputs.
+        /// </remarks>
+        private static PredictionAccuracyDto BuildAccuracy(
+            int truePositives,
+            int falsePositives,
+            int trueNegatives,
+            int falseNegatives,
+            DateTime? periodStart,
+            DateTime? periodEnd)
+        {
+            var totalEvaluated = truePositives + falsePositives + trueNegatives + falseNegatives;
+
             var precision = SafeRatio(truePositives, truePositives + falsePositives);
             var recall    = SafeRatio(truePositives, truePositives + falseNegatives);
             var accuracy  = SafeRatio(truePositives + trueNegatives, totalEvaluated);
@@ -560,7 +598,7 @@ namespace SPXDeliveryAPI.Controllers
                 ? 0.0
                 : 2.0 * precision * recall / (precision + recall);
 
-            return Ok(new PredictionAccuracyDto
+            return new PredictionAccuracyDto
             {
                 TruePositives  = truePositives,
                 FalsePositives = falsePositives,
@@ -571,18 +609,197 @@ namespace SPXDeliveryAPI.Controllers
                 Recall         = Math.Round(recall, 3),
                 F1Score        = Math.Round(f1, 3),
                 TotalEvaluated = totalEvaluated,
-                EvaluationPeriodStart = matrix.PeriodStart,
-                EvaluationPeriodEnd   = matrix.PeriodEnd
-            });
+                EvaluationPeriodStart = periodStart,
+                EvaluationPeriodEnd   = periodEnd
+            };
         }
 
         /// <summary>
-        /// Division that yields 0 for a zero (or negative) denominator instead of NaN or a
-        /// DivideByZeroException. Every metric on this endpoint has an empty-set case.
+        /// Reports the active learned model: when it was fitted, on how much data, and the
+        /// coefficient it assigned to each factor next to that factor's hand-set weight.
         /// </summary>
-        private static double SafeRatio(int numerator, int denominator)
+        /// <remarks>
+        /// Inherits the class-level <c>OpTeamAndAbove</c> authorization policy.
+        /// </remarks>
+        [HttpGet("model")]
+        public async Task<IActionResult> GetActiveModel()
         {
-            return denominator <= 0 ? 0.0 : (double)numerator / denominator;
+            if (_mlModelService == null)
+            {
+                return Ok(new PredictionModelInfoDto { HasActiveModel = false });
+            }
+
+            var info = await _mlModelService.GetActiveModelInfoAsync();
+            return Ok(info);
+        }
+
+        /// <summary>
+        /// Fits a logistic-regression model and makes it active.
+        /// </summary>
+        /// <remarks>
+        /// Training never alters the live risk scores. The fitted model runs in shadow only, and
+        /// only once <c>Predictions:Ml:Enabled</c> is set.
+        /// <para>
+        /// Inherits the class-level <c>OpTeamAndAbove</c> authorization policy.
+        /// </para>
+        /// </remarks>
+        /// <param name="source">
+        /// <c>outcomes</c> (default) fits on real recorded results that carry captured features.
+        /// <c>synthetic</c> fits on generated data so the pipeline can be demonstrated before
+        /// enough real outcomes exist; the resulting model is tagged accordingly and its metrics
+        /// describe the generator, not the business.
+        /// </param>
+        /// <param name="sampleCount">Rows to generate. Applies to <c>synthetic</c> only.</param>
+        /// <param name="seed">Generator seed, so a demonstration is reproducible. Applies to <c>synthetic</c> only.</param>
+        [HttpPost("model/train")]
+        public async Task<IActionResult> TrainModel(
+            [FromQuery] string source = "outcomes",
+            [FromQuery] int sampleCount = 600,
+            [FromQuery] int seed = 20260805)
+        {
+            if (_mlModelService == null)
+            {
+                return Conflict(new { message = "The learned-model service is not available in this configuration." });
+            }
+
+            var normalised = (source ?? string.Empty).Trim().ToLowerInvariant();
+
+            ModelTrainingResult result;
+
+            switch (normalised)
+            {
+                case "outcomes":
+                    result = await _mlModelService.TrainFromOutcomesAsync();
+                    break;
+
+                case "synthetic":
+                    result = await _mlModelService.TrainFromSyntheticAsync(sampleCount, seed);
+                    break;
+
+                default:
+                    return BadRequest(new
+                    {
+                        message = "source must be either 'outcomes' or 'synthetic'."
+                    });
+            }
+
+            if (!result.Success)
+            {
+                // 409 rather than 400: the request was well formed, the data is simply not in a
+                // state that can be fitted yet. The reason is returned verbatim because it tells
+                // the operator what has to happen before training can succeed.
+                return Conflict(new { message = result.FailureReason });
+            }
+
+            _logger.LogInformation(
+                "Risk model retrained from {Source} by {User}.",
+                normalised,
+                User.Identity?.Name ?? "Operations Team");
+
+            return Ok(result.Info);
+        }
+
+        /// <summary>
+        /// Grades the rule-based scorer and the learned model against each other on the identical
+        /// set of recorded outcomes.
+        /// </summary>
+        /// <remarks>
+        /// Restricted to outcomes where the model actually produced a verdict, so neither side is
+        /// credited or penalised for rows the other never saw. Measuring the heuristic across all
+        /// history against a model that only covers recent orders would favour whichever happened
+        /// to get the easier deliveries.
+        /// <para>
+        /// Inherits the class-level <c>OpTeamAndAbove</c> authorization policy.
+        /// </para>
+        /// </remarks>
+        /// <param name="from">Optional inclusive lower bound on OutcomeRecordedAt (UTC).</param>
+        /// <param name="to">Optional inclusive upper bound on OutcomeRecordedAt (UTC).</param>
+        [HttpGet("accuracy/comparison")]
+        public async Task<IActionResult> CompareModelAccuracy(
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to = null)
+        {
+            // Degrades to reporting the matrices without model provenance rather than failing.
+            var activeModel = _mlModelService == null
+                ? new PredictionModelInfoDto { HasActiveModel = false }
+                : await _mlModelService.GetActiveModelInfoAsync();
+
+            var outcomes = _context.PredictionOutcomes
+                .AsNoTracking()
+                .Where(o => o.MlPredictedAtRisk != null);
+
+            if (from.HasValue)
+            {
+                outcomes = outcomes.Where(o => o.OutcomeRecordedAt >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                outcomes = outcomes.Where(o => o.OutcomeRecordedAt <= to.Value);
+            }
+
+            // Both matrices in one round trip, over one row set, so the two sides are guaranteed
+            // to describe the same deliveries.
+            var matrix = await outcomes
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    HeuristicTp = g.Count(o => o.PredictedAtRisk && o.ActuallyBreached),
+                    HeuristicFp = g.Count(o => o.PredictedAtRisk && !o.ActuallyBreached),
+                    HeuristicTn = g.Count(o => !o.PredictedAtRisk && !o.ActuallyBreached),
+                    HeuristicFn = g.Count(o => !o.PredictedAtRisk && o.ActuallyBreached),
+
+                    ModelTp = g.Count(o => o.MlPredictedAtRisk == true && o.ActuallyBreached),
+                    ModelFp = g.Count(o => o.MlPredictedAtRisk == true && !o.ActuallyBreached),
+                    ModelTn = g.Count(o => o.MlPredictedAtRisk == false && !o.ActuallyBreached),
+                    ModelFn = g.Count(o => o.MlPredictedAtRisk == false && o.ActuallyBreached),
+
+                    RowCount    = g.Count(),
+                    PeriodStart = g.Min(o => (DateTime?)o.OutcomeRecordedAt),
+                    PeriodEnd   = g.Max(o => (DateTime?)o.OutcomeRecordedAt)
+                })
+                .FirstOrDefaultAsync();
+
+            // Cold start: the model has not scored any delivery that has since completed. Zeroed
+            // matrices with null bounds, so "no comparison yet" stays distinguishable from "the
+            // model scored zero".
+            if (matrix == null || matrix.RowCount == 0)
+            {
+                return Ok(new ModelAccuracyComparisonDto
+                {
+                    ComparableOutcomes = 0,
+                    Heuristic = new PredictionAccuracyDto(),
+                    Model = new PredictionAccuracyDto(),
+                    F1Delta = 0.0,
+                    ActiveModel = activeModel.HasActiveModel ? activeModel : null
+                });
+            }
+
+            var heuristic = BuildAccuracy(
+                matrix.HeuristicTp, matrix.HeuristicFp, matrix.HeuristicTn, matrix.HeuristicFn,
+                matrix.PeriodStart, matrix.PeriodEnd);
+
+            var model = BuildAccuracy(
+                matrix.ModelTp, matrix.ModelFp, matrix.ModelTn, matrix.ModelFn,
+                matrix.PeriodStart, matrix.PeriodEnd);
+
+            if (heuristic.TotalEvaluated != matrix.RowCount || model.TotalEvaluated != matrix.RowCount)
+            {
+                _logger.LogWarning(
+                    "Model comparison matrices do not tie out: heuristic {HeuristicSum}, model {ModelSum}, rows {RowCount}.",
+                    heuristic.TotalEvaluated,
+                    model.TotalEvaluated,
+                    matrix.RowCount);
+            }
+
+            return Ok(new ModelAccuracyComparisonDto
+            {
+                ComparableOutcomes = matrix.RowCount,
+                Heuristic = heuristic,
+                Model = model,
+                F1Delta = Math.Round(model.F1Score - heuristic.F1Score, 3),
+                ActiveModel = activeModel.HasActiveModel ? activeModel : null
+            });
         }
 
         /// <summary>

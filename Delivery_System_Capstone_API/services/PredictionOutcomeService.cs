@@ -116,8 +116,25 @@ namespace SPXDeliveryAPI.Services
                 PredictedConfidence = prediction.ConfidenceScore,
                 ActuallyBreached = IsBreached(order),
                 PredictionMadeAt = prediction.PredictedAt,
-                OutcomeRecordedAt = DateTime.UtcNow
+                OutcomeRecordedAt = DateTime.UtcNow,
+
+                // Snapshotted on exactly the same terms as the prediction columns above: copied,
+                // never recomputed. Recomputing the features here would evaluate them against a
+                // delivery whose result is already known, so the model would be trained on inputs
+                // that encode their own label.
+                MlPredictedRiskScore = prediction.MlRiskScore,
+                MlPredictedAtRisk = prediction.MlIsAtRisk,
+                MlModelId = prediction.MlModelId
             };
+
+            // Carries FeaturesCaptured across only when the source prediction actually had it.
+            // Predictions written before feature capture shipped store 0.0 in all eight columns,
+            // and copying those in as though they were real would inject a bogus all-zero
+            // training example for every historical order.
+            if (prediction.FeaturesCaptured)
+            {
+                outcome.SetFeatures(prediction.ToFeatureVector());
+            }
 
             await _context.PredictionOutcomes.AddAsync(outcome, cancellationToken);
 

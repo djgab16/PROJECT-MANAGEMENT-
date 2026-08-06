@@ -39,6 +39,26 @@ namespace SPXDeliveryAPI.Services
             public static double Total =>
                 SlaRemainingTime + Priority + RedeliveryAttempts + DriverHistory
                 + RouteHistory + Package + ClientType + Conditions;
+
+            /// <summary>
+            /// The eight weights in the positional order defined by
+            /// <see cref="PredictionFeatureVector.Names"/>.
+            /// </summary>
+            /// <remarks>
+            /// Exists so a fitted coefficient can be reported next to the hand-set weight for the
+            /// same factor without any caller re-deriving the order and risking a mismatch.
+            /// </remarks>
+            public static double[] ToOrderedArray() => new[]
+            {
+                SlaRemainingTime,
+                Priority,
+                RedeliveryAttempts,
+                DriverHistory,
+                RouteHistory,
+                Package,
+                ClientType,
+                Conditions
+            };
         }
 
         /// <summary>
@@ -56,17 +76,26 @@ namespace SPXDeliveryAPI.Services
         private readonly ISlaService _slaService;
         private readonly IExternalConditionsService _conditionsService;
         private readonly IPredictionCache _cache;
+        private readonly IMlRiskModelService? _mlModelService;
 
+        /// <param name="mlModelService">
+        /// Optional. When absent, disabled, or not yet trained, no shadow score is produced and
+        /// this class behaves exactly as it did before the learned model existed. Optional rather
+        /// than required so the heuristic remains independently constructible and testable
+        /// without any model plumbing.
+        /// </param>
         public PredictionService(
             AppDbContext context,
             ISlaService slaService,
             IExternalConditionsService conditionsService,
-            IPredictionCache cache)
+            IPredictionCache cache,
+            IMlRiskModelService? mlModelService = null)
         {
             _context = context;
             _slaService = slaService;
             _conditionsService = conditionsService;
             _cache = cache;
+            _mlModelService = mlModelService;
         }
 
         /// <summary>Risk-level band boundaries. Inclusive lower bounds.</summary>
@@ -131,6 +160,13 @@ namespace SPXDeliveryAPI.Services
             var aggregates = await LoadPerformanceAggregatesAsync();
             var conditions = await _conditionsService.CreateSnapshotAsync();
 
+            // Resolved once for the whole run, on the same terms as the aggregates and the
+            // conditions snapshot. Null means shadow scoring is off or nothing has been trained;
+            // that is a skip, never a zero score.
+            var scorer = _mlModelService == null
+                ? null
+                : await _mlModelService.GetActiveScorerAsync();
+
             // Fetch existing predictions once to avoid N+1 updates
             var existingPredictions = await _context.DeliveryPredictions
                 .ToDictionaryAsync(p => p.DeliveryOrderId);
@@ -163,6 +199,8 @@ namespace SPXDeliveryAPI.Services
                     existing.RiskReason = result.RiskReason;
                     existing.RecommendedAction = result.RecommendedAction;
                     existing.PredictedAt = DateTime.UtcNow;
+                    existing.SetFeatures(result.Features);
+                    ApplyShadowScore(existing, result.Features, scorer);
                     _context.DeliveryPredictions.Update(existing);
                 }
                 else
@@ -185,6 +223,8 @@ namespace SPXDeliveryAPI.Services
                         RecommendedAction = result.RecommendedAction,
                         PredictedAt = DateTime.UtcNow
                     };
+                    newPred.SetFeatures(result.Features);
+                    ApplyShadowScore(newPred, result.Features, scorer);
                     await _context.DeliveryPredictions.AddAsync(newPred);
                 }
             }
@@ -250,6 +290,47 @@ namespace SPXDeliveryAPI.Services
 
                 await _context.Notifications.AddAsync(notification);
             }
+        }
+
+        /// <summary>
+        /// Writes the learned model's verdict onto a prediction row without touching any
+        /// heuristic field.
+        /// </summary>
+        /// <remarks>
+        /// This is the whole of shadow mode. <c>RiskScore</c>, <c>RiskLevel</c> and
+        /// <c>IsAtRisk</c> continue to carry the rule-based values that the dashboard, the
+        /// Critical alerts and the SLA summary all read, so turning the model on cannot move a
+        /// figure an operator is already acting on. The model's output lands in separate nullable
+        /// columns and is only ever read by the comparison endpoint.
+        /// <para>
+        /// When no scorer is available the columns are actively cleared rather than left alone.
+        /// A score from an earlier run would otherwise persist and later be snapshotted into an
+        /// outcome as though the model had produced it for that delivery, quietly corrupting the
+        /// comparison.
+        /// </para>
+        /// </remarks>
+        private static void ApplyShadowScore(
+            DeliveryPrediction prediction,
+            PredictionFeatureVector features,
+            IMlRiskScorer? scorer)
+        {
+            // Defensive: a factor outside [0,1] cannot have come from the scorer's own bands, so
+            // it indicates an upstream conditions provider returning something unexpected.
+            // Feeding it to the model would yield a confidently wrong probability, so the row is
+            // left unscored instead.
+            if (scorer == null || !features.IsValid())
+            {
+                prediction.MlRiskScore = null;
+                prediction.MlIsAtRisk = null;
+                prediction.MlModelId = null;
+                return;
+            }
+
+            var probability = scorer.PredictProbability(features);
+
+            prediction.MlRiskScore = probability;
+            prediction.MlIsAtRisk = probability >= scorer.DecisionThreshold;
+            prediction.MlModelId = scorer.ModelId;
         }
 
         private static string Truncate(string? value, int maxLength)
@@ -479,15 +560,32 @@ namespace SPXDeliveryAPI.Services
                 order.Area,
                 order.ExpectedDelivery);
 
+            // ─── Capture the factor inputs ───
+            // Assembled before the weighted sum and then summed *from* this vector, so the
+            // values persisted for training are provably the same ones that produced the score
+            // rather than a second copy that could drift from it. The operand order below is
+            // unchanged, so the arithmetic — and every existing expected score — is identical.
+            var features = new PredictionFeatureVector
+            {
+                SlaRemainingTime   = slaTimeScore,
+                Priority           = priorityScore,
+                RedeliveryAttempts = redeliveryScore,
+                DriverHistory      = driverScore,
+                RouteHistory       = routeScore,
+                Package            = packageScore,
+                ClientType         = clientScore,
+                Conditions         = conditionsScore
+            };
+
             // ─── Compute Weighted Risk Score ───
-            double riskScore = (slaTimeScore * ScoringWeights.SlaRemainingTime) +
-                               (priorityScore * ScoringWeights.Priority) +
-                               (redeliveryScore * ScoringWeights.RedeliveryAttempts) +
-                               (driverScore * ScoringWeights.DriverHistory) +
-                               (routeScore * ScoringWeights.RouteHistory) +
-                               (packageScore * ScoringWeights.Package) +
-                               (clientScore * ScoringWeights.ClientType) +
-                               (conditionsScore * ScoringWeights.Conditions);
+            double riskScore = (features.SlaRemainingTime * ScoringWeights.SlaRemainingTime) +
+                               (features.Priority * ScoringWeights.Priority) +
+                               (features.RedeliveryAttempts * ScoringWeights.RedeliveryAttempts) +
+                               (features.DriverHistory * ScoringWeights.DriverHistory) +
+                               (features.RouteHistory * ScoringWeights.RouteHistory) +
+                               (features.Package * ScoringWeights.Package) +
+                               (features.ClientType * ScoringWeights.ClientType) +
+                               (features.Conditions * ScoringWeights.Conditions);
 
             // Clamp risk score to [0.0, 1.0].
             //
@@ -594,7 +692,8 @@ namespace SPXDeliveryAPI.Services
                 ConfidenceScore = confidence,
                 IsAtRisk = isAtRisk,
                 RiskReason = riskReasonStr,
-                RecommendedAction = recommendedAction
+                RecommendedAction = recommendedAction,
+                Features = features
             };
         }
     }

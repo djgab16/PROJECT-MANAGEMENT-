@@ -22,6 +22,7 @@ namespace SPXDeliveryAPI.Data
         public DbSet<AppTask> Tasks { get; set; }
         public DbSet<DeliveryPrediction> DeliveryPredictions { get; set; }
         public DbSet<PredictionOutcome> PredictionOutcomes { get; set; }
+        public DbSet<PredictionModel> PredictionModels { get; set; }
 
         public override int SaveChanges()
         {
@@ -181,6 +182,24 @@ namespace SPXDeliveryAPI.Data
             // Accuracy queries filter on the evaluation window.
             modelBuilder.Entity<PredictionOutcome>()
                 .HasIndex(o => o.OutcomeRecordedAt);
+
+            // Training filters on this flag, so it is indexed alongside the window. Outcomes
+            // predating feature capture are excluded from every fit and, over time, become the
+            // minority of a growing table.
+            modelBuilder.Entity<PredictionOutcome>()
+                .HasIndex(o => o.FeaturesCaptured);
+
+            // Enforces "at most one active model" in the database rather than trusting callers
+            // to maintain it. A filtered index is used so the many retired rows — which are kept
+            // deliberately, since outcomes snapshotted against them must stay interpretable —
+            // are not forced to be unique on a constant false value.
+            modelBuilder.Entity<PredictionModel>()
+                .HasIndex(m => m.IsActive)
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            modelBuilder.Entity<PredictionModel>()
+                .HasIndex(m => m.TrainedAt);
         }
     }
 }

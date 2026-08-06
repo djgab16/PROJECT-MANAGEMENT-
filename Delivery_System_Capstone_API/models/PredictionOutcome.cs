@@ -65,5 +65,90 @@ namespace SPXDeliveryAPI.Models
         /// <summary>When this outcome was captured (UTC).</summary>
         [Required]
         public DateTime OutcomeRecordedAt { get; set; } = DateTime.UtcNow;
+
+        // ─── Training row: features paired with the label ─────────────────────────────
+        // Copied verbatim from the DeliveryPrediction row, on the same terms as the prediction
+        // columns above and for the same reason. Together with ActuallyBreached these eight
+        // values form one supervised training example whose inputs were fixed before the label
+        // was observable, which is the property that makes a fit on this table honest.
+
+        /// <summary>
+        /// False when the snapshotted prediction predated feature capture. Training must filter
+        /// on this rather than on the values, since an uncaptured row stores 0.0 throughout and
+        /// would otherwise enter the fit as a spurious all-zero example.
+        /// </summary>
+        [Required]
+        public bool FeaturesCaptured { get; set; }
+
+        [Required]
+        public double FeatureSlaRemainingTime { get; set; }
+
+        [Required]
+        public double FeaturePriority { get; set; }
+
+        [Required]
+        public double FeatureRedeliveryAttempts { get; set; }
+
+        [Required]
+        public double FeatureDriverHistory { get; set; }
+
+        [Required]
+        public double FeatureRouteHistory { get; set; }
+
+        [Required]
+        public double FeaturePackage { get; set; }
+
+        [Required]
+        public double FeatureClientType { get; set; }
+
+        [Required]
+        public double FeatureConditions { get; set; }
+
+        // ─── Shadow-mode model snapshot ───────────────────────────────────────────────
+
+        /// <summary>
+        /// The model's probability as it stood before the outcome was known, or null when no
+        /// model scored this order. This is what lets the model be graded on exactly the same
+        /// rows as the heuristic, which is the only fair comparison available.
+        /// </summary>
+        public double? MlPredictedRiskScore { get; set; }
+
+        /// <summary>Model verdict before the outcome was known. Null when the model did not run.</summary>
+        public bool? MlPredictedAtRisk { get; set; }
+
+        /// <summary>The model that produced the snapshot, retained so a retrain cannot rewrite history.</summary>
+        public int? MlModelId { get; set; }
+
+        /// <summary>Copies the eight snapshotted factor values into a feature vector.</summary>
+        public PredictionFeatureVector ToFeatureVector() => new()
+        {
+            SlaRemainingTime   = FeatureSlaRemainingTime,
+            Priority           = FeaturePriority,
+            RedeliveryAttempts = FeatureRedeliveryAttempts,
+            DriverHistory      = FeatureDriverHistory,
+            RouteHistory       = FeatureRouteHistory,
+            Package            = FeaturePackage,
+            ClientType         = FeatureClientType,
+            Conditions         = FeatureConditions
+        };
+
+        /// <summary>Writes a feature vector into the eight columns and marks the row as captured.</summary>
+        public void SetFeatures(PredictionFeatureVector features)
+        {
+            if (features == null)
+            {
+                throw new ArgumentNullException(nameof(features));
+            }
+
+            FeatureSlaRemainingTime   = features.SlaRemainingTime;
+            FeaturePriority           = features.Priority;
+            FeatureRedeliveryAttempts = features.RedeliveryAttempts;
+            FeatureDriverHistory      = features.DriverHistory;
+            FeatureRouteHistory       = features.RouteHistory;
+            FeaturePackage            = features.Package;
+            FeatureClientType         = features.ClientType;
+            FeatureConditions         = features.Conditions;
+            FeaturesCaptured          = true;
+        }
     }
 }
