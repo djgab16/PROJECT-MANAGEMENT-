@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Risk Management &amp; At-Risk Delivery Prediction &mdash; Feature Walkthrough</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0B1220', panel: '#121B2E', edge: '#1F2C45',
+          low: '#22C55E', med: '#F59E0B', high: '#F97316', crit: '#EF4444',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+          mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  .slide { display: none; }
+  .slide.is-active { display: flex; }
+  .notes { display: none; }
+  body.notes-on .notes { display: block; }
+  @media print {
+    body { background:#fff !important; }
+    .no-print { display:none !important; }
+    .slide { display:flex !important; page-break-after:always; min-height:auto; border:1px solid #ddd; margin-bottom:1rem; }
+    .notes { display:block !important; }
+  }
+</style>
+</head>
+<body class="bg-ink text-slate-100 font-sans antialiased">
+
+<header class="no-print sticky top-0 z-40 border-b border-edge bg-ink/95 backdrop-blur">
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+    <div class="min-w-0 flex-1">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-med">Feature Walkthrough</p>
+      <h1 class="truncate text-sm font-bold sm:text-base">Risk Management &amp; At-Risk Prediction</h1>
+    </div>
+    <nav aria-label="Slide navigation" class="order-3 w-full sm:order-2 sm:w-auto">
+      <ol id="dots" class="flex flex-wrap items-center gap-1.5"></ol>
+    </nav>
+    <div class="order-2 flex items-center gap-2 sm:order-3">
+      <button id="notesBtn" type="button" aria-pressed="false"
+        class="rounded-md border border-edge px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-edge hover:text-white">Notes</button>
+      <button id="prev" type="button" aria-label="Previous slide"
+        class="rounded-md border border-edge px-3 py-1.5 text-sm font-bold transition hover:bg-edge disabled:opacity-30">&larr;</button>
+      <span id="counter" class="w-14 text-center font-mono text-xs text-slate-400" aria-live="polite"></span>
+      <button id="next" type="button" aria-label="Next slide"
+        class="rounded-md border border-edge px-3 py-1.5 text-sm font-bold transition hover:bg-edge disabled:opacity-30">&rarr;</button>
+    </div>
+  </div>
+  <div class="h-0.5 w-full bg-edge"><div id="bar" class="h-full bg-gradient-to-r from-med via-high to-crit transition-all duration-300"></div></div>
+</header>
+
+<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+
+  <!-- ═════════ 0 · THE PROBLEM ═════════ -->
+  <section class="slide min-h-[70vh] flex-col justify-center" data-slide="0" aria-label="The problem">
+    <article class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-ink p-6 sm:p-12">
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-med">The feature &middot; why it exists</p>
+      <h2 class="mt-4 text-3xl font-extrabold leading-tight sm:text-5xl">
+        Risk Management for<br /><span class="text-slate-400">Delivery SLAs</span>
+      </h2>
+
+      <div class="mt-8 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-crit/40 bg-crit/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-crit">Before</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-300">
+            A coordinator opened the dashboard and saw which deliveries <strong class="text-white">had already breached</strong>.
+            The information arrived <em>after</em> the deadline &mdash; when the only remaining action was writing an apology.
+          </p>
+        </div>
+        <div class="rounded-xl border border-low/40 bg-low/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-low">After</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-300">
+            Every active delivery carries a <strong class="text-white">risk score, a band, a plain-English reason
+            and a recommended action</strong> &mdash; recomputed automatically, hours before the deadline.
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-8 max-w-3xl border-l-4 border-med pl-4 text-lg leading-relaxed text-slate-200">
+        The system moved from <strong class="text-white">reporting failure</strong> to
+        <strong class="text-white">preventing it</strong>.
+      </p>
+
+      <dl class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Weighted factors</dt>
+          <dd class="mt-1 text-2xl font-bold text-med">8</dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Risk bands</dt>
+          <dd class="mt-1 text-2xl font-bold text-high">4</dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Auto-recompute</dt>
+          <dd class="mt-1 text-2xl font-bold text-sky-400">30<span class="text-sm">min</span></dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">External APIs</dt>
+          <dd class="mt-1 text-2xl font-bold text-low">0</dd>
+        </div>
+      </dl>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-med bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-med">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Lead with the before/after, not the algorithm. The one sentence that has to land is
+        <em>"we moved from reporting failure to preventing it."</em> Flag the <strong>zero external APIs</strong> figure
+        early &mdash; it pre-empts "so you just called a weather service?" and sets up slide 4.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 1 · WHAT IT DOES / SCOPE ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="1" aria-label="Scope">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">What the feature does</h2>
+        <span class="rounded-full bg-med/15 px-3 py-1 text-xs font-bold text-med">Scope</span>
+      </div>
+
+      <div class="mt-6 grid gap-5 lg:grid-cols-2">
+        <div class="space-y-4">
+          <div class="rounded-xl border border-low/30 bg-low/5 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-low">It does</h3>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-300">
+              <li>&bull; Score every <strong class="text-white">active</strong> delivery, 0.00 &rarr; 1.00</li>
+              <li>&bull; Sort each into Low / Medium / High / Critical</li>
+              <li>&bull; Explain <em>why</em> &mdash; a bulleted risk reason per order</li>
+              <li>&bull; Recommend <em>one</em> next action</li>
+              <li>&bull; Alert the floor when an order escalates into Critical</li>
+              <li>&bull; Record what actually happened, then grade itself</li>
+              <li>&bull; Break performance down by route, priority and driver</li>
+            </ul>
+          </div>
+          <div class="rounded-xl border border-crit/30 bg-crit/5 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-crit">It deliberately does not</h3>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-300">
+              <li>&bull; <strong class="text-white">Reassign or reschedule anything itself.</strong> It advises; a human decides.</li>
+              <li>&bull; Call any paid traffic or weather API</li>
+              <li>&bull; Promise a calibrated arrival time</li>
+              <li>&bull; Let the machine-learned model drive operations</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">One scored delivery, end to end</h3>
+          <div class="mt-3 space-y-2.5 font-mono text-xs">
+            <div class="rounded-lg border border-edge bg-ink p-3">
+              <p class="text-slate-500">waybill</p>
+              <p class="text-slate-200">SPX&#8209;0000&#8209;4471 &middot; Priority: High &middot; Route: Manila</p>
+            </div>
+            <p class="text-center text-slate-600">&darr; 8 factors, weighted</p>
+            <div class="rounded-lg border border-crit/50 bg-crit/10 p-3">
+              <p class="text-slate-400">riskScore</p>
+              <p class="text-xl font-bold text-crit">0.84 &nbsp;<span class="text-sm">CRITICAL</span></p>
+              <p class="mt-1 text-slate-400">confidence 0.90</p>
+            </div>
+            <p class="text-center text-slate-600">&darr;</p>
+            <div class="rounded-lg border border-edge bg-ink p-3">
+              <p class="text-slate-500">riskReason</p>
+              <p class="whitespace-pre-line text-slate-200">&bull; Less than 12 hours to deadline
+&bull; No driver assigned
+&bull; Route breach rate above 30%</p>
+            </div>
+            <div class="rounded-lg border border-med/50 bg-med/10 p-3">
+              <p class="text-slate-400">recommendedAction</p>
+              <p class="text-med">Escalate to dispatch immediately</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-med bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-med">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Walk the right-hand column top to bottom &mdash; it is the whole feature in one screen. Stress that the output is
+        not just a number: a bare 0.84 is useless to a coordinator at 2am, whereas
+        <em>"no driver assigned, 12 hours left, escalate"</em> is actionable. That gap is the design argument for the
+        entire feature.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 2 · THE 8 FACTORS ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="2" aria-label="The eight factors">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">How risk is computed</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">The core</span>
+      </div>
+
+      <p class="mt-4 text-sm text-slate-400">
+        Eight signals, each normalised to <code class="font-mono text-xs text-sky-300">[0,1]</code>, combined by a fixed
+        weight table. <strong class="text-white">The weights sum to exactly 1.00</strong> &mdash; enforced by a unit test,
+        so the score can never silently drift out of range.
+      </p>
+
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full min-w-[44rem] border-collapse text-sm">
+          <caption class="sr-only">The eight risk factors, their weights and scoring rules</caption>
+          <thead>
+            <tr class="border-b border-edge text-left text-[11px] uppercase tracking-wider text-slate-400">
+              <th scope="col" class="py-2 pr-3">Factor</th>
+              <th scope="col" class="py-2 pr-3 text-right">Weight</th>
+              <th scope="col" class="py-2 pr-3">How it scores</th>
+              <th scope="col" class="py-2">Why it earns that weight</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge/60 align-top">
+            <tr class="bg-crit/5">
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Time to deadline</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-crit">0.35</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">&le;0h&rarr;1.0 &middot; &le;6h&rarr;0.9 &middot; &le;12h&rarr;0.7<br />&le;24h&rarr;0.4 &middot; &le;48h&rarr;0.2 &middot; else 0</td>
+              <td class="py-2.5 text-slate-400">The only factor that <em>always</em> gets worse on its own. Nothing predicts a breach better than being nearly out of time.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Priority</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-high">0.15</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">high 1.0 &middot; medium 0.5<br />low 0.1 &middot; unknown 0.3</td>
+              <td class="py-2.5 text-slate-400">A tighter promise is easier to break. Unknown values score mid-range rather than safe &mdash; bad data should not read as low risk.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Failed attempts</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-high">0.15</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">&ge;2&rarr;1.0 &middot; 1&rarr;0.6 &middot; 0&rarr;0.0</td>
+              <td class="py-2.5 text-slate-400">A redelivery already failed once. The second attempt is not a fresh start.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Driver history</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-high">0.15</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">no driver&rarr;<strong class="text-crit">0.8</strong><br />&ge;3 past jobs&rarr;breach rate<br />else 0.2</td>
+              <td class="py-2.5 text-slate-400">An <strong class="text-white">unassigned</strong> order is treated as high risk on purpose &mdash; nobody is currently carrying it.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Route history</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-med">0.10</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">&ge;3 past jobs&rarr;breach rate<br />else 0.2</td>
+              <td class="py-2.5 text-slate-400">Some routes simply fail more. Requires 3 samples before we trust a rate.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Package size</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-slate-300">0.05</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">&gt;15kg or &gt;8 items&rarr;1.0<br />&gt;5kg or &gt;3 items&rarr;0.4</td>
+              <td class="py-2.5 text-slate-400">Bulky loads are slower to handle, but it is a second-order effect.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Client type</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-slate-300">0.03</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">vip 0.7 &middot; express 0.5<br />corporate 0.3 &middot; else 0.1</td>
+              <td class="py-2.5 text-slate-400">Consequence weighting, not delay prediction. Kept small so it never dominates.</td>
+            </tr>
+            <tr>
+              <th scope="row" class="py-2.5 pr-3 text-left font-bold text-white">Operating conditions</th>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-slate-300">0.02</td>
+              <td class="py-2.5 pr-3 font-mono text-xs text-slate-400">blended history + traffic<br />+ calendar &rarr; slide 4</td>
+              <td class="py-2.5 text-slate-400">Real, but honestly small. We weighted it by how much we trust it.</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-edge">
+              <th scope="row" class="py-3 pr-3 text-left text-xs uppercase tracking-wider text-slate-400">Total</th>
+              <td class="py-3 pr-3 text-right font-mono text-lg font-extrabold text-low">1.00</td>
+              <td colspan="2" class="py-3 text-xs text-slate-500">Unit-tested with rounding &mdash; values like 0.35 and 0.03 are not exactly representable in binary floating point.</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        This is the slide you will be questioned on. Do not read all eight &mdash; say
+        <em>"time to deadline carries a third of the weight, because it is the only signal that always gets worse on
+        its own,"</em> then jump to the two design decisions worth defending: an <strong>unassigned order scores
+        0.8</strong>, and <strong>unknown priority scores 0.3, not 0</strong> &mdash; missing data must never read as safe.
+        If asked "where did the weights come from?": they are expert-assigned, not fitted, which is exactly why we
+        built the shadow model on slide 7 to test them.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 3 · BANDS ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="3" aria-label="Risk bands">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">From score to decision</h2>
+        <span class="rounded-full bg-high/15 px-3 py-1 text-xs font-bold text-high">Bands</span>
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border-2 border-crit bg-crit/10 p-5">
+          <p class="font-mono text-xs text-crit">&ge; 0.80</p>
+          <h3 class="mt-1 text-xl font-extrabold text-crit">Critical</h3>
+          <p class="mt-2 text-sm text-slate-300">Escalate now. <strong class="text-white">Fires an alert</strong> on entry to this band.</p>
+        </div>
+        <div class="rounded-xl border-2 border-high bg-high/10 p-5">
+          <p class="font-mono text-xs text-high">&ge; 0.60</p>
+          <h3 class="mt-1 text-xl font-extrabold text-high">High</h3>
+          <p class="mt-2 text-sm text-slate-300">Intervene today &mdash; assign, reassign or contact.</p>
+        </div>
+        <div class="rounded-xl border-2 border-med bg-med/10 p-5">
+          <p class="font-mono text-xs text-med">&ge; 0.35</p>
+          <h3 class="mt-1 text-xl font-extrabold text-med">Medium</h3>
+          <p class="mt-2 text-sm text-slate-300">Monitor closely. <strong class="text-white">Still counts as at-risk.</strong></p>
+        </div>
+        <div class="rounded-xl border-2 border-low bg-low/10 p-5">
+          <p class="font-mono text-xs text-low">&lt; 0.35</p>
+          <h3 class="mt-1 text-xl font-extrabold text-low">Low</h3>
+          <p class="mt-2 text-sm text-slate-300">No action required.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5 lg:col-span-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">What &ldquo;at risk&rdquo; means &mdash; precisely</h3>
+          <p class="mt-2 font-mono text-sm text-sky-300">isAtRisk = score &ge; 0.35 &nbsp;OR&nbsp; deadline already passed</p>
+          <p class="mt-2 text-sm text-slate-400">
+            Two things worth noting. First, the flag reads the
+            <strong class="text-white">same constant</strong> as the Medium band rather than a copied literal &mdash; so
+            retuning the band can never silently decouple the flag from the label. Second, a breached order is flagged
+            <strong class="text-white">regardless of score</strong>; there is no arithmetic route to missing an order
+            that is already late.
+          </p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Confidence</h3>
+          <p class="mt-2 text-sm text-slate-400">
+            Starts at <span class="font-mono text-slate-200">0.60</span> and rises as real history backs the score &mdash;
+            driver record, route record, parsed weight, client record.
+          </p>
+          <p class="mt-2 text-sm text-slate-400">Capped at <span class="font-mono text-slate-200">0.98</span>. It is a prediction; it never claims certainty.</p>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-med/40 bg-med/5 p-4">
+        <p class="text-sm text-slate-300">
+          <strong class="text-med">Known quirk, stated up front:</strong> because the client-type factor tops out at 0.7,
+          the maximum reachable score is about <strong class="text-white">0.99, not 1.00</strong>. Nothing in the system
+          assumes a perfect 1.0 is attainable.
+        </p>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-high bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-high">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        The four cards are self-explanatory &mdash; do not narrate them. Spend the time on the
+        <code class="rounded bg-edge px-1 font-mono text-xs">isAtRisk</code> line, especially the
+        <strong>OR deadline passed</strong> clause: it guarantees a late order can never be scored into invisibility.
+        Then volunteer the 0.99 ceiling. It is a small, precise, self-caught flaw, and disclosing it buys you far more
+        credibility than it costs.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 4 · CONDITIONS FACTOR ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="4" aria-label="Conditions factor">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">The factor we had to rebuild</h2>
+        <span class="rounded-full bg-low/15 px-3 py-1 text-xs font-bold text-low">Deep dive</span>
+      </div>
+
+      <div class="mt-5 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-crit/40 bg-crit/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-crit">What we found</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            The operating-conditions factor had <strong class="text-white">hardcoded traffic and weather values</strong>.
+            It resolved to one of two numbers &mdash; 0.2 on a weekday, 0.533 on a weekend.
+          </p>
+          <p class="mt-3 rounded-lg border border-crit/40 bg-ink p-3 font-mono text-xs text-crit">
+            weighted spread = 0.533 &minus; 0.2 &times; 0.02<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <strong>0.0067</strong>
+          </p>
+          <p class="mt-2 text-sm text-slate-400">
+            The narrowest band gap is 0.25. This factor was
+            <strong class="text-white">mathematically incapable</strong> of moving a single order between bands. It was
+            decoration.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-low/40 bg-low/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-low">What we replaced it with</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            Our own delivery history &mdash; no paid API, no new dependency. Three blended signals whose weights also
+            sum to 1.00:
+          </p>
+          <dl class="mt-3 space-y-2 text-sm">
+            <div class="flex gap-3">
+              <dt class="w-14 shrink-0 font-mono font-bold text-low">0.55</dt>
+              <dd class="text-slate-400"><strong class="text-slate-200">Historical breach rate</strong> for this route, area and time of day</dd>
+            </div>
+            <div class="flex gap-3">
+              <dt class="w-14 shrink-0 font-mono font-bold text-low">0.25</dt>
+              <dd class="text-slate-400"><strong class="text-slate-200">Congestion</strong> &mdash; Metro Manila rush windows, 7&ndash;9am and 5&ndash;7pm</dd>
+            </div>
+            <div class="flex gap-3">
+              <dt class="w-14 shrink-0 font-mono font-bold text-low">0.20</dt>
+              <dd class="text-slate-400"><strong class="text-slate-200">Calendar</strong> &mdash; weekend versus weekday</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="mt-5 rounded-xl border border-edge bg-ink/50 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">The fallback chain &mdash; a new route still gets a defensible number</h3>
+        <p class="mt-2 text-sm text-slate-400">Each level needs at least <strong class="text-white">3 past deliveries</strong> before we trust it. If it doesn't, we fall through:</p>
+        <ol class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <li class="rounded-lg border border-low/50 bg-low/10 px-3 py-2 font-mono text-low">route + time</li>
+          <li class="text-slate-600">&rarr;</li>
+          <li class="rounded-lg border border-edge bg-ink px-3 py-2 font-mono text-slate-300">area + time</li>
+          <li class="text-slate-600">&rarr;</li>
+          <li class="rounded-lg border border-edge bg-ink px-3 py-2 font-mono text-slate-300">route overall</li>
+          <li class="text-slate-600">&rarr;</li>
+          <li class="rounded-lg border border-edge bg-ink px-3 py-2 font-mono text-slate-300">area overall</li>
+          <li class="text-slate-600">&rarr;</li>
+          <li class="rounded-lg border border-edge bg-ink px-3 py-2 font-mono text-slate-300">global</li>
+          <li class="text-slate-600">&rarr;</li>
+          <li class="rounded-lg border border-med/50 bg-med/10 px-3 py-2 font-mono text-med">0.2 default</li>
+        </ol>
+        <p class="mt-3 text-sm text-slate-400">
+          Also worth noting: conditions are evaluated against the <strong class="text-white">delivery slot</strong>,
+          not the moment we happen to run &mdash; because what matters is the traffic at 6pm Friday, not at 10am when
+          the scorer fired.
+        </p>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-low bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-low">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        This is your strongest technical slide &mdash; you audited your own model and proved a component was inert.
+        Deliver the arithmetic slowly: <em>"0.0067 of weighted movement, against a smallest band gap of 0.25."</em>
+        Then the payoff line: <em>"it looked like it was working, and it could not possibly have been."</em>
+        The fallback chain answers the obvious follow-up &mdash; "what about a brand-new route?" &mdash; so let them ask it
+        if you are short on time.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 5 · AUTOMATION & ALERTS ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="5" aria-label="Automation and alerting">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Running it unattended</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">Automation</span>
+      </div>
+
+      <p class="mt-4 text-sm text-slate-400">
+        A score that only updates when somebody clicks a button is <strong class="text-white">wrong by design</strong> &mdash;
+        the heaviest factor decays with the clock. So it runs itself.
+      </p>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+        <div class="space-y-4">
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="font-bold text-white">Every 30 minutes, guarded</h3>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-400">
+              <li>&bull; <strong class="text-slate-200">Hard 5-minute floor</strong> &mdash; a bad config value cannot make it hot-spin</li>
+              <li>&bull; <strong class="text-slate-200">Overlapping runs are skipped, not queued</strong> &mdash; no pile-up under load</li>
+              <li>&bull; <strong class="text-slate-200">Errors caught inside the loop</strong> &mdash; one bad record cannot kill the service</li>
+              <li>&bull; <strong class="text-slate-200">60-second startup delay</strong> &mdash; lets the app finish booting first</li>
+            </ul>
+          </div>
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="font-bold text-white">One pass, zero N+1</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              All driver, route and client history plus the conditions snapshot are fetched
+              <strong class="text-white">once per run</strong>. Inside the scoring loop there is
+              <strong class="text-white">no database access at all</strong> &mdash; scoring 500 orders costs the same
+              handful of queries as scoring 5.
+            </p>
+          </div>
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="font-bold text-white">Separable audit trail</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Scheduled runs log under <code class="font-mono text-xs text-sky-300">AutoRun-</code>, operator-triggered
+              runs under <code class="font-mono text-xs text-sky-300">Run-</code>. You can always tell whether a human
+              or the clock produced a score.
+            </p>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-crit/40 bg-crit/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-crit">Alerting without alert fatigue</h3>
+          <p class="mt-3 text-sm text-slate-300">
+            The naive version re-alerts on every Critical order, every run. That is
+            <strong class="text-white">48 pages a day for one delivery</strong> &mdash; and a floor that learns to ignore
+            the system.
+          </p>
+          <div class="mt-4 rounded-lg border border-edge bg-ink p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-500">The fix</p>
+            <p class="mt-1 text-sm text-slate-200">
+              Read the <em>previous</em> band before overwriting it, and alert only on the
+              <strong class="text-crit">transition into</strong> Critical.
+            </p>
+            <p class="mt-2 font-mono text-xs text-slate-400">High &rarr; Critical &nbsp;=&nbsp; <span class="text-crit">alert</span></p>
+            <p class="font-mono text-xs text-slate-400">Critical &rarr; Critical &nbsp;=&nbsp; <span class="text-low">silence</span></p>
+          </div>
+          <p class="mt-4 text-sm text-slate-400">
+            Alerts land in the <strong class="text-white">existing</strong> notification feed, tagged
+            <em>SLA Prediction Engine</em>, carrying the recommended action as the body &mdash; so the alert itself tells
+            the coordinator what to do.
+          </p>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        The "48 pages a day" number is what makes this slide memorable &mdash; use it. The transition-detection fix is a
+        genuinely non-obvious engineering insight, and it shows you thought about the human on the receiving end, not
+        just the algorithm. If someone asks about scale, the N+1 panel is your answer: constant query count regardless
+        of order volume.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 6 · DOES IT WORK ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="6" aria-label="Accuracy">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">But is it actually right?</h2>
+        <span class="rounded-full bg-low/15 px-3 py-1 text-xs font-bold text-low">Validation</span>
+      </div>
+
+      <div class="mt-5 rounded-xl border border-crit/40 bg-crit/5 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-crit">The trap we avoided</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          Our completed-deliveries view derives its risk fields <em>from the outcome</em> &mdash; a breached order is
+          labelled High after the fact. Measuring accuracy against that view returns
+          <strong class="text-white">100%, truthfully computed, and completely worthless.</strong>
+        </p>
+      </div>
+
+      <div class="mt-5 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-low/40 bg-low/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-low">What we do instead</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            When a delivery reaches a terminal status, we snapshot the prediction
+            <strong class="text-white">as it stood before the result was known</strong>, alongside what actually
+            happened.
+          </p>
+          <ul class="mt-3 space-y-1.5 text-sm text-slate-400">
+            <li>&bull; Features are copied <strong class="text-slate-200">verbatim, never recomputed</strong> &mdash; recomputing time-based factors after delivery would leak the answer into its own inputs</li>
+            <li>&bull; Written in the <strong class="text-slate-200">same transaction</strong> as the status change</li>
+            <li>&bull; <strong class="text-slate-200">Idempotent</strong> &mdash; three layers of guard, including a unique index</li>
+            <li>&bull; If no prediction existed, the order is <strong class="text-slate-200">skipped, not invented</strong></li>
+          </ul>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">The confusion matrix, in operator language</h3>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div class="rounded-lg border border-low/50 bg-low/10 p-3">
+              <p class="font-mono text-[11px] text-low">TP</p>
+              <p class="mt-0.5 font-semibold text-slate-200">Correctly flagged at risk</p>
+            </div>
+            <div class="rounded-lg border border-med/50 bg-med/10 p-3">
+              <p class="font-mono text-[11px] text-med">FP</p>
+              <p class="mt-0.5 font-semibold text-slate-200">False alarms</p>
+            </div>
+            <div class="rounded-lg border border-low/50 bg-low/10 p-3">
+              <p class="font-mono text-[11px] text-low">TN</p>
+              <p class="mt-0.5 font-semibold text-slate-200">Correctly cleared</p>
+            </div>
+            <div class="rounded-lg border border-crit/50 bg-crit/10 p-3">
+              <p class="font-mono text-[11px] text-crit">FN</p>
+              <p class="mt-0.5 font-semibold text-slate-200">Missed breaches</p>
+            </div>
+          </div>
+          <p class="mt-3 text-sm text-slate-400">
+            Reported as accuracy, precision, recall and F1 &mdash; and rendered on the dashboard with those plain-English
+            labels, because <em>"false negative"</em> means nothing to a coordinator but
+            <em>"missed breaches"</em> does.
+          </p>
+          <p class="mt-3 text-xs text-slate-500">
+            With no outcomes yet, the endpoint returns an explicit <strong class="text-slate-300">&ldquo;not yet
+            validated&rdquo;</strong> state &mdash; never a measured zero.
+          </p>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-low bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-low">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        <strong>This is the most important slide in the deck.</strong> Any team can show a risk score; almost none can
+        show they refused a flattering metric. Deliver the line and then stop talking for a beat:
+        <em>"we could have reported 100% accuracy, computed correctly, and it would have meant nothing."</em>
+        Explaining <em>why</em> you rejected it demonstrates more understanding than any number you could put on screen.
+        Have the live figures ready but do not lead with them.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 7 · SHADOW MODEL ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="7" aria-label="Shadow model">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Testing the weights with a real model</h2>
+        <span class="rounded-full bg-med/15 px-3 py-1 text-xs font-bold text-med">Shadow mode</span>
+      </div>
+
+      <p class="mt-4 text-sm text-slate-400">
+        Our eight weights are <strong class="text-white">expert-assigned, not fitted</strong>. The honest question is
+        &ldquo;would a model trained on our own outcomes choose differently?&rdquo; So we built one &mdash; and gave it
+        <strong class="text-white">no authority whatsoever</strong>.
+      </p>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">What it is</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            <strong class="text-white">Logistic regression</strong>, written directly in C# &mdash; no ML framework. The
+            eight factors are already normalised, so no scaling was needed and a heavyweight dependency would have
+            bought us nothing.
+          </p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-slate-200">Fully deterministic</strong> &mdash; same data in, identical coefficients out, every time. That is what lets us unit-test a trained model.</p>
+        </div>
+
+        <div class="rounded-xl border border-med/40 bg-med/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-med">What &ldquo;shadow&rdquo; means</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            It writes to <strong class="text-white">three separate nullable columns</strong>. The score, the band and the
+            at-risk flag &mdash; the fields the dashboard, the alerts and the summary all read &mdash;
+            <strong class="text-white">are never touched by it</strong>.
+          </p>
+          <p class="mt-2 text-sm text-slate-400">
+            It ships <strong class="text-slate-200">switched off</strong>. Installing the build changes nothing until
+            somebody deliberately enables it.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Refusing to train</h3>
+          <p class="mt-2 text-sm text-slate-400">Four guards. It declines rather than fitting nonsense:</p>
+          <ul class="mt-2 space-y-1.5 text-sm text-slate-400">
+            <li>&bull; <strong class="text-slate-200">All-breach or all-safe data</strong> &mdash; would learn to say one word forever</li>
+            <li>&bull; <strong class="text-slate-200">Too few rows</strong> to identify 8 coefficients</li>
+            <li>&bull; <strong class="text-slate-200">Out-of-range rows dropped, not clamped</strong> &mdash; clamping trains on a value that never existed</li>
+            <li>&bull; <strong class="text-slate-200">Non-finite input</strong> rejected before it can poison every coefficient</li>
+          </ul>
+          <p class="mt-2 text-xs text-slate-500">Each refusal reports <em>why</em> to the operator.</p>
+        </div>
+      </div>
+
+      <div class="mt-5 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">A fair head-to-head</h3>
+          <p class="mt-2 text-sm text-slate-400">
+            Both scorers are graded on <strong class="text-white">exactly the same deliveries</strong> &mdash; only rows the
+            model actually scored &mdash; through the <strong class="text-white">same metric code</strong>, in one pass.
+            Neither side can be credited for a row the other never saw.
+          </p>
+          <p class="mt-2 text-sm text-slate-400">
+            The headline is <strong class="text-white">F1 delta</strong>: positive means the model is ahead. F1 rather
+            than raw accuracy, because accuracy rewards a model that just predicts the majority class.
+          </p>
+        </div>
+        <div class="rounded-xl border border-crit/30 bg-crit/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-crit">How to talk about it</h3>
+          <p class="mt-2 text-sm text-slate-300">
+            &ldquo;Our live risk scores are <strong class="text-white">100% rule-based</strong>. We additionally trained a
+            logistic-regression challenger that runs alongside in shadow, so we can prove whether a fitted model would
+            do better before we would ever trust one.&rdquo;
+          </p>
+          <p class="mt-3 text-sm text-slate-400">
+            Do <strong class="text-white">not</strong> call the rule-based engine AI. Do
+            <strong class="text-white">not</strong> claim the model drives decisions. It has to earn promotion, and it
+            has not been promoted.
+          </p>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-med bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-med">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Frame the model as a <em>test of the weights</em>, not as a headline feature &mdash; that framing is both accurate
+        and much harder to attack. Read the scripted sentence in the red box close to verbatim; it is written to be
+        challenge-proof. Expect "why not just use the ML model?" &mdash; the answer is that it has not been validated on
+        enough real outcomes yet, and shipping an unvalidated model into an operational alerting path would be
+        indefensible.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 8 · WHAT USERS SEE ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="8" aria-label="The dashboard">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">What the coordinator sees</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">The dashboard</span>
+      </div>
+
+      <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div class="rounded-xl border border-edge bg-ink/50 p-4"><p class="text-[10px] uppercase tracking-wider text-slate-500">Active</p><p class="mt-1 text-lg font-bold text-slate-200">Deliveries</p></div>
+        <div class="rounded-xl border border-med/40 bg-med/5 p-4"><p class="text-[10px] uppercase tracking-wider text-med">At risk</p><p class="mt-1 text-lg font-bold text-slate-200">Count</p></div>
+        <div class="rounded-xl border border-crit/40 bg-crit/5 p-4"><p class="text-[10px] uppercase tracking-wider text-crit">SLA</p><p class="mt-1 text-lg font-bold text-slate-200">Breaches</p></div>
+        <div class="rounded-xl border border-low/40 bg-low/5 p-4"><p class="text-[10px] uppercase tracking-wider text-low">On-time</p><p class="mt-1 text-lg font-bold text-slate-200">Percentage</p></div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-4"><p class="text-[10px] uppercase tracking-wider text-slate-500">Average</p><p class="mt-1 text-lg font-bold text-slate-200">Delay</p></div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-4"><p class="text-[10px] uppercase tracking-wider text-slate-500">Avg duration</p><p class="mt-1 text-lg font-bold text-slate-200">Hours</p></div>
+      </div>
+
+      <div class="mt-5 grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Two tabs</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-slate-200">Ongoing</strong> &mdash; what to act on now, with risk band, time to breach and recommended action.</p>
+          <p class="mt-1.5 text-sm text-slate-400"><strong class="text-slate-200">Delivered</strong> &mdash; what happened, for review.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Nine filters</h3>
+          <p class="mt-2 text-sm text-slate-400">Search, driver, route, area, priority, status, client type, risk band and date range &mdash; so a coordinator can narrow to <em>&ldquo;High-risk VIP orders on Manila routes today.&rdquo;</em></p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Refreshes itself</h3>
+          <p class="mt-2 text-sm text-slate-400">Every 30 seconds, by polling rather than sockets &mdash; a deliberate reliability choice after our socket layer kept dropping connections.</p>
+        </div>
+      </div>
+
+      <div class="mt-5 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Degrades gracefully</h3>
+          <p class="mt-2 text-sm text-slate-400">
+            If the accuracy panel fails to load, <strong class="text-white">only that panel</strong> shows an error. The
+            operational dashboard stays up &mdash; a reporting hiccup must never blank the screen somebody is working from.
+          </p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Role-gated</h3>
+          <p class="mt-2 text-sm text-slate-400">
+            Operations team and above. Drivers and clients are blocked at both the route and the API &mdash;
+            demonstrable live, and it reuses the existing policy rather than inventing a new one.
+          </p>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        If you are demoing live, <strong>skip this slide entirely</strong> and show the real screen &mdash; it is strictly
+        better. Keep it only as a fallback for when the demo will not cooperate. If you do present it, the
+        graceful-degradation panel is the detail worth mentioning; it shows you thought about failure modes in the UI,
+        not just the backend.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ═════════ 9 · LIMITS ═════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="9" aria-label="Known limits">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">What it can't do yet</h2>
+        <span class="rounded-full bg-crit/15 px-3 py-1 text-xs font-bold text-crit">Honest limits</span>
+      </div>
+
+      <p class="mt-4 text-sm text-slate-400">
+        Every one of these is documented in our source code rather than discovered by a reviewer. We are telling you
+        because <strong class="text-white">a disclosed limitation costs a fraction of a discovered one</strong>.
+      </p>
+
+      <div class="mt-6 space-y-3">
+        <div class="rounded-xl border border-crit/40 bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Predicted arrival is directional, not calibrated</h3>
+          <p class="mt-1.5 text-sm text-slate-400">
+            The arrival estimate adds a <strong class="text-white">hand-picked offset per risk band</strong>. Those four
+            numbers were <em>not</em> fitted from historical delay data. It is useful for sorting a worklist and
+            <strong class="text-white">must not be quoted to a customer as an ETA</strong>. Fitting it from the observed
+            delay distribution is the clearest next step.
+          </p>
+        </div>
+        <div class="rounded-xl border border-med/40 bg-ink/50 p-5">
+          <h3 class="font-bold text-white">The breach counter mixes scope</h3>
+          <p class="mt-1.5 text-sm text-slate-400">
+            It spans archived and active orders, while the active-deliveries count excludes archived. Almost certainly
+            unintended &mdash; but the figure was already published in our Week 5 documentation, so we
+            <strong class="text-white">reproduced it verbatim and documented the flaw</strong> rather than silently
+            changing a number under review.
+          </p>
+        </div>
+        <div class="rounded-xl border border-med/40 bg-ink/50 p-5">
+          <h3 class="font-bold text-white">The weights are judgement, not evidence</h3>
+          <p class="mt-1.5 text-sm text-slate-400">
+            Expert-assigned and defensible, but not derived from our data. The shadow model exists precisely to answer
+            this, and it needs <strong class="text-white">more recorded outcomes</strong> before its verdict means
+            anything.
+          </p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Smaller known gaps</h3>
+          <ul class="mt-1.5 space-y-1.5 text-sm text-slate-400">
+            <li>&bull; The at-risk KPI label reads <em>&ldquo;High / Critical&rdquo;</em>, but the underlying flag also includes Medium &mdash; a copy fix, not a logic one</li>
+            <li>&bull; The maximum reachable score is about 0.99, not 1.00</li>
+            <li>&bull; The learned model has <strong class="text-slate-200">no user interface</strong> &mdash; it is reachable by API only</li>
+            <li>&bull; Backend is well covered by tests; the <strong class="text-slate-200">frontend has no test runner wired up</strong></li>
+          </ul>
+        </div>
+      </div>
+    </article>
+    <aside class="notes mt-4 rounded-xl border-l-4 border-crit bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-crit">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Counter-intuitively this is a <strong>strong</strong> slide, so do not rush it apologetically. Say the framing
+        line out loud: <em>"documented in our source, not discovered by a reviewer."</em> The arrival-offset admission
+        is the one that matters most &mdash; if a panel member were going to catch anything, it would be that, and
+        volunteering it converts a potential ambush into evidence of rigour. Pair each limit with its next step so the
+        slide reads as a roadmap, not a confession.
+      </p>
+    </aside>
+  </section>
+
+</main>
+
+<footer class="no-print border-t border-edge px-4 py-5 text-center text-xs text-slate-500 sm:px-6">
+  <p>
+    <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">&larr;</kbd>
+    <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">&rarr;</kbd> navigate &middot;
+    <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">N</kbd> speaker notes &middot;
+    <button id="printBtn" type="button" class="underline transition hover:text-slate-300">print / export</button>
+  </p>
+  <p class="mt-2">Every threshold, weight and caveat in this deck was read from the project source.</p>
+</footer>
+
+<script>
+(function () {
+  var slides  = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var labels  = ['Problem','Scope','8 Factors','Bands','Conditions','Automation','Accuracy','Shadow ML','Dashboard','Limits'];
+  var dots    = document.getElementById('dots');
+  var counter = document.getElementById('counter');
+  var bar     = document.getElementById('bar');
+  var prev    = document.getElementById('prev');
+  var next    = document.getElementById('next');
+  var current = 0;
+
+  slides.forEach(function (_, i) {
+    var li = document.createElement('li');
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = labels[i] || String(i + 1);
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1) + ': ' + (labels[i] || i + 1));
+    b.addEventListener('click', function () { go(i); });
+    li.appendChild(b);
+    dots.appendChild(li);
+  });
+  var dotButtons = Array.prototype.slice.call(dots.querySelectorAll('button'));
+
+  function go(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, n) { s.classList.toggle('is-active', n === current); });
+    dotButtons.forEach(function (b, n) {
+      var on = n === current;
+      b.className = 'rounded px-2 py-1 text-[11px] font-semibold transition ' +
+        (on ? 'bg-med text-ink' : 'text-slate-400 hover:bg-edge hover:text-slate-200');
+      b.setAttribute('aria-current', on ? 'true' : 'false');
+    });
+    counter.textContent = (current + 1) + ' / ' + slides.length;
+    bar.style.width = (((current + 1) / slides.length) * 100) + '%';
+    prev.disabled = current === 0;
+    next.disabled = current === slides.length - 1;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  prev.addEventListener('click', function () { go(current - 1); });
+  next.addEventListener('click', function () { go(current + 1); });
+
+  var notesBtn = document.getElementById('notesBtn');
+  notesBtn.addEventListener('click', function () {
+    var on = document.body.classList.toggle('notes-on');
+    notesBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    notesBtn.className = 'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ' +
+      (on ? 'border-med bg-med text-ink' : 'border-edge text-slate-300 hover:bg-edge hover:text-white');
+  });
+
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(slides.length - 1); }
+    else if (e.key === 'n' || e.key === 'N') { notesBtn.click(); }
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>

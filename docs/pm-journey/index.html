@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3.2 Project Management Journey &mdash; At-Risk SLA Prediction</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0B1220',
+          panel: '#121B2E',
+          edge: '#1F2C45',
+          low: '#22C55E',
+          med: '#F59E0B',
+          high: '#F97316',
+          crit: '#EF4444',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+          mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  .slide { display: none; }
+  .slide.is-active { display: flex; }
+  .notes { display: none; }
+  body.notes-on .notes { display: block; }
+  @media print {
+    body { background: #fff !important; }
+    .no-print { display: none !important; }
+    .slide { display: flex !important; page-break-after: always; min-height: auto; border: 1px solid #ddd; margin-bottom: 1rem; }
+    .notes { display: block !important; }
+  }
+</style>
+</head>
+<body class="bg-ink text-slate-100 font-sans antialiased">
+
+<!-- ══════════════════════════ HEADER / NAV ══════════════════════════ -->
+<header class="no-print sticky top-0 z-40 border-b border-edge bg-ink/95 backdrop-blur">
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+    <div class="min-w-0 flex-1">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-400">Section 3.2 &middot; 8 minutes</p>
+      <h1 class="truncate text-sm font-bold sm:text-base">Project Management Journey</h1>
+    </div>
+
+    <nav aria-label="Slide navigation" class="order-3 w-full sm:order-2 sm:w-auto">
+      <ol id="dots" class="flex flex-wrap items-center gap-1.5"></ol>
+    </nav>
+
+    <div class="order-2 flex items-center gap-2 sm:order-3">
+      <button id="notesBtn" type="button"
+        class="rounded-md border border-edge px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-edge hover:text-white"
+        aria-pressed="false">Notes</button>
+      <button id="prev" type="button" aria-label="Previous slide"
+        class="rounded-md border border-edge px-3 py-1.5 text-sm font-bold transition hover:bg-edge disabled:opacity-30">&larr;</button>
+      <span id="counter" class="w-14 text-center text-xs font-mono text-slate-400" aria-live="polite">1 / 8</span>
+      <button id="next" type="button" aria-label="Next slide"
+        class="rounded-md border border-edge px-3 py-1.5 text-sm font-bold transition hover:bg-edge disabled:opacity-30">&rarr;</button>
+    </div>
+  </div>
+  <div class="h-0.5 w-full bg-edge">
+    <div id="bar" class="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300" style="width:12.5%"></div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+
+  <!-- ══════════════════════════ 0 · TITLE ══════════════════════════ -->
+  <section class="slide is-active min-h-[70vh] flex-col justify-center" data-slide="0" aria-label="Title">
+    <article class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-ink p-6 sm:p-12">
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-sky-400">Capstone Enhancement &middot; Project Management</p>
+      <h2 class="mt-4 text-3xl font-extrabold leading-tight sm:text-5xl">
+        At-Risk SLA Prediction<br />
+        <span class="text-slate-400">&amp; Proactive Monitoring</span>
+      </h2>
+      <p class="mt-6 max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg">
+        The original system could tell you a delivery <em>was</em> late. It could not tell you a delivery was
+        <strong class="text-white">about to be</strong> late. By the time the dashboard turned red, the SLA was already gone.
+      </p>
+
+      <dl class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Risk factors</dt>
+          <dd class="mt-1 text-2xl font-bold text-sky-400">8</dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Risk bands</dt>
+          <dd class="mt-1 text-2xl font-bold text-med">4</dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">New tables</dt>
+          <dd class="mt-1 text-2xl font-bold text-emerald-400">3</dd>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/60 p-4">
+          <dt class="text-[11px] uppercase tracking-wider text-slate-400">Columns dropped</dt>
+          <dd class="mt-1 text-2xl font-bold text-white">0</dd>
+        </div>
+      </dl>
+
+      <footer class="mt-8 border-t border-edge pt-5 text-sm text-slate-400">
+        <p>Delivery Management System &middot; BSIT Capstone &middot; Adviser: Mr. Cristian O. Balatbat</p>
+        <p class="mt-1 font-mono text-xs">Enhancement window: 02 Jul 2026 &rarr; 06 Aug 2026 &middot; 6 weeks</p>
+      </footer>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes &middot; 0:20</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Open with the problem, not the tech. Say the "was late / about to be late" line verbatim &mdash; it frames all
+        seven slides. Then state the ground rule you will keep returning to: <strong>every number in this deck was read
+        out of the repository.</strong> Press <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono text-xs">&rarr;</kbd> to begin.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 1 · PROJECT CHARTER ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="1" aria-label="Project Charter">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Project Charter</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">Slide 1 &middot; ~75 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+        <p class="text-sm font-bold text-sky-200">&ldquo;What did we set out to achieve?&rdquo;</p>
+        <p class="mt-1 text-xs text-sky-100/70">Highlight the most important elements. Show how the charter guided the project.</p>
+      </aside>
+
+      <div class="mt-6 grid gap-5 lg:grid-cols-2">
+        <!-- Vision + scope -->
+        <div class="space-y-5">
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Vision</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-200">
+              Score <strong class="text-white">every active delivery</strong> for breach risk
+              <strong class="text-white">before</strong> the deadline passes, and explain each score well enough that
+              a coordinator can act on it.
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">In scope</h3>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-300">
+              <li>&bull; 8-factor explainable risk score, 4 bands</li>
+              <li>&bull; SLA Proactive Monitoring dashboard <code class="font-mono text-xs text-sky-300">/sla-monitoring</code></li>
+              <li>&bull; Background recompute every 30 min</li>
+              <li>&bull; Alert on escalation <em>into</em> Critical</li>
+              <li>&bull; Accuracy measured on recorded outcomes</li>
+              <li>&bull; Logistic-regression challenger in shadow</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-crit/30 bg-crit/5 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-crit">Out of scope &mdash; deliberately</h3>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-300">
+              <li>&bull; Any change to delivery CRUD, auth, notifications, activity logging</li>
+              <li>&bull; Paid weather / traffic APIs &mdash; conditions come from local history</li>
+              <li>&bull; A calibrated ETA &mdash; arrival is directional only</li>
+              <li>&bull; Auto-remediation &mdash; the engine recommends, humans act</li>
+              <li>&bull; ML driving operations &mdash; shadow only</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stakeholders + criteria -->
+        <div class="space-y-5">
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Stakeholders &amp; the question each one asks</h3>
+            <dl class="mt-3 space-y-3 text-sm">
+              <div>
+                <dt class="font-semibold text-white">Operations Coordinator <span class="font-mono text-xs text-slate-500">OP. TEAM</span></dt>
+                <dd class="text-slate-400">&ldquo;Which deliveries are about to breach, and what do I do?&rdquo;</dd>
+              </div>
+              <div>
+                <dt class="font-semibold text-white">Operations Manager <span class="font-mono text-xs text-slate-500">ADMIN</span></dt>
+                <dd class="text-slate-400">&ldquo;Is the prediction actually right?&rdquo;</dd>
+              </div>
+              <div>
+                <dt class="font-semibold text-white">IT Administrator</dt>
+                <dd class="text-slate-400">&ldquo;Is it stable, audited &mdash; and did it break anything?&rdquo;</dd>
+              </div>
+              <div>
+                <dt class="font-semibold text-white">Drivers &amp; Client <span class="font-mono text-xs text-slate-500">LZP-001</span></dt>
+                <dd class="text-slate-400">Consumers of the workflow that must not regress.</dd>
+              </div>
+              <div>
+                <dt class="font-semibold text-white">Capstone Adviser</dt>
+                <dd class="text-slate-400">Acceptance and academic defensibility.</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="rounded-xl border border-edge bg-ink/50 p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Success criteria &mdash; testable, not aspirational</h3>
+            <ul class="mt-3 space-y-2 text-sm text-slate-300">
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Additive-only schema: 3 tables, 3 migrations, 0 drops or renames</li>
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Factor weights sum to exactly 1.00 &mdash; asserted by unit test</li>
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Accuracy computed only from pre-outcome snapshots</li>
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Whole controller behind <code class="font-mono text-xs">OpTeamAndAbove</code></li>
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Regression baseline recorded at each freeze: 0 build errors, full suite green, <code class="font-mono text-xs">tsc</code> exit 0</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Spend most of this slide on the <strong>Out of scope</strong> column &mdash; it is the most defensible thing in
+        the charter. Each exclusion was a decision, not an omission: no paid API because factor 8 can be derived from
+        our own history; no calibrated ETA because we never fitted one; ML stays in shadow because a model has to earn
+        promotion. Then land the closing line: <em>"the charter is why the last three slides have so little drama &mdash;
+        the boundaries were drawn before we started writing code."</em>
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 2 · SCOPE CHANGES ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="2" aria-label="Scope Changes">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Scope Changes</h2>
+        <span class="rounded-full bg-med/15 px-3 py-1 text-xs font-bold text-med">Slide 2 &middot; ~60 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-med/30 bg-med/10 p-4">
+        <p class="text-sm font-bold text-amber-200">&ldquo;What changed along the way?&rdquo;</p>
+        <p class="mt-1 text-xs text-amber-100/70">Explain why changes were made and how they were managed.</p>
+      </aside>
+
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full min-w-[46rem] border-collapse text-sm">
+          <caption class="sr-only">Approved scope changes with rationale and impact</caption>
+          <thead>
+            <tr class="border-b border-edge text-left text-[11px] uppercase tracking-wider text-slate-400">
+              <th scope="col" class="py-2 pr-3 font-bold">#</th>
+              <th scope="col" class="py-2 pr-3 font-bold">Change</th>
+              <th scope="col" class="py-2 pr-3 font-bold">Why</th>
+              <th scope="col" class="py-2 font-bold">Impact</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge/60 align-top">
+            <tr>
+              <td class="py-3 pr-3 font-mono text-xs text-slate-500">01</td>
+              <td class="py-3 pr-3 font-semibold text-white">WebSockets &rarr; HTTP polling</td>
+              <td class="py-3 pr-3 text-slate-400">Socket layer dropped connections under normal use; reconnect logic kept growing.</td>
+              <td class="py-3"><span class="text-emerald-400">Simplified.</span> 30 s dashboard refresh, 10 s notifications. Live tracking became reliable.</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-3 font-mono text-xs text-slate-500">02</td>
+              <td class="py-3 pr-3 font-semibold text-white">External conditions API &rarr; local history</td>
+              <td class="py-3 pr-3 text-slate-400">The placeholder formula resolved to a constant &mdash; 0.2 on weekdays, 0.533 on weekends. Weighted, a
+                <strong class="text-white">0.0067</strong> spread. It could never move an order across a band.</td>
+              <td class="py-3"><span class="text-emerald-400">Factor 8 became real.</span> Route&times;area&times;time-bucket history, no paid dependency.</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-3 font-mono text-xs text-slate-500">03</td>
+              <td class="py-3 pr-3 font-semibold text-white">Added a learned risk model</td>
+              <td class="py-3 pr-3 text-slate-400">Scope said &ldquo;there is no ML.&rdquo; A trained challenger was added to answer &ldquo;could a fitted model do better?&rdquo; with evidence.</td>
+              <td class="py-3"><span class="text-med">Scope grew, risk did not.</span> Shipped <code class="font-mono text-xs">Enabled: false</code>, shadow-only.</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-3 font-mono text-xs text-slate-500">04</td>
+              <td class="py-3 pr-3 font-semibold text-white">Single build entry point</td>
+              <td class="py-3 pr-3 text-slate-400">No solution file existed, and <code class="font-mono text-xs">*.sln</code> was git-ignored by the Vite template, so adding one did nothing.</td>
+              <td class="py-3"><span class="text-emerald-400">One command builds both projects.</span></td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-3 font-mono text-xs text-slate-500">05</td>
+              <td class="py-3 pr-3 font-semibold text-white">Freeze published figures</td>
+              <td class="py-3 pr-3 text-slate-400">Three known imperfections were found <em>after</em> Week 5 numbers were already cited in documentation.</td>
+              <td class="py-3"><span class="text-med">Documented in-code, not silently corrected.</span> See slide 5.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 rounded-xl border border-edge bg-ink/50 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">How change was controlled</h3>
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+          <p class="text-sm text-slate-300"><strong class="text-white">Two-tier gate.</strong> Low-risk refactors proceeded; anything touching a published figure or model semantics required an explicit decision.</p>
+          <p class="text-sm text-slate-300"><strong class="text-white">Feature branches + PR.</strong> <code class="font-mono text-xs">feat/at-risk-prediction-sla-monitoring</code> merged via PR #2; <code class="font-mono text-xs">feat/learned-risk-model</code> followed.</p>
+          <p class="text-sm text-slate-300"><strong class="text-white">Written decision log.</strong> Open questions recorded with options, never resolved unilaterally.</p>
+        </div>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-med bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-med">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Change 02 is the strongest story here &mdash; you found a factor that <em>looked</em> like it was working and
+        proved arithmetically that it could not affect any outcome. Quote the 0.0067 figure; it shows you audited your
+        own model rather than trusting it. On change 03, get ahead of the obvious challenge: <em>"yes, this contradicts
+        our earlier documentation that said there is no ML &mdash; that document was accurate when written, and we have
+        flagged the inconsistency rather than quietly leaving it."</em> Examiners reward that.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 3 · WBS ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="3" aria-label="Work Breakdown Structure">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Work Breakdown Structure</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">Slide 3 &middot; ~65 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+        <p class="text-sm font-bold text-sky-200">&ldquo;How did we break down the work?&rdquo;</p>
+        <p class="mt-1 text-xs text-sky-100/70">Show the major workstreams and effort estimates. Highlight key milestones.</p>
+      </aside>
+
+      <ol class="mt-6 grid gap-3 md:grid-cols-2">
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">1.0</span> Data foundation</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~15%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">3 tables &mdash; <code class="font-mono text-xs">DeliveryPredictions</code>, <code class="font-mono text-xs">PredictionOutcomes</code>, <code class="font-mono text-xs">PredictionModels</code> &mdash; via 3 additive EF Core migrations.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">2.0</span> Scoring engine</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~20%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">8 normalised factors, weight table, 4 bands, plus the risk reason and recommended action a human reads.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">3.0</span> Conditions factor</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~8%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">Two-stage snapshot so per-order lookups do zero I/O. Historical 0.55 / congestion 0.25 / calendar 0.20.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">4.0</span> Automation &amp; audit</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~8%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">30-minute background scorer, overlap-guarded, with <code class="font-mono text-xs">Run-</code> vs <code class="font-mono text-xs">AutoRun-</code> audit references.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">5.0</span> Honest measurement</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~12%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">Outcome snapshotting, confusion matrix, accuracy / precision / recall / F1.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">6.0</span> Learned model (shadow)</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~15%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">Logistic regression, training guards, shadow columns, head-to-head comparison endpoint.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">7.0</span> Monitoring dashboard</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~15%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">6 KPI cards, risk-distribution chart, Ongoing / Delivered tabs, 9 filters, CSV &amp; PDF export.</p>
+        </li>
+        <li class="rounded-xl border border-edge bg-ink/50 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="font-bold text-white"><span class="font-mono text-xs text-sky-400">8.0</span> Quality &amp; documentation</h3>
+            <span class="shrink-0 rounded bg-edge px-2 py-0.5 font-mono text-[11px] text-slate-300">~7%</span>
+          </div>
+          <p class="mt-1.5 text-sm text-slate-400">7 xUnit test files, recorded demo script, finalization decision log.</p>
+        </li>
+      </ol>
+
+      <p class="mt-5 rounded-lg border border-edge bg-ink/40 p-3 text-xs text-slate-500">
+        Effort shown as share of total enhancement effort rather than person-hours &mdash; the project ran as a
+        student team with variable weekly availability, so proportions are the honest unit.
+      </p>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Do not read all eight aloud &mdash; you will burn the slide. Group them: <em>"three workstreams to produce a
+        score, two to prove the score is any good, two to put it in front of a user, one to keep it honest."</em> Then
+        point at 5.0 and say that measuring the prediction was budgeted as heavily as building it, which is the part
+        most projects skip. Note the caveat line at the bottom if asked about estimation.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 4 · RISK MANAGEMENT ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="4" aria-label="Risk Management">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Risk Management</h2>
+        <span class="rounded-full bg-crit/15 px-3 py-1 text-xs font-bold text-crit">Slide 4 &middot; ~80 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-crit/30 bg-crit/10 p-4">
+        <p class="text-sm font-bold text-red-200">&ldquo;What could have gone wrong, and how did we prevent it?&rdquo;</p>
+        <p class="mt-1 text-xs text-red-100/70">Show the top 3&ndash;5 risks and how they were addressed.</p>
+      </aside>
+
+      <div class="mt-6 space-y-3">
+        <!-- R1 -->
+        <div class="rounded-xl border border-crit/40 bg-ink/50 p-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded bg-crit px-2 py-0.5 text-[11px] font-bold text-white">R1 &middot; CRITICAL</span>
+            <h3 class="font-bold text-white">Breaking the system we were told not to touch</h3>
+          </div>
+          <div class="mt-2 grid gap-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-400"><strong class="text-slate-300">Risk:</strong> an enhancement that regresses delivery CRUD, auth or logging fails the whole capstone, not just the feature.</p>
+            <p class="text-sm text-slate-400"><strong class="text-emerald-400">Control:</strong> additive-only migrations; the ML service injected as an <em>optional</em> dependency; the pre-existing test suite kept unchanged so a green run is evidence no existing score moved.</p>
+          </div>
+        </div>
+        <!-- R2 -->
+        <div class="rounded-xl border border-crit/40 bg-ink/50 p-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded bg-crit px-2 py-0.5 text-[11px] font-bold text-white">R2 &middot; CRITICAL</span>
+            <h3 class="font-bold text-white">Measuring ourselves dishonestly</h3>
+          </div>
+          <div class="mt-2 grid gap-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-400"><strong class="text-slate-300">Risk:</strong> the completed-orders view derives its risk fields <em>from</em> the outcome. Scoring accuracy against it returns 100% by construction &mdash; a number that is both flawless and worthless.</p>
+            <p class="text-sm text-slate-400"><strong class="text-emerald-400">Control:</strong> a separate outcomes table snapshots the prediction <em>as it stood before the result was known</em>, copied verbatim and never recomputed. Recomputing time-based factors after delivery would leak the answer into its own inputs.</p>
+          </div>
+        </div>
+        <!-- R3 -->
+        <div class="rounded-xl border border-high/40 bg-ink/50 p-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded bg-high px-2 py-0.5 text-[11px] font-bold text-white">R3 &middot; HIGH</span>
+            <h3 class="font-bold text-white">Overclaiming the AI in a defence</h3>
+          </div>
+          <div class="mt-2 grid gap-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-400"><strong class="text-slate-300">Risk:</strong> calling a rule-based scorer &ldquo;AI&rdquo; is the fastest way to lose credibility under questioning.</p>
+            <p class="text-sm text-slate-400"><strong class="text-emerald-400">Control:</strong> the learned model writes only to separate nullable columns and ships disabled; the dashboard, the alerts and the summary all still read the rule-based score. A written <em>claims-to-avoid</em> table sits alongside the demo script.</p>
+          </div>
+        </div>
+        <!-- R4 -->
+        <div class="rounded-xl border border-high/40 bg-ink/50 p-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded bg-high px-2 py-0.5 text-[11px] font-bold text-white">R4 &middot; HIGH</span>
+            <h3 class="font-bold text-white">Training on data that cannot support a model</h3>
+          </div>
+          <div class="mt-2 grid gap-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-400"><strong class="text-slate-300">Risk:</strong> too few rows to identify 8 coefficients, or a dataset that is all breaches or all successes &mdash; where the model just learns to say one word forever.</p>
+            <p class="text-sm text-slate-400"><strong class="text-emerald-400">Control:</strong> four training guards. Refuse on single-class data, refuse below a hard row floor, drop out-of-range rows rather than clamp them, reject non-finite input up front. Failures report the reason to the operator instead of quietly fitting garbage.</p>
+          </div>
+        </div>
+        <!-- R5 -->
+        <div class="rounded-xl border border-med/40 bg-ink/50 p-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded bg-med px-2 py-0.5 text-[11px] font-bold text-ink">R5 &middot; MEDIUM</span>
+            <h3 class="font-bold text-white">Automation misbehaving unattended</h3>
+          </div>
+          <div class="mt-2 grid gap-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-400"><strong class="text-slate-300">Risk:</strong> a background scorer can hot-spin on a bad config value, queue overlapping runs, or die silently on one bad record.</p>
+            <p class="text-sm text-slate-400"><strong class="text-emerald-400">Control:</strong> a hard minimum interval floor regardless of config, a run gate that <em>skips</em> an overlapping tick rather than queueing it, and error handling inside the loop so one failure cannot kill the service.</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-crit bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-crit">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        R2 is your best slide in the entire deck &mdash; land it slowly. The line to deliver:
+        <em>"we could have reported 100% accuracy, truthfully computed, and it would have meant nothing."</em> Explaining
+        why you rejected the flattering number is worth more than any metric you could show. If you are short on time,
+        compress R5 to a single sentence and protect R2 and R4.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 5 · CHALLENGES ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="5" aria-label="Challenges Faced">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Challenges Faced</h2>
+        <span class="rounded-full bg-high/15 px-3 py-1 text-xs font-bold text-high">Slide 5 &middot; ~80 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-high/30 bg-high/10 p-4">
+        <p class="text-sm font-bold text-orange-200">&ldquo;What obstacles did we face?&rdquo;</p>
+        <p class="mt-1 text-xs text-orange-100/70">Be honest about struggles and how you solved them.</p>
+      </aside>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">A factor that did nothing</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> the operating-conditions factor had hardcoded traffic and weather values. It resolved to one of two constants, a weighted spread of 0.0067 &mdash; mathematically incapable of changing any risk band.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> rebuilt it from our own delivery history, bucketed by route, area and time of day, with a six-level fallback chain so a brand-new route still gets a defensible number.</p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Alert fatigue by design</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> the scorer runs every 30 minutes. Naively, every run re-alerted on every Critical order &mdash; the same delivery would page the floor 48 times a day.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> read the previous risk level <em>before</em> overwriting it, and alert only on the transition <em>into</em> Critical. One alert per escalation, not one per refresh.</p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Tests that failed on weekends</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> the conditions factor reads the calendar, so scores differed depending on which day the suite ran. A test suite that passes Monday and fails Saturday is worse than no suite.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> pin that factor to a fixed value in the test harness, and test the factor itself separately with explicit dates.</p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Weights that would not sum to one</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> the assertion that our 8 weights total 1.00 failed. Values like 0.35 and 0.03 are not exactly representable in binary floating point.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> compare with rounding rather than exact equality. The test still catches a real broken weight table &mdash; which matters, because a bad sum silently de-calibrates every band.</p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Reads that dragged image payloads</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> summary queries materialised every column on the order &mdash; including two unbounded base64 proof-of-delivery images per row.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> narrow projections and no-tracking reads on every path, and batch pre-fetching so the scoring loop performs no database work at all.</p>
+        </div>
+
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="font-bold text-white">Our own documentation went stale</h3>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-high">Problem:</strong> the Week 5 write-up stated plainly &ldquo;there is no ML.&rdquo; True when written &mdash; then we added a learned model, and the two documents disagreed.</p>
+          <p class="mt-2 text-sm text-slate-400"><strong class="text-emerald-400">Fix:</strong> an explicit consistency warning in the demo script naming the contradiction, and narration phrased so the rule-based engine remains the system of record.</p>
+        </div>
+      </div>
+
+      <div class="mt-5 rounded-xl border border-med/30 bg-med/5 p-4">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-med">Still open &mdash; and we say so</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          The breach counter mixes archived and active scope. The predicted-arrival column uses hand-picked offsets,
+          not a fitted ETA. The risk score can never actually reach 1.00 &mdash; its real ceiling is about 0.99. All three
+          are documented in the source rather than quietly patched, because the affected figures were already published.
+        </p>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-high bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-high">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Pick <strong>three</strong> to narrate &mdash; the dead factor, the alert storm, the weekend test failures &mdash;
+        and let the panel read the rest. Then deliver the <em>Still open</em> box deliberately, out loud. Volunteering
+        three unfixed defects, with the reason they stayed unfixed, is the single most disarming thing you can do in a
+        defence; it also pre-empts the exact questions an examiner would otherwise use to catch you out.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 6 · NO TOUCH RULE ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="6" aria-label="No Touch Rule">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">The &ldquo;No Touch&rdquo; Rule</h2>
+        <span class="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-300">Slide 6 &middot; ~70 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+        <p class="text-sm font-bold text-emerald-200">&ldquo;How did we ensure we didn't touch Capstone 1?&rdquo;</p>
+        <p class="mt-1 text-xs text-emerald-100/70">Show how you enforced the rule.</p>
+      </aside>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">1 &middot; Additive schema only</h3>
+          <p class="mt-2 text-sm text-slate-300">Three new tables via three migrations. <strong class="text-white">Nothing dropped, nothing renamed, no existing column changed meaning.</strong> The original schema replays clean from empty.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">2 &middot; Mostly new surface</h3>
+          <p class="mt-2 text-sm text-slate-300">One new page, one new controller, one new service layer. Where existing files <em>had</em> to change, the change was declared rather than absorbed &mdash; see the integration points below.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">3 &middot; Reuse, don't replace</h3>
+          <p class="mt-2 text-sm text-slate-300">Alerts go into the <em>existing</em> notification feed and the <em>existing</em> activity log, rather than a parallel system competing with them.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">4 &middot; Off by default</h3>
+          <p class="mt-2 text-sm text-slate-300">The learned model ships disabled. <strong class="text-white">Installing the build changes nothing on its own</strong> &mdash; it has to be switched on deliberately.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">5 &middot; Shadow isolation</h3>
+          <p class="mt-2 text-sm text-slate-300">Model output lands in separate nullable columns. The three fields the dashboard, alerts and summary actually read are never written by it.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">6 &middot; Optional dependency</h3>
+          <p class="mt-2 text-sm text-slate-300">The prediction engine can be constructed without the ML service at all &mdash; so the original path stays independently testable.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">7 &middot; Access unchanged</h3>
+          <p class="mt-2 text-sm text-slate-300">The whole feature sits behind the existing role policy. Drivers and clients are blocked at both the route and the API &mdash; demonstrable live.</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">8 &middot; Frozen figures</h3>
+          <p class="mt-2 text-sm text-slate-300">Published numbers are reproduced verbatim. Known imperfections are documented in-code rather than corrected mid-defence.</p>
+        </div>
+        <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">9 &middot; The evidence</h3>
+          <p class="mt-2 text-sm text-slate-300"><strong class="text-white">The pre-existing tests are unchanged and still green</strong> &mdash; 66 of them at feature freeze. Not an assurance; a re-runnable check that no original behaviour moved.</p>
+        </div>
+      </div>
+
+      <!-- Declared integration points -->
+      <div class="mt-6 rounded-xl border border-med/40 bg-med/5 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-med">Where we <em>did</em> change Capstone 1 &mdash; four declared integration points</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          &ldquo;No touch&rdquo; did not mean zero edits. It meant <strong class="text-white">no undeclared edits.</strong> Four places had to change,
+          and each one is defensible on its own terms:
+        </p>
+        <ul class="mt-3 space-y-2.5 text-sm text-slate-400">
+          <li><strong class="text-slate-200">Outcome capture hooks</strong> &mdash; the order service and controller call outcome capture when a delivery reaches a terminal status. Without this the accuracy matrix would stay permanently empty. Three separate hook sites were needed because two code paths set status directly instead of going through the central update method.</li>
+          <li><strong class="text-slate-200">Registration wiring</strong> &mdash; the data context and startup file register the new tables and services. Unavoidable in any additive feature.</li>
+          <li><strong class="text-slate-200">Two existing behaviours corrected</strong> &mdash; analytics average delivery time was a hardcoded <code class="font-mono text-xs">3.5</code> and now computes from completed orders; the seeder was changed to migrate rather than drop and recreate, with the destructive path gated to Development. Both are improvements to Capstone 1, and both are still changes to it.</li>
+          <li><strong class="text-slate-200">One existing migration was edited</strong> &mdash; its unconditional column drops were made conditional, because a clean database could not migrate at all: it failed on a column that no longer gets created. Applied databases are unaffected, since an applied migration never re-runs. Disclosed here because it is the one place we modified Capstone 1's migration history.</li>
+        </ul>
+      </div>
+
+      <!-- Honest limitation -->
+      <div class="mt-4 rounded-xl border border-crit/40 bg-crit/5 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-crit">What we did not have &mdash; stated plainly</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          There was <strong class="text-white">no read-only database user and no separate environment.</strong> One connection string, one local
+          database, one configuration file, trusted connection with full rights. Compliance was enforced by
+          <strong class="text-white">code and schema discipline, not by infrastructure</strong> &mdash; additive-only migrations, shadow columns,
+          a feature switched off by default, and the original test suite as the tripwire.
+        </p>
+        <p class="mt-2 text-sm text-slate-400">
+          That is a weaker guarantee than an isolated environment, and we would take a read-only replica and a second
+          configuration profile if we ran this again. Saying so is cheaper than being asked.
+        </p>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-emerald-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Run the nine boxes fast &mdash; <em>"three ways we constrained the code, three ways we constrained the risk,
+        three ways we proved it"</em> &mdash; then slow right down for the last two panels, because that is where the
+        marks are. <strong>Volunteer the four integration points before anyone asks.</strong> The framing that survives
+        questioning is <em>"no touch meant no undeclared edits, and here are all four edits."</em>
+        <br /><br />
+        The examiner's prompt explicitly suggests a read-only user and a separate environment, and we had
+        <strong>neither</strong>. Do not skate past that &mdash; say it, say what we used instead, and say what we would
+        do differently. A disclosed limitation costs you a fraction of what a discovered one does. If you have the
+        recording, cut to the green test run here rather than describing it.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ══════════════════════════ 7 · MILESTONES ══════════════════════════ -->
+  <section class="slide min-h-[70vh] flex-col" data-slide="7" aria-label="Milestones Achieved">
+    <article class="rounded-2xl border border-edge bg-panel p-6 sm:p-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-4">
+        <h2 class="text-2xl font-extrabold sm:text-3xl">Milestones Achieved</h2>
+        <span class="rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">Slide 7 &middot; ~50 sec</span>
+      </div>
+
+      <aside class="mt-5 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+        <p class="text-sm font-bold text-sky-200">&ldquo;What did we deliver each week?&rdquo;</p>
+        <p class="mt-1 text-xs text-sky-100/70">Show a timeline graphic.</p>
+      </aside>
+
+      <ol class="mt-8 relative border-l-2 border-edge pl-6 sm:pl-8">
+        <li class="relative pb-7">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-ink text-[10px] font-bold text-emerald-400">1</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-slate-500">Week 1 &middot; 02 Jul 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Foundation consolidated</h3>
+          <p class="mt-1 text-sm text-slate-400">Authentication, role-based navigation, activity logging and notification models locked down &mdash; the surface the enhancement would have to reuse without altering.</p>
+        </li>
+        <li class="relative pb-7">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-ink text-[10px] font-bold text-emerald-400">2</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-slate-500">Weeks 2&ndash;3 &middot; 14 Jul 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Baseline cleaned, scope frozen</h3>
+          <p class="mt-1 text-sm text-slate-400">Repository hygiene and a documented starting state, so &ldquo;did this break anything?&rdquo; had a fixed reference point.</p>
+        </li>
+        <li class="relative pb-7">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-ink text-[10px] font-bold text-emerald-400">3</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-slate-500">Week 4 &middot; 21 Jul 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Monitoring centre live</h3>
+          <p class="mt-1 text-sm text-slate-400">SLA Proactive Monitoring dashboard with Ongoing and Delivered tabs and the first arrival predictions. <strong class="text-white">First visible deliverable.</strong></p>
+        </li>
+        <li class="relative pb-7">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-ink text-[10px] font-bold text-emerald-400">4</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-slate-500">Week 5 &middot; 31 Jul 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Prediction &amp; outcome schema shipped</h3>
+          <p class="mt-1 text-sm text-slate-400">Two additive migrations land the predictions and outcomes tables &mdash; the point at which accuracy became measurable rather than asserted.</p>
+        </li>
+        <li class="relative pb-7">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-ink text-[10px] font-bold text-emerald-400">5</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-slate-500">Week 6 &middot; 05 Aug 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Feature finalised &amp; merged</h3>
+          <p class="mt-1 text-sm text-slate-400">At-risk prediction and SLA monitoring completed and merged via pull request, with the scheduler, alerting and accuracy endpoints all in place.</p>
+        </li>
+        <li class="relative">
+          <span class="absolute -left-[2.15rem] sm:-left-[2.65rem] flex h-6 w-6 items-center justify-center rounded-full border-2 border-sky-400 bg-sky-400 text-[10px] font-bold text-ink">6</span>
+          <p class="font-mono text-[11px] uppercase tracking-wider text-sky-400">Week 6 &middot; 06 Aug 2026</p>
+          <h3 class="mt-0.5 font-bold text-white">Learned model, in shadow</h3>
+          <p class="mt-1 text-sm text-slate-400">Logistic-regression challenger, its training guards, a dedicated test file, and head-to-head comparison against the rule-based engine &mdash; delivered switched off.</p>
+        </li>
+      </ol>
+
+      <div class="mt-8 grid gap-3 border-t border-edge pt-6 sm:grid-cols-4">
+        <div class="rounded-xl border border-edge bg-ink/50 p-4 text-center">
+          <p class="text-2xl font-extrabold text-sky-400">6</p>
+          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Weeks</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-4 text-center">
+          <p class="text-2xl font-extrabold text-emerald-400">3</p>
+          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Additive migrations</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-4 text-center">
+          <p class="text-2xl font-extrabold text-med">7</p>
+          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Test files</p>
+        </div>
+        <div class="rounded-xl border border-edge bg-ink/50 p-4 text-center">
+          <p class="text-2xl font-extrabold text-white">0</p>
+          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Schema drops</p>
+        </div>
+      </div>
+    </article>
+
+    <aside class="notes mt-4 rounded-xl border-l-4 border-sky-500 bg-panel p-5">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Speaker notes</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-300">
+        Walk the timeline with your finger, not your script &mdash; one clause per week. The shape is the message:
+        <em>foundation, freeze, visible dashboard, measurability, merge, then a model that arrived last and arrived off.</em>
+        Close on the four counters and hand back: <em>"six weeks, three additive migrations, zero regressions &mdash; the
+        original system is exactly where we found it."</em>
+      </p>
+    </aside>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════ FOOTER ══════════════════════════ -->
+<footer class="no-print border-t border-edge px-4 py-5 text-center text-xs text-slate-500 sm:px-6">
+  <p>
+    Navigate with <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">&larr;</kbd>
+    <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">&rarr;</kbd> &middot;
+    toggle speaker notes with <kbd class="rounded bg-edge px-1.5 py-0.5 font-mono">N</kbd> &middot;
+    <button id="printBtn" type="button" class="underline transition hover:text-slate-300">print / export all slides</button>
+  </p>
+  <p class="mt-2">Every figure in this deck was read from the project repository. Budget: 8 minutes.</p>
+</footer>
+
+<script>
+(function () {
+  var slides  = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var labels  = ['Title','Charter','Scope','WBS','Risks','Challenges','No Touch','Milestones'];
+  var dots    = document.getElementById('dots');
+  var counter = document.getElementById('counter');
+  var bar     = document.getElementById('bar');
+  var prev    = document.getElementById('prev');
+  var next    = document.getElementById('next');
+  var current = 0;
+
+  // Build the dot navigation from the slide list so the two can never drift apart.
+  slides.forEach(function (_, i) {
+    var li = document.createElement('li');
+    var b  = document.createElement('button');
+    b.type = 'button';
+    b.textContent = labels[i] || String(i + 1);
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1) + ': ' + (labels[i] || i + 1));
+    b.className = 'rounded px-2 py-1 text-[11px] font-semibold transition';
+    b.addEventListener('click', function () { go(i); });
+    li.appendChild(b);
+    dots.appendChild(li);
+  });
+  var dotButtons = Array.prototype.slice.call(dots.querySelectorAll('button'));
+
+  function go(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, n) {
+      s.classList.toggle('is-active', n === current);
+    });
+    dotButtons.forEach(function (b, n) {
+      var on = n === current;
+      b.className = 'rounded px-2 py-1 text-[11px] font-semibold transition ' +
+        (on ? 'bg-sky-500 text-white' : 'text-slate-400 hover:bg-edge hover:text-slate-200');
+      b.setAttribute('aria-current', on ? 'true' : 'false');
+    });
+    counter.textContent = (current + 1) + ' / ' + slides.length;
+    bar.style.width = (((current + 1) / slides.length) * 100) + '%';
+    prev.disabled = current === 0;
+    next.disabled = current === slides.length - 1;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  prev.addEventListener('click', function () { go(current - 1); });
+  next.addEventListener('click', function () { go(current + 1); });
+
+  var notesBtn = document.getElementById('notesBtn');
+  notesBtn.addEventListener('click', function () {
+    var on = document.body.classList.toggle('notes-on');
+    notesBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    notesBtn.className = 'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ' +
+      (on ? 'border-sky-500 bg-sky-500 text-white' : 'border-edge text-slate-300 hover:bg-edge hover:text-white');
+  });
+
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+  document.addEventListener('keydown', function (e) {
+    // Don't hijack keys while the user is typing in a field.
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(slides.length - 1); }
+    else if (e.key === 'n' || e.key === 'N') { notesBtn.click(); }
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>
