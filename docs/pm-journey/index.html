@@ -204,7 +204,7 @@
               <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Factor weights sum to exactly 1.00 &mdash; asserted by unit test</li>
               <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Accuracy computed only from pre-outcome snapshots</li>
               <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Whole controller behind <code class="font-mono text-xs">OpTeamAndAbove</code></li>
-              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Regression baseline held: 0 build errors, tests green, <code class="font-mono text-xs">tsc</code> exit 0</li>
+              <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Regression baseline recorded at each freeze: 0 build errors, full suite green, <code class="font-mono text-xs">tsc</code> exit 0</li>
             </ul>
           </div>
         </div>
@@ -568,8 +568,8 @@
           <p class="mt-2 text-sm text-slate-300">Three new tables via three migrations. <strong class="text-white">Nothing dropped, nothing renamed, no existing column changed meaning.</strong> The original schema replays clean from empty.</p>
         </div>
         <div class="rounded-xl border border-edge bg-ink/50 p-5">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">2 &middot; New surface, not edits</h3>
-          <p class="mt-2 text-sm text-slate-300">One new page, one new controller. Existing controllers and pages were not modified to make room for the feature.</p>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">2 &middot; Mostly new surface</h3>
+          <p class="mt-2 text-sm text-slate-300">One new page, one new controller, one new service layer. Where existing files <em>had</em> to change, the change was declared rather than absorbed &mdash; see the integration points below.</p>
         </div>
         <div class="rounded-xl border border-edge bg-ink/50 p-5">
           <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">3 &middot; Reuse, don't replace</h3>
@@ -597,18 +597,53 @@
         </div>
         <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-5">
           <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">9 &middot; The evidence</h3>
-          <p class="mt-2 text-sm text-slate-300"><strong class="text-white">The pre-existing tests are unchanged and still green.</strong> Not an assurance &mdash; a reproducible proof that no original behaviour moved.</p>
+          <p class="mt-2 text-sm text-slate-300"><strong class="text-white">The pre-existing tests are unchanged and still green</strong> &mdash; 66 of them at feature freeze. Not an assurance; a re-runnable check that no original behaviour moved.</p>
         </div>
+      </div>
+
+      <!-- Declared integration points -->
+      <div class="mt-6 rounded-xl border border-med/40 bg-med/5 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-med">Where we <em>did</em> change Capstone 1 &mdash; four declared integration points</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          &ldquo;No touch&rdquo; did not mean zero edits. It meant <strong class="text-white">no undeclared edits.</strong> Four places had to change,
+          and each one is defensible on its own terms:
+        </p>
+        <ul class="mt-3 space-y-2.5 text-sm text-slate-400">
+          <li><strong class="text-slate-200">Outcome capture hooks</strong> &mdash; the order service and controller call outcome capture when a delivery reaches a terminal status. Without this the accuracy matrix would stay permanently empty. Three separate hook sites were needed because two code paths set status directly instead of going through the central update method.</li>
+          <li><strong class="text-slate-200">Registration wiring</strong> &mdash; the data context and startup file register the new tables and services. Unavoidable in any additive feature.</li>
+          <li><strong class="text-slate-200">Two existing behaviours corrected</strong> &mdash; analytics average delivery time was a hardcoded <code class="font-mono text-xs">3.5</code> and now computes from completed orders; the seeder was changed to migrate rather than drop and recreate, with the destructive path gated to Development. Both are improvements to Capstone 1, and both are still changes to it.</li>
+          <li><strong class="text-slate-200">One existing migration was edited</strong> &mdash; its unconditional column drops were made conditional, because a clean database could not migrate at all: it failed on a column that no longer gets created. Applied databases are unaffected, since an applied migration never re-runs. Disclosed here because it is the one place we modified Capstone 1's migration history.</li>
+        </ul>
+      </div>
+
+      <!-- Honest limitation -->
+      <div class="mt-4 rounded-xl border border-crit/40 bg-crit/5 p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-crit">What we did not have &mdash; stated plainly</h3>
+        <p class="mt-2 text-sm text-slate-300">
+          There was <strong class="text-white">no read-only database user and no separate environment.</strong> One connection string, one local
+          database, one configuration file, trusted connection with full rights. Compliance was enforced by
+          <strong class="text-white">code and schema discipline, not by infrastructure</strong> &mdash; additive-only migrations, shadow columns,
+          a feature switched off by default, and the original test suite as the tripwire.
+        </p>
+        <p class="mt-2 text-sm text-slate-400">
+          That is a weaker guarantee than an isolated environment, and we would take a read-only replica and a second
+          configuration profile if we ran this again. Saying so is cheaper than being asked.
+        </p>
       </div>
     </article>
 
     <aside class="notes mt-4 rounded-xl border-l-4 border-emerald-500 bg-panel p-5">
       <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Speaker notes</h3>
       <p class="mt-2 text-sm leading-relaxed text-slate-300">
-        Structure this as <em>"three ways we constrained the code, three ways we constrained the risk, three ways we
-        proved it."</em> End on box 9 and pause &mdash; the strongest form of this claim is not "we were careful," it is
-        "run the original test suite yourself." If you have the recording, cut to the green test summary here rather
-        than describing it.
+        Run the nine boxes fast &mdash; <em>"three ways we constrained the code, three ways we constrained the risk,
+        three ways we proved it"</em> &mdash; then slow right down for the last two panels, because that is where the
+        marks are. <strong>Volunteer the four integration points before anyone asks.</strong> The framing that survives
+        questioning is <em>"no touch meant no undeclared edits, and here are all four edits."</em>
+        <br /><br />
+        The examiner's prompt explicitly suggests a read-only user and a separate environment, and we had
+        <strong>neither</strong>. Do not skate past that &mdash; say it, say what we used instead, and say what we would
+        do differently. A disclosed limitation costs you a fraction of what a discovered one does. If you have the
+        recording, cut to the green test run here rather than describing it.
       </p>
     </aside>
   </section>
@@ -680,7 +715,7 @@
         </div>
         <div class="rounded-xl border border-edge bg-ink/50 p-4 text-center">
           <p class="text-2xl font-extrabold text-white">0</p>
-          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Regressions</p>
+          <p class="mt-1 text-[11px] uppercase tracking-wider text-slate-400">Schema drops</p>
         </div>
       </div>
     </article>
